@@ -16,37 +16,29 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Echeance {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "echeance_id")
     private Long echeanceId;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "credit_id", nullable = false)
     private Credit credit;
-    
+
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
-    
+
     @Column(name = "amount_due", nullable = false, precision = 15, scale = 2)
     private BigDecimal amountDue;
-    
+
     @Column(name = "amount_paid", precision = 15, scale = 2)
-    private BigDecimal amountPaid = BigDecimal.ZERO;
-    
+    private BigDecimal amountPaid;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private EcheanceStatus status = EcheanceStatus.PENDING;
-    
+    private EcheanceStatus status;
+
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
-    
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-    
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
 }
