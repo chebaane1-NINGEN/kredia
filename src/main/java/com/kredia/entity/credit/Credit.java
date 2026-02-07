@@ -1,5 +1,7 @@
 package com.kredia.entity.credit;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kredia.entity.user.User;
 import com.kredia.enums.CreditStatus;
 import jakarta.persistence.*;
@@ -26,8 +28,23 @@ public class Credit {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private User user;
+
+    // Virtual property for userId
+    @JsonProperty("userId")
+    public Long getUserId() {
+        return user != null ? user.getUserId() : null;
+    }
+
+    @JsonProperty("userId")
+    public void setUserId(Long userId) {
+        if (userId != null) {
+            this.user = new User();
+            this.user.setUserId(userId);
+        }
+    }
+
 
     @Column(name = "amount", nullable = false)
     private float amount;
@@ -61,6 +78,7 @@ public class Credit {
     private List<Echeance> echeances;
 
     @OneToMany(mappedBy = "credit", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<KycLoan> kycLoanDocuments;
 
     @PrePersist

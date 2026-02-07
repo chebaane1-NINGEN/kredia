@@ -1,5 +1,6 @@
 package com.kredia.entity.credit;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.kredia.enums.EcheanceStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,7 @@ public class Echeance {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "credit_id", nullable = false)
+    @JsonIgnore
     private Credit credit;
 
     @Column(name = "due_date", nullable = false)
