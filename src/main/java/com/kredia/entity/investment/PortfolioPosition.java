@@ -35,9 +35,6 @@ public class PortfolioPosition {
     @Column(name = "avg_purchase_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal avgPurchasePrice;
     
-    @Column(name = "market_value", precision = 15, scale = 2)
-    private BigDecimal marketValue;
-    
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
