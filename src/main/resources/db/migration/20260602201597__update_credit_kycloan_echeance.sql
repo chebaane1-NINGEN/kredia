@@ -55,7 +55,7 @@ DROP COLUMN uploaded_at;
 -- Ajouter user_id et verified_status
 
 ALTER TABLE kyc_loan
-ADD COLUMN submitted_at NOT NULL,
+ADD COLUMN submitted_at DATETIME NOT NULL,
 ADD COLUMN user_id BIGINT NOT NULL,
 ADD COLUMN verified_status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING';
 
