@@ -2,47 +2,50 @@ package com.kredia.entity.support;
 
 import com.kredia.enums.ReclamationStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "reclamation_history")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "reclamation_history",
+        indexes = {
+                @Index(name = "idx_hist_reclamation", columnList = "reclamation_id"),
+                @Index(name = "idx_hist_changed", columnList = "changed_at")
+        }
+)
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+@Builder
 public class ReclamationHistory {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "history_id")
     private Long historyId;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reclamation_id", nullable = false)
     private Reclamation reclamation;
-    
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId; // who did the action (agent/admin/system)
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "old_status")
+    @Column(name = "old_status", nullable = false)
     private ReclamationStatus oldStatus;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "new_status", nullable = false)
     private ReclamationStatus newStatus;
-    
-    @Column(name = "changed_at", nullable = false, updatable = false)
+
+    @Column(name = "changed_at", nullable = false)
     private LocalDateTime changedAt;
-    
-    @Column(name = "note", length = 1000)
+
+    @Column(length = 500)
     private String note;
-    
-    @Column(name = "changed_by")
-    private String changedBy;
-    
+
     @PrePersist
-    protected void onCreate() {
+    void onCreate() {
         changedAt = LocalDateTime.now();
     }
 }
