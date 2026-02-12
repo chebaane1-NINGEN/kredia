@@ -1,51 +1,53 @@
 package com.kredia.entity.support;
 
-import com.kredia.entity.user.User;
 import com.kredia.enums.NotificationType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notification")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "notification",
+        indexes = {
+                @Index(name = "idx_notif_user_read", columnList = "user_id,is_read"),
+                @Index(name = "idx_notif_sent", columnList = "sent_at")
+        }
+)
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+@Builder
 public class Notification {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "notification_id")
     private Long notificationId;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-    
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    @Column(name = "reclamation_id")
+    private Long reclamationId; // link if related to complaint
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false)
+    @Column(nullable = false)
     private NotificationType type;
-    
-    @Column(name = "title", nullable = false, length = 200)
+
+    @Column(nullable = false, length = 150)
     private String title;
-    
-    @Column(name = "message", nullable = false, length = 1000)
+
+    @Lob
+    @Column(nullable = false)
     private String message;
-    
+
     @Column(name = "is_read", nullable = false)
-    private Boolean isRead = false;
-    
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-    
-    @Column(name = "read_at")
-    private LocalDateTime readAt;
-    
+    private boolean isRead = false;
+
+    @Column(name = "sent_at", nullable = false, updatable = false)
+    private LocalDateTime sentAt;
+
     @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
+    void onCreate() {
+        sentAt = LocalDateTime.now();
     }
 }
