@@ -1,6 +1,6 @@
 package com.kredia.entity.support;
 
-import com.kredia.entity.user.User;
+import com.kredia.user.entity.User;
 import com.kredia.enums.Priority;
 import com.kredia.enums.ReclamationStatus;
 import jakarta.persistence.*;

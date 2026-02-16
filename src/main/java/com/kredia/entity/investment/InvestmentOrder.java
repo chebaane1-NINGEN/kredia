@@ -1,6 +1,6 @@
 package com.kredia.entity.investment;
 
-import com.kredia.entity.user.User;
+import com.kredia.user.entity.User;
 import com.kredia.enums.OrderStatus;
 import com.kredia.enums.OrderType;
 import jakarta.persistence.*;

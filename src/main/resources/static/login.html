@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Kredia</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div class="auth-page">
+        <!-- Visual Section -->
+        <div class="auth-visual">
+            <div class="auth-visual-content">
+                <h2>Invest Smarter.<br>Grow Faster.</h2>
+                <p>Track your credit portfolio, manage your digital wallet, and unlock 2.0 micro-finance intelligence
+                    from a single, secure dashboard.</p>
+            </div>
+        </div>
+
+        <!-- content Section -->
+        <div class="auth-content">
+            <a href="/" class="auth-back-link">
+                <span>← Back to Website</span>
+            </a>
+
+            <div class="auth-form-wrapper">
+                <header class="auth-header">
+                    <img src="/images/logo.png" alt="Kredia" class="auth-logo">
+                    <h3>Welcome Back!</h3>
+                    <p>Enter your credentials to access your secure portal.</p>
+                </header>
+
+                <form id="loginForm" class="auth-form">
+                    <div class="form-group-modern">
+                        <label for="email">Email address</label>
+                        <div class="input-wrapper">
+                            <input type="email" id="email" class="input-modern" placeholder="e.g. name@company.com"
+                                required>
+                        </div>
+                    </div>
+
+                    <div class="form-group-modern">
+                        <label for="password">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="password" class="input-modern" placeholder="••••••••" required>
+                            <button type="button" class="password-toggle"
+                                onclick="togglePasswordVisibility('password')">
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-options">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="rememberMe">
+                            <span>Remember Me</span>
+                        </label>
+                        <a href="#" class="forgot-password">Forgot Password?</a>
+                    </div>
+
+                    <div class="error-message" id="errorMessage" style="text-align: left; margin-bottom: 24px;"></div>
+
+                    <button type="submit" class="btn-auth">Sign In</button>
+
+                    <div class="auth-divider">
+                        <span>Or continue with</span>
+                    </div>
+
+                    <div class="social-login">
+                        <button type="button" class="btn-social">
+                            <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google">
+                            <span>Google</span>
+                        </button>
+                        <button type="button" class="btn-social">
+                            <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+                                alt="Github">
+                            <span>Github</span>
+                        </button>
+                    </div>
+
+                    <p class="auth-footer">
+                        Don't have an account? <a href="/auth/register">Sign up here</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script>
+        function togglePasswordVisibility(id) {
+            const input = document.getElementById(id);
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
+            }
+        }
+    </script>
+</body>
+
+</html>

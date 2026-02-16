@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard - Kredia</title>
+    <link rel="icon" type="image/png" href="/images/favicon.png">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header" style="border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                <a href="/"><img src="/images/logo.png" alt="Kredia Logo" style="height:40px;"></a>
+            </div>
+            <div class="sidebar-user">Logged in as <strong id="sidebarUser">Employee</strong></div>
+            <nav>
+                <a href="#" class="active" onclick="showSection('overview')"><span class="nav-icon">📊</span>
+                    Overview</a>
+                <a href="#" onclick="showSection('credits')"><span class="nav-icon">💳</span> Credits Queue</a>
+                <a href="#" onclick="logout()"><span class="nav-icon">🚪</span> Logout</a>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <!-- OVERVIEW -->
+            <div id="section-overview" class="section active">
+                <h2>Employee Workspace</h2>
+                <div class="stats-grid">
+                    <div class="card">
+                        <p class="stat-label">Total Handled</p>
+                        <p class="stat-value" id="statHandled">0</p>
+                    </div>
+                    <div class="card">
+                        <p class="stat-label">Approved</p>
+                        <p class="stat-value" id="statApproved">0</p>
+                    </div>
+                    <div class="card">
+                        <p class="stat-label">Rejected</p>
+                        <p class="stat-value" id="statRejected">0</p>
+                    </div>
+                    <div class="card">
+                        <p class="stat-label">Avg Decision (days)</p>
+                        <p class="stat-value" id="statAvgDays">0</p>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="card">
+                        <p class="stat-label">Low Risk</p>
+                        <p class="stat-value" style="color:var(--success-color)" id="statLow">0</p>
+                    </div>
+                    <div class="card">
+                        <p class="stat-label">Medium Risk</p>
+                        <p class="stat-value" style="color:var(--warning-color)" id="statMedium">0</p>
+                    </div>
+                    <div class="card">
+                        <p class="stat-label">High Risk</p>
+                        <p class="stat-value" style="color:var(--error-color)" id="statHigh">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CREDITS QUEUE -->
+            <div id="section-credits" class="section">
+                <h2>Credits Queue</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Rate</th>
+                            <th>Term</th>
+                            <th>Status</th>
+                            <th>Risk</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="creditsList"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const role = localStorage.getItem('role');
+            if (role !== 'ADMIN' && role !== 'AGENT' && role !== 'AUDITOR') {
+                alert('Access Denied');
+                window.location.href = '/';
+                return;
+            }
+            // Load user name
+            try {
+                const pRes = await authenticatedFetch('/api/users/me');
+                if (pRes.ok) {
+                    const u = await pRes.json();
+                    document.getElementById('sidebarUser').textContent = u.firstName;
+                }
+            } catch (e) { }
+
+            await loadStats();
+            await loadCredits();
+        });
+
+        function showSection(name) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+            document.getElementById('section-' + name).classList.add('active');
+            event.target.closest('a').classList.add('active');
+        }
+
+        async function loadStats() {
+            try {
+                const res = await authenticatedFetch('/api/dashboard/employee');
+                if (res.ok) {
+                    const s = await res.json();
+                    document.getElementById('statHandled').textContent = s.totalHandledCredits;
+                    document.getElementById('statApproved').textContent = s.approvedCredits;
+                    document.getElementById('statRejected').textContent = s.rejectedCredits;
+                    document.getElementById('statAvgDays').textContent = s.averageDecisionTimeDays;
+                    document.getElementById('statLow').textContent = s.lowRiskCredits;
+                    document.getElementById('statMedium').textContent = s.mediumRiskCredits;
+                    document.getElementById('statHigh').textContent = s.highRiskCredits;
+                }
+            } catch (err) { console.error('Stats error', err); }
+        }
+
+        async function loadCredits() {
+            try {
+                const res = await authenticatedFetch('/api/credits');
+                if (res.ok) {
+                    const credits = await res.json();
+                    const tbody = document.getElementById('creditsList');
+                    if (credits.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#999">No credits in queue.</td></tr>';
+                    } else {
+                        tbody.innerHTML = credits.map(c => `
+                            <tr>
+                                <td>#${c.creditId}</td>
+                                <td>#${c.userId || 'N/A'}</td>
+                                <td>${formatCurrency(c.amount)}</td>
+                                <td>${c.interestRate}%</td>
+                                <td>${c.termMonths}m</td>
+                                <td><span class="status-badge status-${c.status}">${c.status}</span></td>
+                                <td>${c.riskLevel || 'N/A'}</td>
+                                <td>
+                                    ${c.status === 'PENDING' ? `
+                                        <button class="btn btn-success btn-sm" onclick="updateCredit(${c.creditId}, 'APPROVED')">Approve</button>
+                                        <button class="btn btn-danger btn-sm" onclick="updateCredit(${c.creditId}, 'REJECTED')">Reject</button>
+                                    ` : '<span style="color:#999">—</span>'}
+                                </td>
+                            </tr>`).join('');
+                    }
+                }
+            } catch (err) { console.error('Credits error', err); }
+        }
+
+        async function updateCredit(creditId, newStatus) {
+            try {
+                // Fetch current credit first to get all fields
+                const getRes = await authenticatedFetch(`/api/credits/${creditId}`);
+                if (!getRes.ok) { showToast('Failed to fetch credit', 'error'); return; }
+                const credit = await getRes.json();
+
+                const updateData = {
+                    amount: credit.amount,
+                    interestRate: credit.interestRate,
+                    startDate: credit.startDate,
+                    endDate: credit.endDate,
+                    termMonths: credit.termMonths,
+                    income: credit.income,
+                    dependents: credit.dependents,
+                    status: newStatus,
+                    riskLevel: credit.riskLevel || 'MEDIUM'
+                };
+
+                const res = await authenticatedFetch(`/api/credits/${creditId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updateData)
+                });
+                if (res.ok) {
+                    showToast(`Credit ${newStatus.toLowerCase()}!`, newStatus === 'APPROVED' ? 'success' : 'warning');
+                    await loadCredits();
+                    await loadStats();
+                } else {
+                    showToast('Update failed', 'error');
+                }
+            } catch (err) { showToast('Error', 'error'); }
+        }
+    </script>
+</body>
+
+</html>

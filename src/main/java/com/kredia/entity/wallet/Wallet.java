@@ -1,6 +1,6 @@
 package com.kredia.entity.wallet;
 
-import com.kredia.entity.user.User;
+import com.kredia.user.entity.User;
 import com.kredia.enums.WalletStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -58,4 +58,19 @@ public class Wallet {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    public Long getWalletId() { return walletId; }
+    public void setWalletId(Long walletId) { this.walletId = walletId; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    public BigDecimal getBalance() { return balance; }
+    public void setBalance(BigDecimal balance) { this.balance = balance; }
+    public BigDecimal getFrozenBalance() { return frozenBalance; }
+    public void setFrozenBalance(BigDecimal frozenBalance) { this.frozenBalance = frozenBalance; }
+    public WalletStatus getStatus() { return status; }
+    public void setStatus(WalletStatus status) { this.status = status; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Dashboard - Kredia</title>
+    <link rel="icon" type="image/png" href="/images/favicon.png">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header" style="border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                <a href="/"><img src="/images/logo.png" alt="Kredia Logo" style="height:40px;"></a>
+            </div>
+            <div class="sidebar-user">Logged in as <strong id="sidebarUser">Client</strong></div>
+            <nav>
+                <a href="#" class="active" onclick="showSection('overview')"><span class="nav-icon">📊</span>
+                    Overview</a>
+                <a href="#" onclick="showSection('kyc')"><span class="nav-icon">📄</span> KYC & Documents</a>
+                <a href="#" onclick="showSection('wallet')"><span class="nav-icon">👛</span> My Wallet</a>
+                <a href="#" onclick="showSection('loans')"><span class="nav-icon">💳</span> My Loans</a>
+                <a href="#" onclick="showSection('profile')"><span class="nav-icon">👤</span> Profile</a>
+                <a href="#" onclick="logout()"><span class="nav-icon">🚪</span> Logout</a>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <!-- HEADER -->
+            <header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h2>Welcome, <span id="userName">User</span></h2>
+                <span id="userStatus" class="status-badge">Loading...</span>
+            </header>
+
+            <!-- OVERVIEW SECTION -->
+            <div id="section-overview" class="section active">
+                <div class="stats-grid">
+                    <div class="card">
+                        <p class="stat-label">Total Loans</p>
+                        <p class="stat-value" id="statTotal">0</p>
+                    </div>
+                    <div class="card">
+                        <p class="stat-label">Approved</p>
+                        <p class="stat-value" id="statApproved">0</p>
+                    </div>
+                    <div class="card">
+                        <p class="stat-label">Approval Rate</p>
+                        <p class="stat-value" id="statRate">0%</p>
+                    </div>
+                    <div class="card">
+                        <p class="stat-label">Total Borrowed</p>
+                        <p class="stat-value" id="statBorrowed">0 TND</p>
+                    </div>
+                </div>
+                <div class="grid">
+                    <div class="card">
+                        <h4>KYC Status</h4>
+                        <p id="kycMessage">Checking status...</p>
+                        <button class="btn btn-primary btn-sm" onclick="showSection('kyc')"
+                            style="margin-top:10px;">Manage Documents</button>
+                    </div>
+                    <div class="card">
+                        <h4>Wallet Balance</h4>
+                        <h3 id="walletBalanceOverview" style="margin:10px 0;color:var(--primary-color)">0.00 TND</h3>
+                        <p style="font-size:0.85rem;color:var(--text-muted)">Frozen: <span
+                                id="frozenBalanceOverview">0.00 TND</span></p>
+                    </div>
+                    <div class="card">
+                        <h4>Risk Level</h4>
+                        <p id="riskLevel" style="font-size:1.5rem;font-weight:700;color:var(--primary-color)">N/A</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KYC SECTION -->
+            <div id="section-kyc" class="section">
+                <div class="section-header">
+                    <h2>KYC & Documents</h2>
+                    <span id="kycStatus" class="status-badge">Loading...</span>
+                </div>
+                <div class="card" style="margin-bottom:20px">
+                    <h4>Upload New Document</h4>
+                    <form id="kycUploadForm" style="display:flex;gap:15px;align-items:flex-end;flex-wrap:wrap;">
+                        <div class="form-group" style="margin-bottom:0;flex:1;min-width:200px">
+                            <label>Document Type</label>
+                            <select id="docType">
+                                <option value="CIN">CIN (National ID)</option>
+                                <option value="PASSPORT">Passport</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;flex:1;min-width:200px">
+                            <label>File</label>
+                            <input type="file" id="kycFile" accept=".pdf,.jpg,.jpeg,.png" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </form>
+                </div>
+                <h4>My Documents</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Uploaded</th>
+                            <th>Verified</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kycDocsList"></tbody>
+                </table>
+            </div>
+
+            <!-- WALLET SECTION -->
+            <div id="section-wallet" class="section">
+                <h2>My Wallet</h2>
+                <div id="walletContent">
+                    <div class="stats-grid">
+                        <div class="card">
+                            <p class="stat-label">Available Balance</p>
+                            <p class="stat-value" id="walletBalance">0.00 TND</p>
+                        </div>
+                        <div class="card">
+                            <p class="stat-label">Frozen Balance</p>
+                            <p class="stat-value" id="frozenBalance">0.00 TND</p>
+                        </div>
+                        <div class="card">
+                            <p class="stat-label">Wallet Status</p>
+                            <p class="stat-value" id="walletStatus">N/A</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="walletBlocked" style="display:none" class="card">
+                    <div class="empty-state">
+                        <p>⚠️ Please complete your KYC verification to access wallet features.</p>
+                        <button class="btn btn-primary" onclick="showSection('kyc')">Complete KYC</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOANS SECTION -->
+            <div id="section-loans" class="section">
+                <div class="section-header">
+                    <h2>My Loans</h2>
+                    <button class="btn btn-primary"
+                        onclick="document.getElementById('newLoanModal').classList.add('active')">+ Apply for
+                        Loan</button>
+                </div>
+                <div id="loansContent">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Amount</th>
+                                <th>Rate</th>
+                                <th>Term</th>
+                                <th>Status</th>
+                                <th>Start</th>
+                                <th>Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="creditsList"></tbody>
+                    </table>
+                </div>
+                <div id="loansBlocked" style="display:none" class="card">
+                    <div class="empty-state">
+                        <p>⚠️ Please complete your KYC verification to access loan features.</p>
+                        <button class="btn btn-primary" onclick="showSection('kyc')">Complete KYC</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROFILE SECTION -->
+            <div id="section-profile" class="section">
+                <h2>Edit Profile</h2>
+                <div class="form-card">
+                    <form id="profileForm">
+                        <div class="form-row">
+                            <div class="form-group"><label>First Name</label><input type="text" id="profFirstName">
+                            </div>
+                            <div class="form-group"><label>Last Name</label><input type="text" id="profLastName"></div>
+                        </div>
+                        <div class="form-group"><label>Address</label><input type="text" id="profAddress"></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>City</label><input type="text" id="profCity"></div>
+                            <div class="form-group"><label>Zip Code</label><input type="text" id="profZip"></div>
+                        </div>
+                        <div class="form-group"><label>Country</label><input type="text" id="profCountry"></div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- NEW LOAN MODAL -->
+    <div class="modal-overlay" id="newLoanModal">
+        <div class="modal">
+            <h3>Apply for a Loan</h3>
+            <form id="loanForm">
+                <div class="form-row">
+                    <div class="form-group"><label>Amount (TND)</label><input type="number" id="loanAmount" min="100"
+                            step="100" required></div>
+                    <div class="form-group"><label>Interest Rate (%)</label><input type="number" id="loanRate"
+                            value="8.5" step="0.5" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Term (months)</label><input type="number" id="loanTerm" min="3"
+                            max="60" required></div>
+                    <div class="form-group"><label>Monthly Income (TND)</label><input type="number" id="loanIncome"
+                            min="0" step="50" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Start Date</label><input type="date" id="loanStart" required></div>
+                    <div class="form-group"><label>Dependents</label><input type="number" id="loanDependents" min="0"
+                            value="0" required></div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('newLoanModal').classList.remove('active')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script>
+        let currentUser = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkAuth('CLIENT');
+            await loadProfile();
+            await loadDashboardStats();
+            await loadKycDocuments();
+            if (currentUser && currentUser.status === 'VERIFIED') {
+                await loadWallet();
+                await loadCredits();
+            }
+        });
+
+        function showSection(name) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+            document.getElementById('section-' + name).classList.add('active');
+            event.target.closest('a').classList.add('active');
+        }
+
+        async function loadProfile() {
+            try {
+                const res = await authenticatedFetch('/api/users/me');
+                if (res.ok) {
+                    currentUser = await res.json();
+                    document.getElementById('userName').textContent = currentUser.firstName + ' ' + currentUser.lastName;
+                    document.getElementById('sidebarUser').textContent = currentUser.firstName;
+                    const statusSpan = document.getElementById('userStatus');
+                    statusSpan.textContent = currentUser.status;
+                    statusSpan.className = 'status-badge status-' + currentUser.status;
+                    const kycStatusSpan = document.getElementById('kycStatus');
+                    kycStatusSpan.textContent = currentUser.status;
+                    kycStatusSpan.className = 'status-badge status-' + currentUser.status;
+
+                    if (currentUser.status === 'VERIFIED') {
+                        document.getElementById('kycMessage').textContent = '✅ Your account is fully verified.';
+                        document.getElementById('walletContent').style.display = 'block';
+                        document.getElementById('walletBlocked').style.display = 'none';
+                        document.getElementById('loansContent').style.display = 'block';
+                        document.getElementById('loansBlocked').style.display = 'none';
+                    } else {
+                        document.getElementById('kycMessage').textContent = '⚠️ Please complete KYC to access Wallet & Loans.';
+                        document.getElementById('walletContent').style.display = 'none';
+                        document.getElementById('walletBlocked').style.display = 'block';
+                        document.getElementById('loansContent').style.display = 'none';
+                        document.getElementById('loansBlocked').style.display = 'block';
+                    }
+
+                    // Fill profile form
+                    document.getElementById('profFirstName').value = currentUser.firstName || '';
+                    document.getElementById('profLastName').value = currentUser.lastName || '';
+                    document.getElementById('profAddress').value = currentUser.address || '';
+                    document.getElementById('profCity').value = currentUser.city || '';
+                    document.getElementById('profZip').value = currentUser.zipCode || '';
+                    document.getElementById('profCountry').value = currentUser.country || '';
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadDashboardStats() {
+            try {
+                const res = await authenticatedFetch('/api/dashboard/client');
+                if (res.ok) {
+                    const stats = await res.json();
+                    document.getElementById('statTotal').textContent = stats.totalLoans;
+                    document.getElementById('statApproved').textContent = stats.approvedLoans;
+                    document.getElementById('statRate').textContent = stats.approvalRate + '%';
+                    document.getElementById('statBorrowed').textContent = formatCurrency(stats.totalBorrowedAmount);
+                    document.getElementById('riskLevel').textContent = stats.riskLevel || 'N/A';
+                }
+            } catch (err) { console.error('Stats error', err); }
+        }
+
+        async function loadWallet() {
+            try {
+                const res = await authenticatedFetch('/api/wallet');
+                if (res.ok) {
+                    const w = await res.json();
+                    document.getElementById('walletBalance').textContent = formatCurrency(w.balance);
+                    document.getElementById('frozenBalance').textContent = formatCurrency(w.frozenBalance);
+                    document.getElementById('walletBalanceOverview').textContent = formatCurrency(w.balance);
+                    document.getElementById('frozenBalanceOverview').textContent = formatCurrency(w.frozenBalance);
+                    document.getElementById('walletStatus').textContent = w.status || 'ACTIVE';
+                }
+            } catch (err) { console.error('Wallet error', err); }
+        }
+
+        async function loadCredits() {
+            try {
+                const res = await authenticatedFetch('/api/credits');
+                if (res.ok) {
+                    const credits = await res.json();
+                    const tbody = document.getElementById('creditsList');
+                    if (credits.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999">No loans found. Apply for your first loan!</td></tr>';
+                    } else {
+                        tbody.innerHTML = credits.map(c => `
+                            <tr>
+                                <td>#${c.creditId}</td>
+                                <td>${formatCurrency(c.amount)}</td>
+                                <td>${c.interestRate}%</td>
+                                <td>${c.termMonths} months</td>
+                                <td><span class="status-badge status-${c.status}">${c.status}</span></td>
+                                <td>${formatDate(c.startDate)}</td>
+                                <td>${c.riskLevel || 'N/A'}</td>
+                            </tr>`).join('');
+                    }
+                }
+            } catch (err) { console.error('Credits error', err); }
+        }
+
+        async function loadKycDocuments() {
+            try {
+                const res = await authenticatedFetch('/api/kyc/my-documents');
+                if (res.ok) {
+                    const docs = await res.json();
+                    const tbody = document.getElementById('kycDocsList');
+                    if (docs.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999">No documents uploaded yet.</td></tr>';
+                    } else {
+                        tbody.innerHTML = docs.map(d => `
+                            <tr>
+                                <td>#${d.kycId}</td>
+                                <td>${d.documentType}</td>
+                                <td><span class="status-badge status-${d.status}">${d.status}</span></td>
+                                <td>${formatDate(d.uploadedAt)}</td>
+                                <td>${d.verifiedAt ? formatDate(d.verifiedAt) : 'Pending'}</td>
+                            </tr>`).join('');
+                    }
+                }
+            } catch (err) { console.error('KYC docs error', err); }
+        }
+
+        // KYC Upload
+        document.getElementById('kycUploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('kycFile').files[0];
+            const type = document.getElementById('docType').value;
+            if (!file) { showToast('Please select a file', 'error'); return; }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', type);
+
+            try {
+                const res = await authenticatedFetch('/api/kyc/upload', { method: 'POST', body: formData });
+                if (res.ok) {
+                    showToast('Document uploaded successfully!', 'success');
+                    await loadKycDocuments();
+                    document.getElementById('kycUploadForm').reset();
+                } else {
+                    const err = await res.text();
+                    showToast('Upload failed: ' + err, 'error');
+                }
+            } catch (err) { showToast('Upload error', 'error'); }
+        });
+
+        // Profile Update
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                firstName: document.getElementById('profFirstName').value,
+                lastName: document.getElementById('profLastName').value,
+                address: document.getElementById('profAddress').value,
+                city: document.getElementById('profCity').value,
+                zipCode: document.getElementById('profZip').value,
+                country: document.getElementById('profCountry').value
+            };
+            try {
+                const res = await authenticatedFetch('/api/users/profile', { method: 'PUT', body: JSON.stringify(data) });
+                if (res.ok) {
+                    showToast('Profile updated!', 'success');
+                    await loadProfile();
+                } else {
+                    showToast('Update failed', 'error');
+                }
+            } catch (err) { showToast('Error updating profile', 'error'); }
+        });
+
+        // New Loan
+        document.getElementById('loanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const startDate = document.getElementById('loanStart').value;
+            const termMonths = parseInt(document.getElementById('loanTerm').value);
+            const start = new Date(startDate);
+            const end = new Date(start);
+            end.setMonth(end.getMonth() + termMonths);
+
+            const data = {
+                amount: parseFloat(document.getElementById('loanAmount').value),
+                interestRate: parseFloat(document.getElementById('loanRate').value),
+                termMonths: termMonths,
+                startDate: startDate,
+                endDate: end.toISOString().split('T')[0],
+                income: parseFloat(document.getElementById('loanIncome').value),
+                dependents: parseInt(document.getElementById('loanDependents').value)
+            };
+            try {
+                const res = await authenticatedFetch('/api/credits', { method: 'POST', body: JSON.stringify(data) });
+                if (res.ok) {
+                    showToast('Loan application submitted!', 'success');
+                    document.getElementById('newLoanModal').classList.remove('active');
+                    document.getElementById('loanForm').reset();
+                    await loadCredits();
+                    await loadDashboardStats();
+                } else {
+                    const err = await res.text();
+                    showToast('Loan application failed: ' + err, 'error');
+                }
+            } catch (err) { showToast('Error submitting application', 'error'); }
+        });
+    </script>
+</body>
+
+</html>

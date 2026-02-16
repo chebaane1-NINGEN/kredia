@@ -2,12 +2,10 @@ package com.kredia.entity.credit;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.kredia.entity.user.User;
+import com.kredia.user.entity.User;
 import com.kredia.enums.CreditStatus;
+import com.kredia.enums.RiskLevel;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -16,9 +14,6 @@ import java.util.List;
 
 @Entity
 @Table(name = "credit")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Credit {
 
     @Id
@@ -30,21 +25,6 @@ public class Credit {
     @JoinColumn(name = "user_id", nullable = false)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private User user;
-
-    // Virtual property for userId
-    @JsonProperty("userId")
-    public Long getUserId() {
-        return user != null ? user.getUserId() : null;
-    }
-
-    @JsonProperty("userId")
-    public void setUserId(Long userId) {
-        if (userId != null) {
-            this.user = new User();
-            this.user.setUserId(userId);
-        }
-    }
-
 
     @Column(name = "amount", nullable = false)
     private float amount;
@@ -71,6 +51,16 @@ public class Credit {
     @Column(name = "dependents", nullable = false)
     private Integer dependents;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level")
+    private RiskLevel riskLevel;
+
+    @Column(name = "decision_date")
+    private LocalDateTime decisionDate;
+
+    @Column(name = "handled_by")
+    private Long handledBy;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -80,6 +70,52 @@ public class Credit {
     @OneToMany(mappedBy = "credit", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<KycLoan> kycLoanDocuments;
+
+    public Credit() {}
+
+    public Long getCreditId() { return creditId; }
+    public void setCreditId(Long creditId) { this.creditId = creditId; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    public float getAmount() { return amount; }
+    public void setAmount(float amount) { this.amount = amount; }
+    public float getInterestRate() { return interestRate; }
+    public void setInterestRate(float interestRate) { this.interestRate = interestRate; }
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    public Integer getTermMonths() { return termMonths; }
+    public void setTermMonths(Integer termMonths) { this.termMonths = termMonths; }
+    public CreditStatus getStatus() { return status; }
+    public void setStatus(CreditStatus status) { this.status = status; }
+    public BigDecimal getIncome() { return income; }
+    public void setIncome(BigDecimal income) { this.income = income; }
+    public Integer getDependents() { return dependents; }
+    public void setDependents(Integer dependents) { this.dependents = dependents; }
+    public RiskLevel getRiskLevel() { return riskLevel; }
+    public void setRiskLevel(RiskLevel riskLevel) { this.riskLevel = riskLevel; }
+    public LocalDateTime getDecisionDate() { return decisionDate; }
+    public void setDecisionDate(LocalDateTime decisionDate) { this.decisionDate = decisionDate; }
+    public Long getHandledBy() { return handledBy; }
+    public void setHandledBy(Long handledBy) { this.handledBy = handledBy; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public List<Echeance> getEcheances() { return echeances; }
+    public void setEcheances(List<Echeance> echeances) { this.echeances = echeances; }
+
+    @JsonProperty("userId")
+    public Long getUserId() {
+        return user != null ? user.getUserId() : null;
+    }
+
+    @JsonProperty("userId")
+    public void setUserId(Long userId) {
+        if (userId != null) {
+            this.user = new User();
+            this.user.setUserId(userId);
+        }
+    }
 
     @PrePersist
     protected void onCreate() {

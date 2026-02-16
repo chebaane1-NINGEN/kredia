@@ -3,9 +3,6 @@ package com.kredia.entity.credit;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.kredia.enums.EcheanceStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,9 +10,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "echeance")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Echeance {
 
     @Id
@@ -43,4 +37,21 @@ public class Echeance {
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
+
+    public Echeance() {}
+
+    public Long getEcheanceId() { return echeanceId; }
+    public void setEcheanceId(Long echeanceId) { this.echeanceId = echeanceId; }
+    public Credit getCredit() { return credit; }
+    public void setCredit(Credit credit) { this.credit = credit; }
+    public LocalDate getDueDate() { return dueDate; }
+    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+    public BigDecimal getAmountDue() { return amountDue; }
+    public void setAmountDue(BigDecimal amountDue) { this.amountDue = amountDue; }
+    public BigDecimal getAmountPaid() { return amountPaid; }
+    public void setAmountPaid(BigDecimal amountPaid) { this.amountPaid = amountPaid; }
+    public EcheanceStatus getStatus() { return status; }
+    public void setStatus(EcheanceStatus status) { this.status = status; }
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
 }

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Kredia</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div class="auth-page">
+        <!-- Visual Section -->
+        <div class="auth-visual">
+            <div class="auth-visual-content">
+                <h2>Join the<br>Financial Future.</h2>
+                <p>Create your Kredia account today and gain access to the scale of digital micro-finance. Secure,
+                    transparent, and built for growth.</p>
+            </div>
+        </div>
+
+        <!-- content Section -->
+        <div class="auth-content">
+            <a href="/" class="auth-back-link">
+                <span>← Back to Website</span>
+            </a>
+
+            <div class="auth-form-wrapper">
+                <header class="auth-header">
+                    <img src="/images/logo.png" alt="Kredia" class="auth-logo">
+                    <h3>Get Started</h3>
+                    <p>Create your client account in just a few steps.</p>
+                </header>
+
+                <form id="registerForm" class="auth-form">
+                    <div style="display: flex; gap: 16px;">
+                        <div class="form-group-modern" style="flex: 1;">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" class="input-modern" placeholder="John" required>
+                        </div>
+                        <div class="form-group-modern" style="flex: 1;">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" class="input-modern" placeholder="Doe" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group-modern">
+                        <label for="email">Email address</label>
+                        <input type="email" id="email" class="input-modern" placeholder="name@company.com" required>
+                    </div>
+
+                    <div class="form-group-modern">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" class="input-modern" placeholder="+216 -- --- ---" required>
+                    </div>
+
+                    <div class="form-group-modern">
+                        <label for="password">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="password" class="input-modern" placeholder="••••••••" required>
+                            <button type="button" class="password-toggle"
+                                onclick="togglePasswordVisibility('password')">
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="error-message" id="errorMessage" style="text-align: left; margin-bottom: 24px;"></div>
+
+                    <button type="submit" class="btn-auth">Create Account</button>
+
+                    <p class="auth-footer">
+                        Already have an account? <a href="/auth/login">Sign in here</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/register.js"></script>
+    <script>
+        function togglePasswordVisibility(id) {
+            const input = document.getElementById(id);
+            if (input.type === 'password') {
+                input.type = 'text';
+            } else {
+                input.type = 'password';
+            }
+        }
+    </script>
+</body>
+
+</html>

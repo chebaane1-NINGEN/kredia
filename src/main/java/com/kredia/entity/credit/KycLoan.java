@@ -1,6 +1,6 @@
 package com.kredia.entity.credit;
 
-import com.kredia.entity.user.User;
+import com.kredia.user.entity.User;
 import com.kredia.enums.DocumentTypeLoan;
 import com.kredia.enums.KycStatus;
 import jakarta.persistence.*;

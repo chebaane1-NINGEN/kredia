@@ -1,6 +1,6 @@
 package com.kredia.entity.investment;
 
-import com.kredia.entity.user.User;
+import com.kredia.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
