@@ -19,7 +19,7 @@ import java.util.List;
 @AllArgsConstructor
 public class TransactionLoan extends Transaction {
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "echeance_id")
     private Echeance echnace_id;
 
