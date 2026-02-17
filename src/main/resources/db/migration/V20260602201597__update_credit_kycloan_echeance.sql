@@ -70,4 +70,3 @@ CREATE INDEX idx_kyc_loan_user ON kyc_loan(user_id);
 ALTER TABLE kyc_loan
     ADD CONSTRAINT fk_kyc_loan_user
         FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE;
-
