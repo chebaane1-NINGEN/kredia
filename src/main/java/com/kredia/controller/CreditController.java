@@ -1,6 +1,7 @@
 package com.kredia.controller;
 
 import com.kredia.entity.credit.Credit;
+import jakarta.validation.Valid;
 import com.kredia.service.CreditService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,7 +22,7 @@ public class CreditController {
     }
 
     @PostMapping
-    public ResponseEntity<Credit> createCredit(@RequestBody Credit credit) {
+    public ResponseEntity<Credit> createCredit(@Valid @RequestBody Credit credit) {
         Credit createdCredit = creditService.createCredit(credit);
         return new ResponseEntity<>(createdCredit, HttpStatus.CREATED);
     }
@@ -40,7 +41,7 @@ public class CreditController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Credit> updateCredit(@PathVariable Long id, @RequestBody Credit creditDetails) {
+    public ResponseEntity<Credit> updateCredit(@PathVariable Long id, @Valid @RequestBody Credit creditDetails) {
         try {
             Credit updatedCredit = creditService.updateCredit(id, creditDetails);
             return new ResponseEntity<>(updatedCredit, HttpStatus.OK);
