@@ -35,7 +35,7 @@ public class EcheanceService {
      */
     @Transactional
     public void checkAndUpdateStatus(Echeance echeance) {
-        if (echeance.getStatus() == EcheanceStatus.PENDING) {
+        if (echeance.getStatus() == EcheanceStatus.PENDING || echeance.getStatus() == EcheanceStatus.PARTIALLY_PAID) {
             // Calculer le montant total des transactions liées à cette échéance
             java.math.BigDecimal totalPaid = echeanceRepository.sumTransactionAmountsByEcheanceId(echeance.getEcheanceId());
             
@@ -50,6 +50,7 @@ public class EcheanceService {
                 } else {
                     // Paiement partiel
                     echeance.setAmountPaid(totalPaid);
+                    echeance.setStatus(EcheanceStatus.PARTIALLY_PAID);
                     echeanceRepository.save(echeance);
                 }
             }
@@ -146,6 +147,10 @@ public class EcheanceService {
                     ". Montant dû: " + amountDue;
             }
             remainingAmount = java.math.BigDecimal.ZERO;
+        } else if (echeance.getStatus() == EcheanceStatus.PARTIALLY_PAID) {
+            isPartialPayment = true;
+            message = "Paiement partiel effectué. Total payé: " + amountPaid + 
+                ". Montant dû: " + amountDue + ". Reste à payer: " + remainingAmount;
         } else if (amountPaid.compareTo(java.math.BigDecimal.ZERO) > 0) {
             isPartialPayment = true;
             message = "Paiement partiel effectué. Total payé: " + amountPaid + 
@@ -189,6 +194,7 @@ public class EcheanceService {
             // Paiement partiel - il reste encore à payer
             isPartialPayment = true;
             echeance.setAmountPaid(newTotalPaid);
+            echeance.setStatus(EcheanceStatus.PARTIALLY_PAID);
             echeanceRepository.save(echeance);
             
             log.info("Paiement partiel pour l'echeance {}. Montant payé: {}, Total payé: {}, Reste à payer: {}", 
