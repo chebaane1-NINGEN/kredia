@@ -42,14 +42,14 @@ public class EcheanceService {
             if (totalPaid != null && totalPaid.compareTo(java.math.BigDecimal.ZERO) > 0) {
                 log.info("Echeance {} has total transactions amount: {}", echeance.getEcheanceId(), totalPaid);
                 
-                // Mettre à jour amount_paid
-                echeance.setAmountPaid(totalPaid);
-                
-                // Vérifier si le paiement est complet
+                // IMPORTANT: amount_paid ne doit JAMAIS dépasser amount_due
                 if (totalPaid.compareTo(echeance.getAmountDue()) >= 0) {
+                    // Paiement complet ou avec surplus - plafonner à amount_due
+                    echeance.setAmountPaid(echeance.getAmountDue());
                     markAsPaid(echeance);
                 } else {
-                    // Paiement partiel - sauvegarder les changements
+                    // Paiement partiel
+                    echeance.setAmountPaid(totalPaid);
                     echeanceRepository.save(echeance);
                 }
             }
@@ -58,10 +58,13 @@ public class EcheanceService {
 
     private void markAsPaid(Echeance echeance) {
         echeance.setStatus(EcheanceStatus.PAID);
-        echeance.setAmountPaid(echeance.getAmountDue());
+        // S'assurer que amount_paid ne dépasse jamais amount_due
+        if (echeance.getAmountPaid() == null || echeance.getAmountPaid().compareTo(echeance.getAmountDue()) != 0) {
+            echeance.setAmountPaid(echeance.getAmountDue());
+        }
         echeance.setPaidAt(LocalDateTime.now());
         echeanceRepository.save(echeance);
-        log.info("Echeance {} marked as PAID", echeance.getEcheanceId());
+        log.info("Echeance {} marked as PAID with amount_paid: {}", echeance.getEcheanceId(), echeance.getAmountPaid());
 
         // Check if all echeances for this credit are paid
         if (echeance.getCredit() != null) {
@@ -108,20 +111,48 @@ public class EcheanceService {
             echeance.getAmountPaid() : java.math.BigDecimal.ZERO;
         java.math.BigDecimal amountDue = echeance.getAmountDue();
         
+        // Calculer le reste à payer (amount_due - amount_paid)
+        java.math.BigDecimal remainingAmount = amountDue.subtract(amountPaid);
+        
         boolean isPartialPayment = false;
         String message = "";
-        java.math.BigDecimal remainingAmount = amountDue;
         
         if (echeance.getStatus() == EcheanceStatus.PAID) {
-            message = "Échéance payée complètement";
+            // Pour les échéances payées, vérifier s'il y a un surplus via les transactions
+            java.math.BigDecimal totalTransactions = echeanceRepository.sumTransactionAmountsByEcheanceId(echeance.getEcheanceId());
+            
+            if (totalTransactions != null && totalTransactions.compareTo(amountDue) > 0) {
+                java.math.BigDecimal surplus = totalTransactions.subtract(amountDue);
+                
+                // Récupérer le montant de la dernière transaction
+                java.math.BigDecimal lastTransactionAmount = echeanceRepository.getLastTransactionAmountByEcheanceId(echeance.getEcheanceId());
+                
+                if (lastTransactionAmount != null) {
+                    // Calculer le montant comptabilisé de la dernière transaction
+                    java.math.BigDecimal amountCountedFromLast = lastTransactionAmount.subtract(surplus);
+                    
+                    message = "Échéance payée complètement avec surplus. Dernier paiement: " + lastTransactionAmount + 
+                        ". Montant comptabilisé: " + amountCountedFromLast + 
+                        ". Total payé: " + amountPaid + 
+                        ". Surplus: " + surplus;
+                } else {
+                    message = "Échéance payée complètement avec surplus. Paiement total des transactions: " + totalTransactions + 
+                        ". Montant comptabilisé: " + amountPaid + 
+                        ". Montant dû: " + amountDue + 
+                        ". Surplus: " + surplus;
+                }
+            } else {
+                message = "Échéance payée complètement. Total payé: " + amountPaid + 
+                    ". Montant dû: " + amountDue;
+            }
             remainingAmount = java.math.BigDecimal.ZERO;
         } else if (amountPaid.compareTo(java.math.BigDecimal.ZERO) > 0) {
             isPartialPayment = true;
-            message = "Paiement partiel effectué. Montant payé: " + amountPaid + 
-                ". Reste à payer: " + amountDue;
-            remainingAmount = amountDue;
+            message = "Paiement partiel effectué. Total payé: " + amountPaid + 
+                ". Montant dû: " + amountDue + ". Reste à payer: " + remainingAmount;
         } else {
             message = "Aucun paiement effectué. Montant dû: " + amountDue;
+            remainingAmount = amountDue;
         }
         
         return new EcheancePaymentResponse(
@@ -138,35 +169,77 @@ public class EcheanceService {
             throw new RuntimeException("Cette echeance est deja payee");
         }
 
-        // Vérifier si le montant saisi est inférieur au montant dû
-        if (amountPaid.compareTo(echeance.getAmountDue()) < 0) {
-            // Paiement partiel
-            java.math.BigDecimal newAmountDue = echeance.getAmountDue().subtract(amountPaid);
-            java.math.BigDecimal currentAmountPaid = echeance.getAmountPaid() != null ? 
-                echeance.getAmountPaid() : java.math.BigDecimal.ZERO;
+        // Calculer le montant déjà payé
+        java.math.BigDecimal currentAmountPaid = echeance.getAmountPaid() != null ? 
+            echeance.getAmountPaid() : java.math.BigDecimal.ZERO;
+        
+        // Calculer le reste à payer avant ce paiement
+        java.math.BigDecimal remainingBeforePayment = echeance.getAmountDue().subtract(currentAmountPaid);
+        
+        // Calculer le nouveau total payé
+        java.math.BigDecimal newTotalPaid = currentAmountPaid.add(amountPaid);
+        
+        // Calculer le reste à payer après ce paiement
+        java.math.BigDecimal remainingDue = echeance.getAmountDue().subtract(newTotalPaid);
+        
+        String message;
+        boolean isPartialPayment;
+        
+        if (remainingDue.compareTo(java.math.BigDecimal.ZERO) > 0) {
+            // Paiement partiel - il reste encore à payer
+            isPartialPayment = true;
+            echeance.setAmountPaid(newTotalPaid);
+            echeanceRepository.save(echeance);
             
-            echeance.setAmountDue(newAmountDue);
-            echeance.setAmountPaid(currentAmountPaid.add(amountPaid));
-            Echeance savedEcheance = echeanceRepository.save(echeance);
+            log.info("Paiement partiel pour l'echeance {}. Montant payé: {}, Total payé: {}, Reste à payer: {}", 
+                echeanceId, amountPaid, newTotalPaid, remainingDue);
             
-            log.info("Paiement partiel pour l'echeance {}. Montant payé: {}, Reste à payer: {}", 
-                echeanceId, amountPaid, newAmountDue);
-            
-            String message = "Paiement partiel effectué. Montant payé: " + amountPaid + 
-                ". Reste à payer: " + newAmountDue;
+            message = "Paiement partiel effectué. Montant payé: " + amountPaid + 
+                ". Total payé: " + newTotalPaid + 
+                ". Montant dû: " + echeance.getAmountDue() + 
+                ". Reste à payer: " + remainingDue;
             
             return new EcheancePaymentResponse(
-                savedEcheance, true, message, amountPaid, newAmountDue
+                echeance, isPartialPayment, message, newTotalPaid, remainingDue
+            );
+        } else if (remainingDue.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            // Paiement avec surplus
+            java.math.BigDecimal surplus = remainingDue.abs();
+            java.math.BigDecimal amountCounted = amountPaid.subtract(surplus); // Montant comptabilisé de ce paiement
+            isPartialPayment = false;
+            
+            // IMPORTANT: amount_paid ne doit JAMAIS dépasser amount_due
+            echeance.setAmountPaid(echeance.getAmountDue());
+            markAsPaid(echeance);
+            
+            log.info("Paiement avec surplus pour l'echeance {}. Montant payé: {}, Comptabilisé: {}, Surplus: {}", 
+                echeanceId, amountPaid, amountCounted, surplus);
+            
+            message = "Échéance payée complètement avec surplus. Dernier paiement: " + amountPaid + 
+                ". Montant comptabilisé: " + amountCounted + 
+                ". Total payé: " + echeance.getAmountDue() + 
+                ". Surplus: " + surplus;
+            
+            return new EcheancePaymentResponse(
+                echeance, isPartialPayment, message, echeance.getAmountDue(), java.math.BigDecimal.ZERO
+            );
+        } else {
+            // Paiement exact
+            isPartialPayment = false;
+            
+            echeance.setAmountPaid(echeance.getAmountDue());
+            markAsPaid(echeance);
+            
+            log.info("Paiement exact pour l'echeance {}. Montant payé: {}, Total payé: {}", 
+                echeanceId, amountPaid, newTotalPaid);
+            
+            message = "Paiement complet effectué. Montant payé: " + amountPaid + 
+                ". Total payé: " + echeance.getAmountDue() + 
+                ". Montant dû: " + echeance.getAmountDue();
+            
+            return new EcheancePaymentResponse(
+                echeance, isPartialPayment, message, echeance.getAmountDue(), java.math.BigDecimal.ZERO
             );
         }
-
-        // Paiement complet
-        markAsPaid(echeance);
-        
-        String message = "Paiement complet effectué. Montant payé: " + amountPaid;
-        
-        return new EcheancePaymentResponse(
-            echeance, false, message, amountPaid, java.math.BigDecimal.ZERO
-        );
     }
 }
