@@ -20,6 +20,9 @@ public interface EcheanceRepository extends JpaRepository<Echeance, Long> {
     @Query(value = "SELECT COUNT(*) FROM `transaction` t WHERE t.echeance_id = :echeanceId", nativeQuery = true)
     int countTransactionsByEcheanceId(@Param("echeanceId") Long echeanceId);
 
+    @Query(value = "SELECT COALESCE(SUM(t.amount), 0) FROM `transaction` t WHERE t.echeance_id = :echeanceId", nativeQuery = true)
+    java.math.BigDecimal sumTransactionAmountsByEcheanceId(@Param("echeanceId") Long echeanceId);
+
     @Query("SELECT COUNT(e) FROM Echeance e WHERE e.credit.creditId = :creditId AND e.status = 'PENDING'")
     long countPendingEcheancesByCreditId(@Param("creditId") Long creditId);
 }
