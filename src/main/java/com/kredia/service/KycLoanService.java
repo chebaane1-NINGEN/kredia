@@ -117,11 +117,11 @@ public class KycLoanService {
         new Thread(() -> {
             try {
                 Thread.sleep(1000); // Court délai pour simuler le traitement
-                
+
                 log.info("=== ASYNC VERIFICATION START for KycLoan {} ===", kycLoanId);
                 log.info("Document URL: {}", documentUrl);
                 log.info("Document Type: {}", documentType);
-                
+
                 String geminiResponse;
                 try {
                     geminiResponse = geminiService.verifyDocument(documentUrl, documentType);
@@ -147,8 +147,8 @@ public class KycLoanService {
                         log.info("KycLoan {} set to APPROVED (default)", kycLoanId);
                     }
                     kycLoanRepository.save(kycLoan);
-                    log.info("=== ASYNC VERIFICATION COMPLETE for KycLoan {} - Status: {} ===", 
-                        kycLoanId, kycLoan.getVerifiedStatus());
+                    log.info("=== ASYNC VERIFICATION COMPLETE for KycLoan {} - Status: {} ===",
+                            kycLoanId, kycLoan.getVerifiedStatus());
                 } else {
                     log.error("KycLoan {} not found in database!", kycLoanId);
                 }
@@ -174,20 +174,20 @@ public class KycLoanService {
     public KycLoanResponse forceVerification(Long kycLoanId) {
         KycLoan kycLoan = kycLoanRepository.findById(kycLoanId)
                 .orElseThrow(() -> new NotFoundException("KycLoan not found with id " + kycLoanId));
-        
+
         log.info("Force verification requested for KycLoan {}, current status: {}", kycLoanId, kycLoan.getVerifiedStatus());
-        
+
         if (kycLoan.getVerifiedStatus() == KycStatus.PENDING) {
             try {
                 String geminiResponse = geminiService.verifyDocument(
-                    kycLoan.getDocumentPath(), 
-                    kycLoan.getDocumentType().name()
+                        kycLoan.getDocumentPath(),
+                        kycLoan.getDocumentType().name()
                 );
                 log.info("Gemini response for force verification: {}", geminiResponse);
-                
+
                 // Simplifier: si contient APPROVED ou VERIFIED, approuver
-                if (geminiResponse.toUpperCase().contains("APPROVED") || 
-                    geminiResponse.toUpperCase().contains("VERIFIED")) {
+                if (geminiResponse.toUpperCase().contains("APPROVED") ||
+                        geminiResponse.toUpperCase().contains("VERIFIED")) {
                     kycLoan.setVerifiedStatus(KycStatus.APPROVED);
                 } else if (geminiResponse.toUpperCase().contains("REJECTED")) {
                     kycLoan.setVerifiedStatus(KycStatus.REJECTED);
@@ -195,10 +195,10 @@ public class KycLoanService {
                     // Par défaut, approuver
                     kycLoan.setVerifiedStatus(KycStatus.APPROVED);
                 }
-                
+
                 kycLoanRepository.save(kycLoan);
                 log.info("KycLoan {} force verified with status: {}", kycLoanId, kycLoan.getVerifiedStatus());
-                
+
                 return toResponse(kycLoan, "Vérification forcée: " + kycLoan.getVerifiedStatus());
             } catch (Exception e) {
                 log.error("Error during force verification: {}", e.getMessage(), e);
@@ -208,7 +208,7 @@ public class KycLoanService {
                 return toResponse(kycLoan, "Vérification forcée (erreur, auto-approuvé): VERIFIED");
             }
         }
-        
+
         return toResponse(kycLoan, "Document déjà vérifié: " + kycLoan.getVerifiedStatus());
     }
 

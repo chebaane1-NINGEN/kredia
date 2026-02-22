@@ -27,7 +27,7 @@ public class GeminiService {
 
     @Value("${gemini.api-key}")
     private String apiKey;
-    
+
     @Value("${gemini.model:gemini-2.5-flash}")
     private String modelName;
 
@@ -36,14 +36,14 @@ public class GeminiService {
 
     /**
      * Vérifie un document KYC avec Gemini Vision
-     * 
+     *
      * @param documentUrl URL du document à vérifier
      * @param documentType Type de document (INCOME_PROOF, ID_PROOF, etc.)
      * @return Résultat de la vérification (APPROVED: ... ou REJECTED: ...)
      */
     public String verifyDocument(String documentUrl, String documentType) {
         log.info("Verifying document type {} with Gemini {}", documentType, modelName);
-        
+
         try {
             // Télécharger l'image
             byte[] imageBytes = downloadImage(documentUrl);
@@ -61,7 +61,7 @@ public class GeminiService {
 
             // Envoyer à Gemini
             String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
-            
+
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(apiUrl))
                     .header("Content-Type", "application/json")
@@ -70,7 +70,7 @@ public class GeminiService {
 
             log.info("Sending request to Gemini API...");
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            
+
             if (response.statusCode() != 200) {
                 log.error("Gemini API error: {}", response.body());
                 return "ERROR: Gemini API returned status " + response.statusCode();
@@ -92,11 +92,11 @@ public class GeminiService {
      */
     private byte[] downloadImage(String imageUrl) throws IOException {
         log.info("Downloading image from: {}", imageUrl);
-        
+
         try {
             String processedUrl = processCloudinaryUrl(imageUrl);
             log.info("Processed URL: {}", processedUrl);
-            
+
             URL url = new URL(processedUrl);
             try (InputStream in = url.openStream()) {
                 byte[] bytes = in.readAllBytes();
@@ -108,7 +108,7 @@ public class GeminiService {
             throw new IOException("Cannot download image: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Convertit une URL Cloudinary "raw" en URL d'image accessible
      */
@@ -130,7 +130,7 @@ public class GeminiService {
      */
     private String getMimeType(String url) {
         String lowerUrl = url.toLowerCase();
-        
+
         if (lowerUrl.contains("f_jpg") || lowerUrl.endsWith(".jpg") || lowerUrl.endsWith(".jpeg")) {
             return "image/jpeg";
         } else if (lowerUrl.endsWith(".png")) {
@@ -140,7 +140,7 @@ public class GeminiService {
         } else if (lowerUrl.endsWith(".pdf")) {
             return "image/jpeg"; // PDF converti en JPG
         }
-        
+
         return "image/jpeg"; // Par défaut
     }
 
@@ -149,16 +149,16 @@ public class GeminiService {
      */
     private String buildVerificationPrompt(String documentType) {
         return String.format(
-            "Tu es un expert en vérification de documents KYC pour une banque. " +
-            "Analyse ce document de type '%s' et vérifie:\n" +
-            "1. Le document est-il lisible et de bonne qualité?\n" +
-            "2. Contient-il les informations nécessaires (nom, montant, date, etc.)?\n" +
-            "3. Le document semble-t-il authentique?\n\n" +
-            "Réponds UNIQUEMENT par:\n" +
-            "- 'APPROVED: [raison courte]' si le document est valide\n" +
-            "- 'REJECTED: [raison courte]' si le document est invalide\n\n" +
-            "Sois strict mais raisonnable dans ton évaluation.",
-            documentType
+                "Tu es un expert en vérification de documents KYC pour une banque. " +
+                        "Analyse ce document de type '%s' et vérifie:\n" +
+                        "1. Le document est-il lisible et de bonne qualité?\n" +
+                        "2. Contient-il les informations nécessaires (nom, montant, date, etc.)?\n" +
+                        "3. Le document semble-t-il authentique?\n\n" +
+                        "Réponds UNIQUEMENT par:\n" +
+                        "- 'APPROVED: [raison courte]' si le document est valide\n" +
+                        "- 'REJECTED: [raison courte]' si le document est invalide\n\n" +
+                        "Sois strict mais raisonnable dans ton évaluation.",
+                documentType
         );
     }
 
@@ -167,16 +167,16 @@ public class GeminiService {
      */
     private JsonObject buildGeminiRequest(String prompt, String base64Image, String mimeType) {
         JsonObject requestBody = new JsonObject();
-        
+
         JsonArray contents = new JsonArray();
         JsonObject content = new JsonObject();
         JsonArray parts = new JsonArray();
-        
+
         // Part 1: Le texte du prompt
         JsonObject textPart = new JsonObject();
         textPart.addProperty("text", prompt);
         parts.add(textPart);
-        
+
         // Part 2: L'image en base64
         JsonObject imagePart = new JsonObject();
         JsonObject inlineData = new JsonObject();
@@ -184,11 +184,11 @@ public class GeminiService {
         inlineData.addProperty("data", base64Image);
         imagePart.add("inline_data", inlineData);
         parts.add(imagePart);
-        
+
         content.add("parts", parts);
         contents.add(content);
         requestBody.add("contents", contents);
-        
+
         return requestBody;
     }
 
@@ -198,21 +198,21 @@ public class GeminiService {
     private String parseGeminiResponse(String responseBody) {
         try {
             JsonObject jsonResponse = gson.fromJson(responseBody, JsonObject.class);
-            
+
             if (jsonResponse.has("error")) {
                 JsonObject error = jsonResponse.getAsJsonObject("error");
                 String errorMessage = error.get("message").getAsString();
                 log.error("Gemini API error: {}", errorMessage);
                 return "ERROR: " + errorMessage;
             }
-            
+
             String text = jsonResponse.getAsJsonArray("candidates")
                     .get(0).getAsJsonObject()
                     .getAsJsonObject("content")
                     .getAsJsonArray("parts")
                     .get(0).getAsJsonObject()
                     .get("text").getAsString();
-            
+
             return text.trim();
         } catch (Exception e) {
             log.error("Error parsing Gemini response: {}", e.getMessage());
