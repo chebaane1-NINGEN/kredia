@@ -30,19 +30,19 @@ public class KycLoanService {
     private final CreditRepository creditRepository;
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
-    private final GeminiAIService geminiAIService;
+    private final GeminiService geminiService;
 
     @Autowired
     public KycLoanService(KycLoanRepository kycLoanRepository,
                           CreditRepository creditRepository,
                           UserRepository userRepository,
                           CloudinaryService cloudinaryService,
-                          GeminiAIService geminiAIService) {
+                          GeminiService geminiService) {
         this.kycLoanRepository = kycLoanRepository;
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
         this.cloudinaryService = cloudinaryService;
-        this.geminiAIService = geminiAIService;
+        this.geminiService = geminiService;
     }
 
     public KycLoanResponse uploadDocument(Long creditId, Long userId, DocumentTypeLoan documentType, MultipartFile file) {
@@ -124,7 +124,7 @@ public class KycLoanService {
                 
                 String geminiResponse;
                 try {
-                    geminiResponse = geminiAIService.verifyDocument(documentUrl, documentType);
+                    geminiResponse = geminiService.verifyDocument(documentUrl, documentType);
                     log.info("Gemini response for KycLoan {}: {}", kycLoanId, geminiResponse);
                 } catch (Exception e) {
                     log.error("Gemini API error for KycLoan {}: {}", kycLoanId, e.getMessage(), e);
@@ -179,7 +179,7 @@ public class KycLoanService {
         
         if (kycLoan.getVerifiedStatus() == KycStatus.PENDING) {
             try {
-                String geminiResponse = geminiAIService.verifyDocument(
+                String geminiResponse = geminiService.verifyDocument(
                     kycLoan.getDocumentPath(), 
                     kycLoan.getDocumentType().name()
                 );

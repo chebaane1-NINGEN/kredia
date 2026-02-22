@@ -17,69 +17,49 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Base64;
 
+/**
+ * Service de vérification de documents KYC avec Gemini Vision API
+ */
 @Service
-public class GeminiVisionService {
+public class GeminiService {
 
-    private static final Logger log = LoggerFactory.getLogger(GeminiVisionService.class);
+    private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
 
     @Value("${gemini.api-key}")
     private String apiKey;
     
-    @Value("${gemini.model:gemini-1.5-pro}")
+    @Value("${gemini.model:gemini-2.5-flash}")
     private String modelName;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Gson gson = new Gson();
-    
-    /**
-     * Liste les modèles Gemini disponibles
-     */
-    public String listAvailableModels() {
-        try {
-            // Essayer v1
-            String urlV1 = "https://generativelanguage.googleapis.com/v1/models?key=" + apiKey;
-            HttpRequest requestV1 = HttpRequest.newBuilder()
-                    .uri(URI.create(urlV1))
-                    .GET()
-                    .build();
-            
-            HttpResponse<String> responseV1 = httpClient.send(requestV1, HttpResponse.BodyHandlers.ofString());
-            
-            if (responseV1.statusCode() == 200) {
-                return "V1 Models:\n" + responseV1.body();
-            } else {
-                return "V1 Error: " + responseV1.body();
-            }
-        } catch (Exception e) {
-            return "Error: " + e.getMessage();
-        }
-    }
 
     /**
-     * Vérifie un document en téléchargeant l'image et en l'envoyant à Gemini Vision
+     * Vérifie un document KYC avec Gemini Vision
+     * 
+     * @param documentUrl URL du document à vérifier
+     * @param documentType Type de document (INCOME_PROOF, ID_PROOF, etc.)
+     * @return Résultat de la vérification (APPROVED: ... ou REJECTED: ...)
      */
-    public String verifyDocumentWithVision(String documentUrl, String documentType) {
+    public String verifyDocument(String documentUrl, String documentType) {
+        log.info("Verifying document type {} with Gemini {}", documentType, modelName);
+        
         try {
-            log.info("Starting Gemini Vision verification for document type: {}", documentType);
-            log.info("Document URL: {}", documentUrl);
-
-            // Étape 1: Télécharger l'image depuis l'URL
+            // Télécharger l'image
             byte[] imageBytes = downloadImage(documentUrl);
             log.info("Image downloaded successfully, size: {} bytes", imageBytes.length);
 
-            // Étape 2: Encoder en base64
+            // Encoder en base64
             String base64Image = Base64.getEncoder().encodeToString(imageBytes);
-            log.info("Image encoded to base64, length: {} characters", base64Image.length());
 
-            // Étape 3: Déterminer le type MIME
+            // Déterminer le type MIME
             String mimeType = getMimeType(documentUrl);
-            log.info("Detected MIME type: {}", mimeType);
 
-            // Étape 4: Construire la requête pour Gemini Vision
+            // Construire la requête pour Gemini Vision
             String prompt = buildVerificationPrompt(documentType);
-            JsonObject requestBody = buildGeminiVisionRequest(prompt, base64Image, mimeType);
+            JsonObject requestBody = buildGeminiRequest(prompt, base64Image, mimeType);
 
-            // Étape 5: Envoyer à Gemini
+            // Envoyer à Gemini
             String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
             
             HttpRequest request = HttpRequest.newBuilder()
@@ -88,25 +68,21 @@ public class GeminiVisionService {
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
                     .build();
 
-            log.info("Sending request to Gemini Vision API (model: {})...", modelName);
+            log.info("Sending request to Gemini API...");
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             
-            log.info("Gemini API response status: {}", response.statusCode());
-            log.info("Gemini API response body: {}", response.body());
-
             if (response.statusCode() != 200) {
                 log.error("Gemini API error: {}", response.body());
                 return "ERROR: Gemini API returned status " + response.statusCode();
             }
 
-            // Étape 6: Parser la réponse
             String result = parseGeminiResponse(response.body());
-            log.info("Parsed result: {}", result);
+            log.info("Verification result: {}", result);
 
             return result;
 
         } catch (Exception e) {
-            log.error("Error during Gemini Vision verification: {}", e.getMessage(), e);
+            log.error("Gemini verification failed: {}", e.getMessage(), e);
             return "ERROR: " + e.getMessage();
         }
     }
@@ -118,7 +94,6 @@ public class GeminiVisionService {
         log.info("Downloading image from: {}", imageUrl);
         
         try {
-            // Convertir l'URL Cloudinary "raw" en URL d'image si nécessaire
             String processedUrl = processCloudinaryUrl(imageUrl);
             log.info("Processed URL: {}", processedUrl);
             
@@ -129,7 +104,7 @@ public class GeminiVisionService {
                 return bytes;
             }
         } catch (Exception e) {
-            log.error("Failed to download image from {}: {}", imageUrl, e.getMessage());
+            log.error("Failed to download image: {}", e.getMessage());
             throw new IOException("Cannot download image: " + e.getMessage(), e);
         }
     }
@@ -138,19 +113,13 @@ public class GeminiVisionService {
      * Convertit une URL Cloudinary "raw" en URL d'image accessible
      */
     private String processCloudinaryUrl(String url) {
-        // Si c'est une URL "raw/upload", la convertir en "image/upload" pour les images
         if (url.contains("/raw/upload/")) {
-            // Vérifier si c'est un PDF
             if (url.toLowerCase().endsWith(".pdf")) {
                 // Pour les PDF, convertir en image (première page)
-                String convertedUrl = url.replace("/raw/upload/", "/image/upload/f_jpg,pg_1/");
-                log.info("Converting PDF URL to image: {} -> {}", url, convertedUrl);
-                return convertedUrl;
+                return url.replace("/raw/upload/", "/image/upload/f_jpg,pg_1/");
             } else {
                 // Pour les images, juste changer raw en image
-                String convertedUrl = url.replace("/raw/upload/", "/image/upload/");
-                log.info("Converting raw URL to image: {} -> {}", url, convertedUrl);
-                return convertedUrl;
+                return url.replace("/raw/upload/", "/image/upload/");
             }
         }
         return url;
@@ -162,24 +131,17 @@ public class GeminiVisionService {
     private String getMimeType(String url) {
         String lowerUrl = url.toLowerCase();
         
-        // Si l'URL a été convertie avec f_jpg, c'est du JPEG
-        if (lowerUrl.contains("f_jpg")) {
-            return "image/jpeg";
-        }
-        
-        if (lowerUrl.endsWith(".jpg") || lowerUrl.endsWith(".jpeg")) {
+        if (lowerUrl.contains("f_jpg") || lowerUrl.endsWith(".jpg") || lowerUrl.endsWith(".jpeg")) {
             return "image/jpeg";
         } else if (lowerUrl.endsWith(".png")) {
             return "image/png";
-        } else if (lowerUrl.endsWith(".pdf")) {
-            // Si c'est un PDF, on va le convertir en image
-            return "image/jpeg";
         } else if (lowerUrl.endsWith(".webp")) {
             return "image/webp";
+        } else if (lowerUrl.endsWith(".pdf")) {
+            return "image/jpeg"; // PDF converti en JPG
         }
         
-        // Par défaut, considérer comme JPEG
-        return "image/jpeg";
+        return "image/jpeg"; // Par défaut
     }
 
     /**
@@ -203,14 +165,11 @@ public class GeminiVisionService {
     /**
      * Construit la requête JSON pour Gemini Vision
      */
-    private JsonObject buildGeminiVisionRequest(String prompt, String base64Image, String mimeType) {
+    private JsonObject buildGeminiRequest(String prompt, String base64Image, String mimeType) {
         JsonObject requestBody = new JsonObject();
         
-        // Créer le tableau de contents
         JsonArray contents = new JsonArray();
         JsonObject content = new JsonObject();
-        
-        // Créer le tableau de parts (texte + image)
         JsonArray parts = new JsonArray();
         
         // Part 1: Le texte du prompt
@@ -240,7 +199,6 @@ public class GeminiVisionService {
         try {
             JsonObject jsonResponse = gson.fromJson(responseBody, JsonObject.class);
             
-            // Vérifier s'il y a une erreur
             if (jsonResponse.has("error")) {
                 JsonObject error = jsonResponse.getAsJsonObject("error");
                 String errorMessage = error.get("message").getAsString();
@@ -248,7 +206,6 @@ public class GeminiVisionService {
                 return "ERROR: " + errorMessage;
             }
             
-            // Extraire le texte de la réponse
             String text = jsonResponse.getAsJsonArray("candidates")
                     .get(0).getAsJsonObject()
                     .getAsJsonObject("content")
@@ -258,60 +215,8 @@ public class GeminiVisionService {
             
             return text.trim();
         } catch (Exception e) {
-            log.error("Error parsing Gemini response: {}", e.getMessage(), e);
-            return "ERROR: Unable to parse Gemini response - " + e.getMessage();
-        }
-    }
-
-    /**
-     * Méthode de test pour vérifier si Gemini peut lire le document
-     */
-    public String testDocumentExtraction(String documentUrl) {
-        try {
-            log.info("=== TEST: Document Extraction ===");
-            log.info("URL: {}", documentUrl);
-
-            // Test 1: Téléchargement
-            byte[] imageBytes = downloadImage(documentUrl);
-            log.info("✓ Download successful: {} bytes", imageBytes.length);
-
-            // Test 2: Encodage base64
-            String base64Image = Base64.getEncoder().encodeToString(imageBytes);
-            log.info("✓ Base64 encoding successful: {} chars", base64Image.length());
-
-            // Test 3: Type MIME
-            String mimeType = getMimeType(documentUrl);
-            log.info("✓ MIME type detected: {}", mimeType);
-
-            // Test 4: Requête simple à Gemini
-            String simplePrompt = "Décris ce que tu vois dans cette image en quelques mots.";
-            JsonObject requestBody = buildGeminiVisionRequest(simplePrompt, base64Image, mimeType);
-            
-            String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
-            
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(apiUrl))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            
-            log.info("✓ Gemini API response status: {}", response.statusCode());
-            
-            if (response.statusCode() == 200) {
-                String result = parseGeminiResponse(response.body());
-                log.info("✓ Gemini can read the document!");
-                log.info("Gemini says: {}", result);
-                return "SUCCESS: Gemini can read the document. Response: " + result;
-            } else {
-                log.error("✗ Gemini API error: {}", response.body());
-                return "ERROR: Gemini API returned status " + response.statusCode() + " - " + response.body();
-            }
-
-        } catch (Exception e) {
-            log.error("✗ Test failed: {}", e.getMessage(), e);
-            return "ERROR: " + e.getMessage();
+            log.error("Error parsing Gemini response: {}", e.getMessage());
+            return "ERROR: Unable to parse Gemini response";
         }
     }
 }
