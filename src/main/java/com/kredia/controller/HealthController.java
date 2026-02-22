@@ -21,11 +21,11 @@ public class HealthController {
     @GetMapping
     public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> health = new HashMap<>();
-        
+
         health.put("status", "UP");
         health.put("application", "Kredia API");
         health.put("timestamp", java.time.LocalDateTime.now());
-        
+
         // Test de connexion à la base de données
         try (Connection conn = dataSource.getConnection()) {
             health.put("database", "Connected");
@@ -36,7 +36,7 @@ public class HealthController {
             health.put("error", e.getMessage());
             return ResponseEntity.status(503).body(health);
         }
-        
+
         return ResponseEntity.ok(health);
     }
 
