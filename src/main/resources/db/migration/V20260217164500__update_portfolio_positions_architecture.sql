@@ -17,13 +17,13 @@ SET asset_symbol = (
 WHERE asset_symbol IS NULL AND asset_id IS NOT NULL;
 
 -- Step 3: Drop the foreign key constraint
-ALTER TABLE portfolio_positions 
-DROP FOREIGN KEY fk_portfolio_asset;
+ALTER TABLE portfolio_positions
+DROP FOREIGN KEY portfolio_positions_ibfk_2;
 
 -- Step 4: Drop the old asset_id column
 ALTER TABLE portfolio_positions
 DROP COLUMN asset_id;
 
--- Step 5: Make asset_symbol NOT NULL after migration
+-- Step 4: Make asset_symbol NOT NULL after migration
 ALTER TABLE portfolio_positions
 MODIFY COLUMN asset_symbol VARCHAR(20) NOT NULL;
