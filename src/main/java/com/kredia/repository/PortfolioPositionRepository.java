@@ -10,6 +10,6 @@ import java.util.Optional;
 @Repository
 public interface PortfolioPositionRepository extends JpaRepository<PortfolioPosition, Long> {
     List<PortfolioPosition> findByUserUserId(Long userId);
-    List<PortfolioPosition> findByAssetAssetId(Long assetId);
-    Optional<PortfolioPosition> findByUserUserIdAndAssetAssetId(Long userId, Long assetId);
+    List<PortfolioPosition> findByAssetSymbol(String assetSymbol);
+    Optional<PortfolioPosition> findByUserUserIdAndAssetSymbol(Long userId, String assetSymbol);
 }

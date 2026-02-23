@@ -1,5 +1,6 @@
 package com.kredia.controller;
 
+import com.kredia.dto.investment.PortfolioPositionDTO;
 import com.kredia.entity.investment.*;
 import com.kredia.enums.AssetCategory;
 import com.kredia.enums.OrderStatus;
@@ -218,11 +219,18 @@ public class InvestmentController {
     // ==================== PortfolioPosition Endpoints ====================
     
     @PostMapping("/positions")
-    public ResponseEntity<PortfolioPosition> createPosition(@RequestBody PortfolioPosition position) {
+    public ResponseEntity<PortfolioPosition> createPosition(@RequestBody PortfolioPositionDTO positionDTO) {
         try {
-            PortfolioPosition createdPosition = investmentService.createPosition(position);
+            System.out.println("Creating position for user ID: " + positionDTO.getUserId() + ", Asset Symbol: " + positionDTO.getAssetSymbol());
+            
+            if (positionDTO.getUserId() == null || positionDTO.getAssetSymbol() == null) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+            
+            PortfolioPosition createdPosition = investmentService.createPositionFromDTO(positionDTO);
             return new ResponseEntity<>(createdPosition, HttpStatus.CREATED);
         } catch (RuntimeException e) {
+            System.out.println("Error creating position: " + e.getMessage());
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
     }
@@ -272,9 +280,9 @@ public class InvestmentController {
         return new ResponseEntity<>(positions, HttpStatus.OK);
     }
 
-    @GetMapping("/positions/user/{userId}/asset/{assetId}")
-    public ResponseEntity<PortfolioPosition> getPositionByUserIdAndAssetId(@PathVariable Long userId, @PathVariable Long assetId) {
-        return investmentService.getPositionByUserIdAndAssetId(userId, assetId)
+    @GetMapping("/positions/user/{userId}/asset/{assetSymbol}")
+    public ResponseEntity<PortfolioPosition> getPositionByUserIdAndAssetSymbol(@PathVariable Long userId, @PathVariable String assetSymbol) {
+        return investmentService.getPositionByUserIdAndAssetSymbol(userId, assetSymbol)
                 .map(position -> new ResponseEntity<>(position, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }

@@ -1,5 +1,6 @@
 package com.kredia.service;
 
+import com.kredia.dto.investment.PortfolioPositionDTO;
 import com.kredia.entity.investment.*;
 import com.kredia.entity.user.User;
 import com.kredia.enums.AssetCategory;
@@ -24,6 +25,7 @@ public class InvestmentService {
     private final InvestmentStrategyRepository strategyRepository;
     private final PortfolioPositionRepository positionRepository;
     private final UserRepository userRepository;
+    private final MarketPriceService marketPriceService;
 
     @Autowired
     public InvestmentService(
@@ -31,12 +33,14 @@ public class InvestmentService {
             InvestmentOrderRepository orderRepository,
             InvestmentStrategyRepository strategyRepository,
             PortfolioPositionRepository positionRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            MarketPriceService marketPriceService) {
         this.assetRepository = assetRepository;
         this.orderRepository = orderRepository;
         this.strategyRepository = strategyRepository;
         this.positionRepository = positionRepository;
         this.userRepository = userRepository;
+        this.marketPriceService = marketPriceService;
     }
 
     // ==================== InvestmentAsset CRUD ====================
@@ -212,18 +216,33 @@ public class InvestmentService {
 
     // ==================== PortfolioPosition CRUD ====================
     
+    public PortfolioPosition createPositionFromDTO(PortfolioPositionDTO positionDTO) {
+        // Fetch and validate User
+        User user = userRepository.findById(positionDTO.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found with id " + positionDTO.getUserId()));
+
+        // Fetch the current market price automatically from external API (Binance / Alpha Vantage)
+        BigDecimal currentMarketPrice = marketPriceService.getCurrentPrice(positionDTO.getAssetSymbol());
+
+        // Create new PortfolioPosition using the fetched market price as avg purchase price
+        PortfolioPosition position = new PortfolioPosition(
+            null, // positionId will be generated
+            user,
+            positionDTO.getAssetSymbol(),
+            positionDTO.getQuantity(),
+            currentMarketPrice,
+            LocalDateTime.now()
+        );
+
+        return positionRepository.save(position);
+    }
+    
     public PortfolioPosition createPosition(PortfolioPosition position) {
         // Validate and fetch full User entity
         Long userId = position.getUser().getUserId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id " + userId));
         position.setUser(user);
-
-        // Validate and fetch full Asset entity
-        Long assetId = position.getAsset().getAssetId();
-        InvestmentAsset asset = assetRepository.findById(assetId)
-                .orElseThrow(() -> new RuntimeException("Asset not found with id " + assetId));
-        position.setAsset(asset);
 
         return positionRepository.save(position);
     }
@@ -246,10 +265,8 @@ public class InvestmentService {
             position.setUser(user);
         }
         
-        if (positionDetails.getAsset() != null && positionDetails.getAsset().getAssetId() != null) {
-            InvestmentAsset asset = assetRepository.findById(positionDetails.getAsset().getAssetId())
-                    .orElseThrow(() -> new RuntimeException("Asset not found"));
-            position.setAsset(asset);
+        if (positionDetails.getAssetSymbol() != null) {
+            position.setAssetSymbol(positionDetails.getAssetSymbol());
         }
         
         position.setCurrentQuantity(positionDetails.getCurrentQuantity());
@@ -270,10 +287,12 @@ public class InvestmentService {
     }
 
     public List<PortfolioPosition> getPositionsByAssetId(Long assetId) {
-        return positionRepository.findByAssetAssetId(assetId);
+        // Note: assetId parameter is kept for API compatibility
+        // but we can't filter by assetId anymore since PortfolioPosition uses assetSymbol
+        return positionRepository.findAll();
     }
 
-    public Optional<PortfolioPosition> getPositionByUserIdAndAssetId(Long userId, Long assetId) {
-        return positionRepository.findByUserUserIdAndAssetAssetId(userId, assetId);
+    public Optional<PortfolioPosition> getPositionByUserIdAndAssetSymbol(Long userId, String assetSymbol) {
+        return positionRepository.findByUserUserIdAndAssetSymbol(userId, assetSymbol);
     }
 }

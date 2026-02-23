@@ -42,9 +42,6 @@ public class InvestmentAsset {
     @OneToMany(mappedBy = "asset", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<InvestmentOrder> orders;
     
-    @OneToMany(mappedBy = "asset", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<PortfolioPosition> portfolioPositions;
-    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
