@@ -47,4 +47,5 @@ spring-boot-devtools.properties
 logs/
 *.log
 
-application.properties
+# Fichiers de configuration sensibles
+src/main/resources/secrets.properties
