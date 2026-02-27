@@ -1,7 +1,9 @@
 package com.kredia.dto.reclamation;
 
 import com.kredia.enums.Priority;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public record ReclamationCreateRequest(
         @NotNull(message = "userId is required")

@@ -27,7 +27,9 @@ public class Notification {
     private Long userId;
 
     @Column(name = "reclamation_id")
-    private Long reclamationId; // link if related to complaint
+    private Long reclamationId;
+
+    // link if related to complaint
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -50,4 +52,5 @@ public class Notification {
     void onCreate() {
         sentAt = LocalDateTime.now();
     }
+
 }

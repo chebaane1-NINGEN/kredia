@@ -4,12 +4,17 @@ import com.kredia.dto.reclamation.*;
 import com.kredia.enums.ReclamationStatus;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
+
 public interface ReclamationService {
+
     ReclamationResponse create(ReclamationCreateRequest request);
 
     ReclamationResponse update(Long reclamationId, ReclamationUpdateRequest request);
 
     ReclamationResponse updateStatus(Long reclamationId, ReclamationStatusUpdateRequest request);
+
+    ReclamationResponse assign(Long reclamationId, ReclamationAssignRequest request);
 
     ReclamationResponse getById(Long reclamationId);
 
@@ -19,5 +24,5 @@ public interface ReclamationService {
 
     Page<ReclamationResponse> getByStatus(ReclamationStatus status, int page, int size);
 
-    java.util.List<ReclamationHistoryResponse> getHistory(Long reclamationId);
+    List<ReclamationHistoryResponse> getHistory(Long reclamationId);
 }
