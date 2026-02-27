@@ -44,13 +44,56 @@ public class EcheanceService {
                 
                 // IMPORTANT: amount_paid ne doit JAMAIS dépasser amount_due
                 if (totalPaid.compareTo(echeance.getAmountDue()) >= 0) {
-                    // Paiement complet ou avec surplus - plafonner à amount_due
+                    // Paiement complet ou avec surplus
+                    java.math.BigDecimal surplus = totalPaid.subtract(echeance.getAmountDue());
+                    
+                    // Plafonner à amount_due
                     echeance.setAmountPaid(echeance.getAmountDue());
                     markAsPaid(echeance);
+                    
+                    // Si surplus, l'appliquer à la prochaine échéance
+                    if (surplus.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        log.info("Surplus de {} détecté pour l'échéance {}", surplus, echeance.getEcheanceId());
+                        
+                        // Chercher la prochaine échéance non payée du même crédit
+                        Long creditId = echeance.getCredit().getCreditId();
+                        List<Echeance> nextEcheances = echeanceRepository.findNextUnpaidEcheancesByCreditId(creditId);
+                        
+                        // Filtrer pour exclure l'échéance actuelle et prendre la première suivante
+                        Echeance nextEcheance = nextEcheances.stream()
+                            .filter(e -> !e.getEcheanceId().equals(echeance.getEcheanceId()))
+                            .findFirst()
+                            .orElse(null);
+                        
+                        if (nextEcheance != null) {
+                            // Appliquer le surplus à la prochaine échéance
+                            java.math.BigDecimal nextCurrentPaid = nextEcheance.getAmountPaid() != null ? 
+                                nextEcheance.getAmountPaid() : java.math.BigDecimal.ZERO;
+                            java.math.BigDecimal nextNewPaid = nextCurrentPaid.add(surplus);
+                            
+                            // Vérifier si le surplus couvre complètement la prochaine échéance
+                            if (nextNewPaid.compareTo(nextEcheance.getAmountDue()) >= 0) {
+                                nextEcheance.setAmountPaid(nextEcheance.getAmountDue());
+                                markAsPaid(nextEcheance);
+                                log.info("Surplus de {} appliqué à l'échéance {}. Échéance suivante payée complètement.", 
+                                    surplus, nextEcheance.getEcheanceId());
+                            } else {
+                                nextEcheance.setAmountPaid(nextNewPaid);
+                                nextEcheance.setStatus(EcheanceStatus.PARTIALLY_PAID);
+                                nextEcheance.setPaidAt(LocalDateTime.now());
+                                echeanceRepository.save(nextEcheance);
+                                log.info("Surplus de {} appliqué à l'échéance {}. Paiement partiel.", 
+                                    surplus, nextEcheance.getEcheanceId());
+                            }
+                        } else {
+                            log.info("Surplus de {} mais aucune échéance suivante trouvée pour le crédit {}", surplus, creditId);
+                        }
+                    }
                 } else {
                     // Paiement partiel
                     echeance.setAmountPaid(totalPaid);
                     echeance.setStatus(EcheanceStatus.PARTIALLY_PAID);
+                    echeance.setPaidAt(LocalDateTime.now());
                     echeanceRepository.save(echeance);
                 }
             }
@@ -195,6 +238,7 @@ public class EcheanceService {
             isPartialPayment = true;
             echeance.setAmountPaid(newTotalPaid);
             echeance.setStatus(EcheanceStatus.PARTIALLY_PAID);
+            echeance.setPaidAt(LocalDateTime.now());
             echeanceRepository.save(echeance);
             
             log.info("Paiement partiel pour l'echeance {}. Montant payé: {}, Total payé: {}, Reste à payer: {}", 
@@ -221,10 +265,48 @@ public class EcheanceService {
             log.info("Paiement avec surplus pour l'echeance {}. Montant payé: {}, Comptabilisé: {}, Surplus: {}", 
                 echeanceId, amountPaid, amountCounted, surplus);
             
-            message = "Échéance payée complètement avec surplus. Dernier paiement: " + amountPaid + 
-                ". Montant comptabilisé: " + amountCounted + 
-                ". Total payé: " + echeance.getAmountDue() + 
-                ". Surplus: " + surplus;
+            // Chercher la prochaine échéance non payée du même crédit
+            Long creditId = echeance.getCredit().getCreditId();
+            List<Echeance> nextEcheances = echeanceRepository.findNextUnpaidEcheancesByCreditId(creditId);
+            
+            // Filtrer pour exclure l'échéance actuelle et prendre la première suivante
+            Echeance nextEcheance = nextEcheances.stream()
+                .filter(e -> !e.getEcheanceId().equals(echeanceId))
+                .findFirst()
+                .orElse(null);
+            
+            if (nextEcheance != null) {
+                // Appliquer le surplus à la prochaine échéance
+                java.math.BigDecimal nextCurrentPaid = nextEcheance.getAmountPaid() != null ? 
+                    nextEcheance.getAmountPaid() : java.math.BigDecimal.ZERO;
+                java.math.BigDecimal nextNewPaid = nextCurrentPaid.add(surplus);
+                
+                // Vérifier si le surplus couvre complètement la prochaine échéance
+                if (nextNewPaid.compareTo(nextEcheance.getAmountDue()) >= 0) {
+                    nextEcheance.setAmountPaid(nextEcheance.getAmountDue());
+                    markAsPaid(nextEcheance);
+                    log.info("Surplus de {} appliqué à l'échéance {}. Échéance suivante payée complètement.", 
+                        surplus, nextEcheance.getEcheanceId());
+                } else {
+                    nextEcheance.setAmountPaid(nextNewPaid);
+                    nextEcheance.setStatus(EcheanceStatus.PARTIALLY_PAID);
+                    nextEcheance.setPaidAt(LocalDateTime.now());
+                    echeanceRepository.save(nextEcheance);
+                    log.info("Surplus de {} appliqué à l'échéance {}. Paiement partiel.", 
+                        surplus, nextEcheance.getEcheanceId());
+                }
+                
+                message = "Échéance payée complètement avec surplus. Dernier paiement: " + amountPaid + 
+                    ". Montant comptabilisé: " + amountCounted + 
+                    ". Total payé: " + echeance.getAmountDue() + 
+                    ". Surplus de " + surplus + " appliqué à l'échéance #" + nextEcheance.getEcheanceId();
+            } else {
+                log.info("Surplus de {} mais aucune échéance suivante trouvée pour le crédit {}", surplus, creditId);
+                message = "Échéance payée complètement avec surplus. Dernier paiement: " + amountPaid + 
+                    ". Montant comptabilisé: " + amountCounted + 
+                    ". Total payé: " + echeance.getAmountDue() + 
+                    ". Surplus: " + surplus + " (aucune échéance suivante à payer)";
+            }
             
             return new EcheancePaymentResponse(
                 echeance, isPartialPayment, message, echeance.getAmountDue(), java.math.BigDecimal.ZERO
