@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kredia.entity.user.User;
 import com.kredia.enums.CreditStatus;
+import com.kredia.enums.RepaymentType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -14,7 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
+
 import com.kredia.entity.user.User;
 
 @Entity
@@ -48,7 +49,6 @@ public class Credit {
         }
     }
 
-
     @NotNull(message = "Le montant est obligatoire")
     @Positive(message = "Le montant doit être positif")
     @Column(name = "amount", nullable = false)
@@ -71,6 +71,14 @@ public class Credit {
     @Positive(message = "La durée en mois doit être positive")
     @Column(name = "term_months", nullable = false)
     private Integer termMonths;
+
+    @NotNull(message = "Le type de remboursement est obligatoire")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "repayment_type", nullable = false)
+    private RepaymentType repaymentType = RepaymentType.MENSUALITE_CONSTANTE;
+
+    @Column(name = "monthly_payment", precision = 15, scale = 2)
+    private BigDecimal monthlyPayment;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
