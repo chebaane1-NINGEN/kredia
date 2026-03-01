@@ -99,22 +99,115 @@ public class CreditExcelExportService {
 
         // Data
         int rowIdx = 1;
+        int lastDataRow = rowIdx;
         if (echeances != null) {
             for (Echeance e : echeances) {
                 Row row = sheet.createRow(rowIdx++);
-                row.createCell(0).setCellValue(e.getEcheanceNumber() != null ? e.getEcheanceNumber() : 0);
-                row.createCell(1).setCellValue(e.getDueDate() != null ? e.getDueDate().toString() : "");
-                row.createCell(2).setCellValue(e.getCapitalDebut() != null ? e.getCapitalDebut().doubleValue() : 0.0);
-                row.createCell(3).setCellValue(e.getAmountDue() != null ? e.getAmountDue().doubleValue() : 0.0);
-                row.createCell(4).setCellValue(e.getPrincipalDue() != null ? e.getPrincipalDue().doubleValue() : 0.0);
-                row.createCell(5).setCellValue(e.getInterestDue() != null ? e.getInterestDue().doubleValue() : 0.0);
-                row.createCell(6)
-                        .setCellValue(e.getRemainingBalance() != null ? e.getRemainingBalance().doubleValue() : 0.0);
-                row.createCell(7).setCellValue(e.getStatus() != null ? e.getStatus().name() : "");
-                row.createCell(8).setCellValue(e.getAmountPaid() != null ? e.getAmountPaid().doubleValue() : 0.0);
-                row.createCell(9).setCellValue(e.getPaidAt() != null ? e.getPaidAt().toString() : "");
+                lastDataRow = rowIdx - 1;
+                
+                // Déterminer la couleur selon le statut
+                String status = e.getStatus() != null ? e.getStatus().name() : "";
+                IndexedColors bgColor = null;
+                
+                if ("PAID".equals(status)) {
+                    bgColor = IndexedColors.LIGHT_GREEN;
+                } else if ("PARTIALLY_PAID".equals(status)) {
+                    bgColor = IndexedColors.YELLOW;
+                } else if ("OVERDUE".equals(status)) {
+                    bgColor = IndexedColors.RED;
+                }
+                
+                // Créer et appliquer le style pour chaque cellule
+                for (int i = 0; i < 10; i++) {
+                    Cell cell = row.createCell(i);
+                    
+                    // Remplir les valeurs
+                    switch (i) {
+                        case 0:
+                            cell.setCellValue(e.getEcheanceNumber() != null ? e.getEcheanceNumber() : 0);
+                            break;
+                        case 1:
+                            cell.setCellValue(e.getDueDate() != null ? e.getDueDate().toString() : "");
+                            break;
+                        case 2:
+                            cell.setCellValue(e.getCapitalDebut() != null ? e.getCapitalDebut().doubleValue() : 0.0);
+                            break;
+                        case 3:
+                            cell.setCellValue(e.getAmountDue() != null ? e.getAmountDue().doubleValue() : 0.0);
+                            break;
+                        case 4:
+                            cell.setCellValue(e.getPrincipalDue() != null ? e.getPrincipalDue().doubleValue() : 0.0);
+                            break;
+                        case 5:
+                            cell.setCellValue(e.getInterestDue() != null ? e.getInterestDue().doubleValue() : 0.0);
+                            break;
+                        case 6:
+                            cell.setCellValue(e.getRemainingBalance() != null ? e.getRemainingBalance().doubleValue() : 0.0);
+                            break;
+                        case 7:
+                            cell.setCellValue(status);
+                            break;
+                        case 8:
+                            cell.setCellValue(e.getAmountPaid() != null ? e.getAmountPaid().doubleValue() : 0.0);
+                            break;
+                        case 9:
+                            cell.setCellValue(e.getPaidAt() != null ? e.getPaidAt().toString() : "");
+                            break;
+                    }
+                    
+                    // Appliquer la couleur si nécessaire
+                    if (bgColor != null) {
+                        CellStyle cellStyle = workbook.createCellStyle();
+                        cellStyle.setFillForegroundColor(bgColor.getIndex());
+                        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                        cell.setCellStyle(cellStyle);
+                    }
+                }
             }
         }
+
+        // Activer le filtre automatique sur les en-têtes
+        if (echeances != null && !echeances.isEmpty()) {
+            sheet.setAutoFilter(new org.apache.poi.ss.util.CellRangeAddress(0, lastDataRow, 0, columns.length - 1));
+        }
+
+        // Ajouter une légende en bas du tableau
+        rowIdx++; // Ligne vide
+        Row legendRow1 = sheet.createRow(rowIdx++);
+        legendRow1.createCell(0).setCellValue("Légende des couleurs:");
+        
+        // Style pour la légende - Vert
+        CellStyle greenLegendStyle = workbook.createCellStyle();
+        greenLegendStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+        greenLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        
+        Row legendRow2 = sheet.createRow(rowIdx++);
+        Cell greenCell = legendRow2.createCell(0);
+        greenCell.setCellValue("PAID");
+        greenCell.setCellStyle(greenLegendStyle);
+        legendRow2.createCell(1).setCellValue("= Échéance payée intégralement");
+        
+        // Style pour la légende - Jaune
+        CellStyle yellowLegendStyle = workbook.createCellStyle();
+        yellowLegendStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
+        yellowLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        
+        Row legendRow3 = sheet.createRow(rowIdx++);
+        Cell yellowCell = legendRow3.createCell(0);
+        yellowCell.setCellValue("PARTIALLY_PAID");
+        yellowCell.setCellStyle(yellowLegendStyle);
+        legendRow3.createCell(1).setCellValue("= Échéance partiellement payée");
+        
+        // Style pour la légende - Rouge
+        CellStyle redLegendStyle = workbook.createCellStyle();
+        redLegendStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
+        redLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        
+        Row legendRow4 = sheet.createRow(rowIdx++);
+        Cell redCell = legendRow4.createCell(0);
+        redCell.setCellValue("OVERDUE");
+        redCell.setCellStyle(redLegendStyle);
+        legendRow4.createCell(1).setCellValue("= Échéance en retard");
 
         for (int i = 0; i < columns.length; i++) {
             sheet.autoSizeColumn(i);
@@ -135,16 +228,87 @@ public class CreditExcelExportService {
 
         // Data
         int rowIdx = 1;
+        int lastDataRow = rowIdx;
         if (kycLoans != null) {
             for (KycLoan kyc : kycLoans) {
                 Row row = sheet.createRow(rowIdx++);
-                row.createCell(0).setCellValue(kyc.getKycLoanId() != null ? String.valueOf(kyc.getKycLoanId()) : "");
-                row.createCell(1).setCellValue(kyc.getDocumentType() != null ? kyc.getDocumentType().name() : "");
-                row.createCell(2).setCellValue(kyc.getDocumentPath() != null ? kyc.getDocumentPath() : "");
-                row.createCell(3).setCellValue(kyc.getVerifiedStatus() != null ? kyc.getVerifiedStatus().name() : "");
-                row.createCell(4).setCellValue(kyc.getSubmittedAt() != null ? kyc.getSubmittedAt().toString() : "");
+                lastDataRow = rowIdx - 1;
+                
+                // Déterminer la couleur selon le statut KYC
+                String status = kyc.getVerifiedStatus() != null ? kyc.getVerifiedStatus().name() : "";
+                IndexedColors bgColor = null;
+                
+                if ("APPROVED".equals(status)) {
+                    bgColor = IndexedColors.LIGHT_GREEN;
+                } else if ("REJECTED".equals(status)) {
+                    bgColor = IndexedColors.RED;
+                }
+                
+                // Créer et appliquer le style pour chaque cellule
+                for (int i = 0; i < 5; i++) {
+                    Cell cell = row.createCell(i);
+                    
+                    // Remplir les valeurs
+                    switch (i) {
+                        case 0:
+                            cell.setCellValue(kyc.getKycLoanId() != null ? String.valueOf(kyc.getKycLoanId()) : "");
+                            break;
+                        case 1:
+                            cell.setCellValue(kyc.getDocumentType() != null ? kyc.getDocumentType().name() : "");
+                            break;
+                        case 2:
+                            cell.setCellValue(kyc.getDocumentPath() != null ? kyc.getDocumentPath() : "");
+                            break;
+                        case 3:
+                            cell.setCellValue(status);
+                            break;
+                        case 4:
+                            cell.setCellValue(kyc.getSubmittedAt() != null ? kyc.getSubmittedAt().toString() : "");
+                            break;
+                    }
+                    
+                    // Appliquer la couleur si nécessaire
+                    if (bgColor != null) {
+                        CellStyle cellStyle = workbook.createCellStyle();
+                        cellStyle.setFillForegroundColor(bgColor.getIndex());
+                        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                        cell.setCellStyle(cellStyle);
+                    }
+                }
             }
         }
+
+        // Activer le filtre automatique sur les en-têtes
+        if (kycLoans != null && !kycLoans.isEmpty()) {
+            sheet.setAutoFilter(new org.apache.poi.ss.util.CellRangeAddress(0, lastDataRow, 0, columns.length - 1));
+        }
+
+        // Ajouter une légende en bas du tableau
+        rowIdx++; // Ligne vide
+        Row legendRow1 = sheet.createRow(rowIdx++);
+        legendRow1.createCell(0).setCellValue("Légende des couleurs:");
+        
+        // Style pour la légende - Vert
+        CellStyle greenLegendStyle = workbook.createCellStyle();
+        greenLegendStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+        greenLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        
+        Row legendRow2 = sheet.createRow(rowIdx++);
+        Cell greenCell = legendRow2.createCell(0);
+        greenCell.setCellValue("APPROVED");
+        greenCell.setCellStyle(greenLegendStyle);
+        legendRow2.createCell(1).setCellValue("= Document approuvé");
+        
+        // Style pour la légende - Rouge
+        CellStyle redLegendStyle = workbook.createCellStyle();
+        redLegendStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
+        redLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        
+        Row legendRow3 = sheet.createRow(rowIdx++);
+        Cell redCell = legendRow3.createCell(0);
+        redCell.setCellValue("REJECTED");
+        redCell.setCellStyle(redLegendStyle);
+        legendRow3.createCell(1).setCellValue("= Document rejeté");
 
         for (int i = 0; i < columns.length; i++) {
             sheet.autoSizeColumn(i);
