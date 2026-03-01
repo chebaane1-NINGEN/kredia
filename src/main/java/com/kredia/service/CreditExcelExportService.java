@@ -113,7 +113,7 @@ public class CreditExcelExportService {
                     bgColor = IndexedColors.LIGHT_GREEN;
                 } else if ("PARTIALLY_PAID".equals(status)) {
                     bgColor = IndexedColors.YELLOW;
-                } else if ("OVERDUE".equals(status)) {
+                } else if ("PENDING".equals(status)) {
                     bgColor = IndexedColors.RED;
                 }
                 
@@ -205,9 +205,9 @@ public class CreditExcelExportService {
         
         Row legendRow4 = sheet.createRow(rowIdx++);
         Cell redCell = legendRow4.createCell(0);
-        redCell.setCellValue("OVERDUE");
+        redCell.setCellValue("PENDING");
         redCell.setCellStyle(redLegendStyle);
-        legendRow4.createCell(1).setCellValue("= Échéance en retard");
+        legendRow4.createCell(1).setCellValue("= Échéance en attente");
 
         for (int i = 0; i < columns.length; i++) {
             sheet.autoSizeColumn(i);
