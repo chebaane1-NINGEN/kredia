@@ -12,6 +12,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "transaction")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

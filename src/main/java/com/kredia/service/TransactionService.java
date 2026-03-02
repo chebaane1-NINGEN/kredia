@@ -20,14 +20,17 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
     private final TransactionAuditLogService auditLogService;
+    private final FraudDetectionService fraudDetectionService;
 
     @Autowired
     public TransactionService(TransactionRepository transactionRepository, 
                               WalletRepository walletRepository,
-                              TransactionAuditLogService auditLogService) {
+                              TransactionAuditLogService auditLogService,
+                              FraudDetectionService fraudDetectionService) {
         this.transactionRepository = transactionRepository;
         this.walletRepository = walletRepository;
         this.auditLogService = auditLogService;
+        this.fraudDetectionService = fraudDetectionService;
     }
 
     public Transaction createTransaction(Transaction transaction) {
@@ -54,6 +57,9 @@ public class TransactionService {
         
         // Audit the transaction
         auditLogService.auditTransaction(savedTransaction);
+
+        // Analyze for fraud
+        fraudDetectionService.analyzeTransaction(savedTransaction);
         
         return savedTransaction;
     }

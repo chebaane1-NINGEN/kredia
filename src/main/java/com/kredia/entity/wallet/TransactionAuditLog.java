@@ -20,7 +20,7 @@ public class TransactionAuditLog {
     private Long logId;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "transaction_id", nullable = false)
+    @JoinColumn(name = "transaction_id", nullable = true)
     private Transaction transaction;
     
     @Column(name = "previous_hash", length = 256)

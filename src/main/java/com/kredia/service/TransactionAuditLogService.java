@@ -32,8 +32,11 @@ public class TransactionAuditLogService {
     }
 
     public TransactionAuditLog createAuditLog(Long transactionId, String dataHash, String previousHash, String blockchainTxHash) {
-        Transaction transaction = transactionRepository.findById(transactionId)
+        Transaction transaction = null;
+        if (transactionId != null) {
+            transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction not found with id: " + transactionId));
+        }
 
         TransactionAuditLog log = new TransactionAuditLog();
         log.setTransaction(transaction);
