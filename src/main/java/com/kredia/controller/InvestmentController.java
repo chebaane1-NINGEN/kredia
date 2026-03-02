@@ -1,6 +1,7 @@
 package com.kredia.controller;
 
 import com.kredia.dto.investment.PortfolioPositionDTO;
+import com.kredia.dto.investment.PortfolioPositionResponseDTO;
 import com.kredia.entity.investment.*;
 import com.kredia.enums.AssetCategory;
 import com.kredia.enums.OrderStatus;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -236,15 +238,15 @@ public class InvestmentController {
     }
 
     @GetMapping("/positions/{id}")
-    public ResponseEntity<PortfolioPosition> getPositionById(@PathVariable Long id) {
-        return investmentService.getPositionById(id)
+    public ResponseEntity<PortfolioPositionResponseDTO> getPositionById(@PathVariable Long id) {
+        return investmentService.getPositionWithProfitById(id)
                 .map(position -> new ResponseEntity<>(position, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @GetMapping("/positions")
-    public ResponseEntity<List<PortfolioPosition>> getAllPositions() {
-        List<PortfolioPosition> positions = investmentService.getAllPositions();
+    public ResponseEntity<List<PortfolioPositionResponseDTO>> getAllPositions() {
+        List<PortfolioPositionResponseDTO> positions = investmentService.getAllPositionsWithProfit();
         return new ResponseEntity<>(positions, HttpStatus.OK);
     }
 
@@ -269,8 +271,8 @@ public class InvestmentController {
     }
 
     @GetMapping("/positions/user/{userId}")
-    public ResponseEntity<List<PortfolioPosition>> getPositionsByUserId(@PathVariable Long userId) {
-        List<PortfolioPosition> positions = investmentService.getPositionsByUserId(userId);
+    public ResponseEntity<List<PortfolioPositionResponseDTO>> getPositionsByUserId(@PathVariable Long userId) {
+        List<PortfolioPositionResponseDTO> positions = investmentService.getPositionsWithProfitByUserId(userId);
         return new ResponseEntity<>(positions, HttpStatus.OK);
     }
 
@@ -281,8 +283,8 @@ public class InvestmentController {
     }
 
     @GetMapping("/positions/user/{userId}/asset/{assetSymbol}")
-    public ResponseEntity<PortfolioPosition> getPositionByUserIdAndAssetSymbol(@PathVariable Long userId, @PathVariable String assetSymbol) {
-        return investmentService.getPositionByUserIdAndAssetSymbol(userId, assetSymbol)
+    public ResponseEntity<PortfolioPositionResponseDTO> getPositionByUserIdAndAssetSymbol(@PathVariable Long userId, @PathVariable String assetSymbol) {
+        return investmentService.getPositionWithProfitByUserIdAndAssetSymbol(userId, assetSymbol)
                 .map(position -> new ResponseEntity<>(position, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }

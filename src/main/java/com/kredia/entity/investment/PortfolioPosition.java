@@ -1,5 +1,6 @@
 package com.kredia.entity.investment;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.kredia.entity.user.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class PortfolioPosition {
     
     @Id

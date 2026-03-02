@@ -1,6 +1,7 @@
 package com.kredia.service;
 
 import com.kredia.dto.investment.PortfolioPositionDTO;
+import com.kredia.dto.investment.PortfolioPositionResponseDTO;
 import com.kredia.entity.investment.*;
 import com.kredia.entity.user.User;
 import com.kredia.enums.AssetCategory;
@@ -12,9 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -294,5 +297,98 @@ public class InvestmentService {
 
     public Optional<PortfolioPosition> getPositionByUserIdAndAssetSymbol(Long userId, String assetSymbol) {
         return positionRepository.findByUserUserIdAndAssetSymbol(userId, assetSymbol);
+    }
+
+    // ==================== Portfolio Value Calculation ====================
+    
+    /**
+     * Convertit une PortfolioPosition en PortfolioPositionResponseDTO avec calculs de profit.
+     */
+    private PortfolioPositionResponseDTO convertToResponseDTO(PortfolioPosition position) {
+        try {
+            // Récupérer le prix actuel du marché
+            BigDecimal currentMarketPrice = marketPriceService.getCurrentPrice(position.getAssetSymbol());
+            
+            // Calculer la valeur actuelle: quantité * prix actuel
+            BigDecimal currentValue = position.getCurrentQuantity().multiply(currentMarketPrice);
+            
+            // Calculer la valeur d'achat initiale: quantité * prix d'achat moyen
+            BigDecimal purchaseValue = position.getCurrentQuantity().multiply(position.getAvgPurchasePrice());
+            
+            // Calculer le profit/perte en dollars: valeur actuelle - valeur d'achat
+            BigDecimal profitLossDollars = currentValue.subtract(purchaseValue);
+            
+            // Calculer le profit/perte en pourcentage: ((prix actuel - prix achat) / prix achat) * 100
+            BigDecimal profitLossPercentage = BigDecimal.ZERO;
+            if (position.getAvgPurchasePrice().compareTo(BigDecimal.ZERO) > 0) {
+                profitLossPercentage = currentMarketPrice.subtract(position.getAvgPurchasePrice())
+                        .divide(position.getAvgPurchasePrice(), 4, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal("100"));
+            }
+            
+            return new PortfolioPositionResponseDTO(
+                    position.getPositionId(),
+                    position.getUser().getUserId(),
+                    position.getAssetSymbol(),
+                    position.getCurrentQuantity(),
+                    position.getAvgPurchasePrice(),
+                    currentMarketPrice,
+                    currentValue,
+                    profitLossDollars,
+                    profitLossPercentage,
+                    position.getCreatedAt()
+            );
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la conversion de la position " + position.getPositionId() + ": " + e.getMessage());
+            // En cas d'erreur, retourner un DTO avec des valeurs null pour les calculs
+            return new PortfolioPositionResponseDTO(
+                    position.getPositionId(),
+                    position.getUser().getUserId(),
+                    position.getAssetSymbol(),
+                    position.getCurrentQuantity(),
+                    position.getAvgPurchasePrice(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    position.getCreatedAt()
+            );
+        }
+    }
+
+    /**
+     * Récupère une position enrichie avec les calculs de profit.
+     */
+    public Optional<PortfolioPositionResponseDTO> getPositionWithProfitById(Long id) {
+        return positionRepository.findById(id)
+                .map(this::convertToResponseDTO);
+    }
+
+    /**
+     * Récupère toutes les positions d'un utilisateur enrichies avec les calculs de profit.
+     */
+    public List<PortfolioPositionResponseDTO> getPositionsWithProfitByUserId(Long userId) {
+        List<PortfolioPosition> positions = positionRepository.findByUserUserId(userId);
+        return positions.stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Récupère toutes les positions enrichies avec les calculs de profit.
+     */
+    public List<PortfolioPositionResponseDTO> getAllPositionsWithProfit() {
+        List<PortfolioPosition> positions = positionRepository.findAll();
+        return positions.stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Récupère une position spécifique d'un utilisateur enrichie avec les calculs de profit.
+     */
+    public Optional<PortfolioPositionResponseDTO> getPositionWithProfitByUserIdAndAssetSymbol(Long userId, String assetSymbol) {
+        return positionRepository.findByUserUserIdAndAssetSymbol(userId, assetSymbol)
+                .map(this::convertToResponseDTO);
     }
 }
