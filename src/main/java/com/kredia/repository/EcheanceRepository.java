@@ -31,4 +31,6 @@ public interface EcheanceRepository extends JpaRepository<Echeance, Long> {
 
     @Query("SELECT e FROM Echeance e WHERE e.credit.creditId = :creditId AND (e.status = com.kredia.enums.EcheanceStatus.PENDING OR e.status = com.kredia.enums.EcheanceStatus.PARTIALLY_PAID) ORDER BY e.dueDate ASC")
     List<Echeance> findNextUnpaidEcheancesByCreditId(@Param("creditId") Long creditId);
+
+    List<Echeance> findByCreditCreditId(Long creditId);
 }
