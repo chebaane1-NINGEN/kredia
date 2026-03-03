@@ -1,9 +1,37 @@
 package com.kredia.repository;
 
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
+import com.kredia.entity.UserRole;
+import com.kredia.entity.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-@Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+import java.time.Instant;
+import java.util.Optional;
+
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
+
+    Optional<User> findByIdAndDeletedFalse(Long id);
+
+    Optional<User> findByEmailAndDeletedFalse(String email);
+
+    boolean existsByEmailAndDeletedFalse(String email);
+
+    boolean existsByEmailAndDeletedFalseAndIdNot(String email, Long id);
+
+    boolean existsByPhoneNumberAndDeletedFalse(String phoneNumber);
+
+    boolean existsByPhoneNumberAndDeletedFalseAndIdNot(String phoneNumber, Long id);
+
+    long countByRoleAndDeletedFalse(UserRole role);
+
+    long countByStatusAndDeletedFalse(UserStatus status);
+
+    long countByDeletedFalse();
+
+    long countByCreatedAtAfterAndDeletedFalse(Instant createdAt);
+
+    Page<User> findAllByRoleAndDeletedFalse(UserRole role, Pageable pageable);
 }

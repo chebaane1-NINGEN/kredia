@@ -6,7 +6,7 @@ import com.kredia.entity.user.User;
 import com.kredia.enums.EcheanceStatus;
 import com.kredia.enums.RepaymentType;
 import com.kredia.repository.CreditRepository;
-import com.kredia.repository.UserRepository;
+import com.kredia.repository.LegacyUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,10 +27,10 @@ public class CreditService {
     private static final RoundingMode ROUNDING = RoundingMode.HALF_EVEN;
 
     private final CreditRepository creditRepository;
-    private final UserRepository userRepository;
+    private final LegacyUserRepository userRepository;
 
     @Autowired
-    public CreditService(CreditRepository creditRepository, UserRepository userRepository) {
+    public CreditService(CreditRepository creditRepository, LegacyUserRepository userRepository) {
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
     }

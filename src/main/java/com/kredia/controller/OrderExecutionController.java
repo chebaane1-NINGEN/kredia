@@ -3,18 +3,13 @@ package com.kredia.controller;
 import com.kredia.dto.investment.OrderExecutionNotificationDTO;
 import com.kredia.entity.investment.InvestmentOrder;
 import com.kredia.entity.user.User;
-import com.kredia.enums.OrderStatus;
-import com.kredia.enums.OrderType;
 import com.kredia.repository.InvestmentOrderRepository;
-import com.kredia.repository.UserRepository;
+import com.kredia.repository.LegacyUserRepository;
 import com.kredia.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/order-execution")
@@ -24,7 +19,7 @@ public class OrderExecutionController {
 
     private final EmailService emailService;
     private final InvestmentOrderRepository orderRepository;
-    private final UserRepository userRepository;
+    private final LegacyUserRepository userRepository;
 
     @PostMapping("/notify")
     public ResponseEntity<String> notifyOrderExecution(@RequestBody OrderExecutionNotificationDTO notification) {

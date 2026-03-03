@@ -16,8 +16,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.kredia.entity.user.User;
-
 @Entity
 @Table(name = "credit")
 @Data

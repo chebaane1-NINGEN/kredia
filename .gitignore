@@ -47,5 +47,28 @@ spring-boot-devtools.properties
 logs/
 *.log
 
+# Env
+.env
+
+# Runtime uploads / generated user content
+uploads/
+
+# Local/dummy artifacts
+dummy.pdf
+dummy_cin.txt
+user_flow.txt
+
+# Local scripts (non-production)
+test_*.sh
+verify_api.sh
+
+# Gemini source PNGs (keep optimized WebP in images/home)
+src/main/resources/static/images/HERO SECTION IMAGE.png
+src/main/resources/static/images/SECTION PROCESSUS.png
+src/main/resources/static/images/SECTION CONFIANCE : CROISSANCE.png
+src/main/resources/static/images/SECTION SÉCURITÉ.png
+src/main/resources/static/images/SECTION S*.png
+src/main/resources/static/images/test.txt
+
 # Fichiers de configuration sensibles
 src/main/resources/secrets.properties

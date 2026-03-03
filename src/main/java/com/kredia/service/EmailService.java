@@ -29,7 +29,7 @@ public class EmailService {
     @Value("${kredia.mail.from.name}")
     private String fromName;
 
-    public EmailService(@Value("${brevo.api.key}") String apiKey) {
+    public EmailService(@Value("${brevo.api.key:}") String apiKey) {
         ApiClient defaultClient = Configuration.getDefaultApiClient();
         ApiKeyAuth apiKeyAuth = (ApiKeyAuth) defaultClient.getAuthentication("api-key");
         apiKeyAuth.setApiKey(apiKey);

@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Entity
+@Entity(name = "LegacyUser")
 @Table(name = "user")
 @Data
 @NoArgsConstructor
