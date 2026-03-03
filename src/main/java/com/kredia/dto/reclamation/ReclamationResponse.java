@@ -8,7 +8,7 @@ import com.kredia.enums.ReclamationStatus;
 import java.time.LocalDateTime;
 
 public record ReclamationResponse(
-        Long reclamationId,
+        Long id,
         Long userId,
         String subject,
         String description,

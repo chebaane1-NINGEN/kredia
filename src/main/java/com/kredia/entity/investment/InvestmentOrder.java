@@ -1,6 +1,6 @@
 package com.kredia.entity.investment;
 
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import com.kredia.enums.OrderStatus;
 import com.kredia.enums.OrderType;
 import jakarta.persistence.*;
@@ -17,39 +17,39 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InvestmentOrder {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_id")
     private Long orderId;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    
+
     @Column(name = "asset_symbol", nullable = false, length = 20)
     private String assetSymbol;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "order_type", nullable = false)
     private OrderType orderType;
-    
+
     @Column(name = "quantity", nullable = false, precision = 15, scale = 8)
     private BigDecimal quantity;
-    
+
     @Column(name = "price", precision = 15, scale = 2)
     private BigDecimal price;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "order_status", nullable = false)
     private OrderStatus orderStatus = OrderStatus.PENDING;
-    
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
+
     @Column(name = "executed_at")
     private LocalDateTime executedAt;
-    
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

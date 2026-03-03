@@ -1,7 +1,7 @@
 package com.kredia.service;
 
 import com.kredia.entity.investment.InvestmentOrder;
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -63,7 +63,7 @@ public class EmailService {
             // Send email via Brevo API
             CreateSmtpEmail result = apiInstance.sendTransacEmail(sendSmtpEmail);
             log.info("Email d'exécution d'ordre envoyé à {} pour l'ordre {} - MessageId: {}", 
-                    user.getEmail(), order.getOrderId(), result.getMessageId());
+                    user.getEmail(), order.getId(), result.getMessageId());
         } catch (ApiException e) {
             log.error("Erreur lors de l'envoi de l'email via Brevo à {}: Code={}, Body={}", 
                     user.getEmail(), e.getCode(), e.getResponseBody(), e);
@@ -183,7 +183,7 @@ public class EmailService {
             </html>
             """,
                 userName,
-                order.getOrderId(),
+                order.getId(),
                 orderTypeColor,
                 orderTypeLabel,
                 order.getAssetSymbol(),
@@ -191,7 +191,7 @@ public class EmailService {
                 executedPriceFormatted,
                 executedAtFormatted,
                 totalAmountFormatted,
-                order.getOrderId()
+                order.getId()
         );
     }
 }

@@ -1,6 +1,6 @@
 package com.kredia.entity.credit;
 
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import com.kredia.enums.DocumentTypeLoan;
 import com.kredia.enums.KycStatus;
 import jakarta.persistence.*;
@@ -20,7 +20,7 @@ public class KycLoan {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "kyc_loan_id")
-    private Long kycLoanId;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "credit_id", nullable = false)
@@ -42,7 +42,7 @@ public class KycLoan {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "verified_status", nullable = false)
-    private KycStatus verifiedStatus ;
+    private KycStatus verifiedStatus;
 
     @PrePersist
     protected void onCreate() {

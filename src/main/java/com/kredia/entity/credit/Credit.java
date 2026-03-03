@@ -2,7 +2,7 @@ package com.kredia.entity.credit;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import com.kredia.enums.CreditStatus;
 import com.kredia.enums.RepaymentType;
 import jakarta.persistence.*;
@@ -26,7 +26,7 @@ public class Credit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "credit_id")
-    private Long creditId;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -36,14 +36,14 @@ public class Credit {
     // Virtual property for userId
     @JsonProperty("userId")
     public Long getUserId() {
-        return user != null ? user.getUserId() : null;
+        return user != null ? user.getId() : null;
     }
 
     @JsonProperty("userId")
     public void setUserId(Long userId) {
         if (userId != null) {
             this.user = new User();
-            this.user.setUserId(userId);
+            this.user.setId(userId);
         }
     }
 

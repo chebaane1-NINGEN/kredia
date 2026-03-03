@@ -1,7 +1,7 @@
 package com.kredia.dto;
 
-import com.kredia.entity.UserRole;
-import com.kredia.entity.UserStatus;
+import com.kredia.enums.UserRole;
+import com.kredia.enums.UserStatus;
 
 import java.time.Instant;
 

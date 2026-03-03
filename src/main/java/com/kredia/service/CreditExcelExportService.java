@@ -23,9 +23,9 @@ public class CreditExcelExportService {
         this.creditRepository = creditRepository;
     }
 
-    public byte[] generateCreditExcel(Long creditId) throws IOException {
-        Credit credit = creditRepository.findById(creditId)
-                .orElseThrow(() -> new RuntimeException("Crédit non trouvé : " + creditId));
+    public byte[] generateCreditExcel(Long id) throws IOException {
+        Credit credit = creditRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Crédit non trouvé : " + id));
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
@@ -57,7 +57,7 @@ public class CreditExcelExportService {
         int rowIdx = 0;
 
         String[][] creditData = {
-                { "ID Crédit", String.valueOf(credit.getCreditId()) },
+                { "ID Crédit", String.valueOf(credit.getId()) },
                 { "Montant", credit.getAmount() != null ? credit.getAmount().toString() : "" },
                 { "Taux d'intérêt (%)", credit.getInterestRate() != null ? credit.getInterestRate().toString() : "" },
                 { "Date de début", credit.getStartDate() != null ? credit.getStartDate().toString() : "" },
@@ -251,7 +251,7 @@ public class CreditExcelExportService {
                     // Remplir les valeurs
                     switch (i) {
                         case 0:
-                            cell.setCellValue(kyc.getKycLoanId() != null ? String.valueOf(kyc.getKycLoanId()) : "");
+                            cell.setCellValue(kyc.getId() != null ? String.valueOf(kyc.getId()) : "");
                             break;
                         case 1:
                             cell.setCellValue(kyc.getDocumentType() != null ? kyc.getDocumentType().name() : "");

@@ -7,21 +7,21 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "reclamation_history",
-        indexes = {
-                @Index(name = "idx_hist_reclamation", columnList = "reclamation_id"),
-                @Index(name = "idx_hist_changed", columnList = "changed_at")
-        }
-)
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Table(name = "reclamation_history", indexes = {
+        @Index(name = "idx_hist_reclamation", columnList = "reclamation_id"),
+        @Index(name = "idx_hist_changed", columnList = "changed_at")
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class ReclamationHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "history_id")
-    private Long historyId;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reclamation_id", nullable = false)

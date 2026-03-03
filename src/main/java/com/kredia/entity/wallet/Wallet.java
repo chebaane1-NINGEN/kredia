@@ -1,6 +1,6 @@
 package com.kredia.entity.wallet;
 
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import com.kredia.enums.WalletStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -17,43 +17,43 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Wallet {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "wallet_id")
     private Long walletId;
-    
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
-    
+
     @Column(name = "balance", nullable = false, precision = 15, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
-    
+
     @Column(name = "frozen_balance", precision = 15, scale = 2)
     private BigDecimal frozenBalance = BigDecimal.ZERO;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private WalletStatus status = WalletStatus.ACTIVE;
-    
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
     @OneToMany(mappedBy = "sourceWallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Transaction> outgoingTransactions;
-    
+
     @OneToMany(mappedBy = "destinationWallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Transaction> incomingTransactions;
-    
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
-    
+
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();

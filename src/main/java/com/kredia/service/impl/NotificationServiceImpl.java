@@ -3,7 +3,7 @@ package com.kredia.service.impl;
 import com.kredia.dto.notification.NotificationCreateRequest;
 import com.kredia.dto.notification.NotificationResponse;
 import com.kredia.entity.support.Notification;
-import com.kredia.exception.NotFoundException;
+import com.kredia.exception.ResourceNotFoundException;
 import com.kredia.repository.NotificationRepository;
 import com.kredia.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +24,8 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public NotificationResponse create(NotificationCreateRequest request) {
         Notification n = Notification.builder()
-                .userId(request.userId())
-                .reclamationId(request.reclamationId())
+                .userId(request.id())
+                .id(request.id())
                 .type(request.type())
                 .title(request.title())
                 .message(request.message())
@@ -47,32 +47,31 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public NotificationResponse markAsRead(Long notificationId) {
-        Notification n = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new NotFoundException("Notification not found: " + notificationId));
+    public NotificationResponse markAsRead(Long id) {
+        Notification n = notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
 
         n.setRead(true);
         return toResponse(notificationRepository.save(n));
     }
 
     @Override
-    public void delete(Long notificationId) {
-        if (!notificationRepository.existsById(notificationId)) {
-            throw new NotFoundException("Notification not found: " + notificationId);
+    public void delete(Long id) {
+        if (!notificationRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Notification not found: " + id);
         }
-        notificationRepository.deleteById(notificationId);
+        notificationRepository.deleteById(id);
     }
 
     private NotificationResponse toResponse(Notification n) {
         return new NotificationResponse(
-                n.getNotificationId(),
-                n.getUserId(),
-                n.getReclamationId(),
+                n.getId(),
+                n.getId(),
+                n.getId(),
                 n.getType(),
                 n.getTitle(),
                 n.getMessage(),
                 n.isRead(),
-                n.getSentAt()
-        );
+                n.getSentAt());
     }
 }

@@ -23,13 +23,15 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
+    @ExceptionHandler(ResourceResourceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFound(ResourceResourceNotFoundException ex,
+            HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
     }
 
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleNotFoundLegacy(NotFoundException ex, HttpServletRequest request) {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFoundLegacy(ResourceNotFoundException ex,
+            HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
     }
 
@@ -38,8 +40,8 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "Business Error", ex.getMessage(), request);
     }
 
-    @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ApiErrorResponse> handleBadRequestLegacy(BadRequestException ex, HttpServletRequest request) {
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadRequestLegacy(BusinessException ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), request);
     }
 
@@ -49,7 +51,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex,
+            HttpServletRequest request) {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .sorted(Comparator.comparing(FieldError::getField))
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
@@ -59,27 +62,32 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException ex,
+            HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "Validation Error", ex.getMessage(), request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex,
+            HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "Data Integrity Error", "Request violates data constraints", request);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-    public ResponseEntity<ApiErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex,
+            HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, "Concurrency Error", "Resource was updated concurrently", request);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleNoResourceFound(NoResourceFoundException ex,
+            HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "Bad Request", "Invalid parameter value", request);
     }
 
@@ -91,17 +99,13 @@ public class GlobalExceptionHandler {
         }
 
         log.error(
-                "unhandled_exception path={} type={} message={} rootType={} rootMessage={}"
-                , request.getRequestURI()
-                , ex.getClass().getName()
-                , ex.getMessage()
-                , root.getClass().getName()
-                , root.getMessage()
-        );
+                "unhandled_exception path={} type={} message={} rootType={} rootMessage={}", request.getRequestURI(),
+                ex.getClass().getName(), ex.getMessage(), root.getClass().getName(), root.getMessage());
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Error", "Unexpected error", request);
     }
 
-    private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String error, String message, HttpServletRequest request) {
+    private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String error, String message,
+            HttpServletRequest request) {
         ApiErrorResponse body = new ApiErrorResponse();
         body.setTimestamp(Instant.now());
         body.setStatus(status.value());

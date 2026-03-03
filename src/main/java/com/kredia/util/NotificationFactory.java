@@ -5,10 +5,10 @@ import com.kredia.enums.NotificationType;
 
 public class NotificationFactory {
 
-    public static Notification forUser(Long userId, Long reclamationId, NotificationType type, String title, String message) {
+    public static Notification forUser(Long userId, Long id, NotificationType type, String title, String message) {
         return Notification.builder()
                 .userId(userId)
-                .reclamationId(reclamationId)
+                .id(id)
                 .type(type)
                 .title(title)
                 .message(message)

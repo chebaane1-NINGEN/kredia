@@ -9,16 +9,13 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "reclamation",
-        indexes = {
-                @Index(name = "idx_rec_user_status", columnList = "user_id,status"),
-                @Index(name = "idx_rec_status", columnList = "status"),
-                @Index(name = "idx_rec_priority", columnList = "priority"),
-                @Index(name = "idx_rec_created", columnList = "created_at"),
-                @Index(name = "idx_rec_last_activity", columnList = "last_activity_at")
-        }
-)
+@Table(name = "reclamation", indexes = {
+        @Index(name = "idx_rec_user_status", columnList = "user_id,status"),
+        @Index(name = "idx_rec_status", columnList = "status"),
+        @Index(name = "idx_rec_priority", columnList = "priority"),
+        @Index(name = "idx_rec_created", columnList = "created_at"),
+        @Index(name = "idx_rec_last_activity", columnList = "last_activity_at")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -72,9 +69,12 @@ public class Reclamation {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         lastActivityAt = createdAt;
-        if (status == null) status = ReclamationStatus.OPEN;
-        if (priority == null) priority = Priority.MEDIUM;
-        if (riskLevel == null) riskLevel = ReclamationRiskLevel.LOW;
+        if (status == null)
+            status = ReclamationStatus.OPEN;
+        if (priority == null)
+            priority = Priority.MEDIUM;
+        if (riskLevel == null)
+            riskLevel = ReclamationRiskLevel.LOW;
     }
 
     @PreUpdate

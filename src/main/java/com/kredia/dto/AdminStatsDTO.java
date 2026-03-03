@@ -1,6 +1,6 @@
 package com.kredia.dto;
 
-import com.kredia.entity.UserRole;
+import com.kredia.enums.UserRole;
 
 import java.util.Map;
 

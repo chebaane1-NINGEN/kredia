@@ -10,13 +10,13 @@ public interface ReclamationService {
 
     ReclamationResponse create(ReclamationCreateRequest request);
 
-    ReclamationResponse update(Long reclamationId, ReclamationUpdateRequest request);
+    ReclamationResponse update(Long id, ReclamationUpdateRequest request);
 
-    ReclamationResponse updateStatus(Long reclamationId, ReclamationStatusUpdateRequest request);
+    ReclamationResponse updateStatus(Long id, ReclamationStatusUpdateRequest request);
 
-    ReclamationResponse assign(Long reclamationId, ReclamationAssignRequest request);
+    ReclamationResponse assign(Long id, ReclamationAssignRequest request);
 
-    ReclamationResponse getById(Long reclamationId);
+    ReclamationResponse getById(Long id);
 
     Page<ReclamationResponse> getAll(int page, int size);
 
@@ -24,5 +24,5 @@ public interface ReclamationService {
 
     Page<ReclamationResponse> getByStatus(ReclamationStatus status, int page, int size);
 
-    List<ReclamationHistoryResponse> getHistory(Long reclamationId);
+    List<ReclamationHistoryResponse> getHistory(Long id);
 }

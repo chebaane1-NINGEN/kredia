@@ -6,12 +6,12 @@ import com.kredia.enums.KycStatus;
 import java.time.LocalDateTime;
 
 public record KycLoanResponse(
-        Long kycLoanId,
-        Long creditId,
+        Long id,
+        Long id,
         Long userId,
         DocumentTypeLoan documentType,
         String documentPath,
         LocalDateTime submittedAt,
         KycStatus verifiedStatus,
-        String verificationMessage
-) {}
+        String verificationMessage) {
+}

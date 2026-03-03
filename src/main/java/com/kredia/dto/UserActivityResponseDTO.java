@@ -1,6 +1,6 @@
 package com.kredia.dto;
 
-import com.kredia.entity.UserActivityActionType;
+import com.kredia.enums.UserActivityActionType;
 
 import java.time.Instant;
 

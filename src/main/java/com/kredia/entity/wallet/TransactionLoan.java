@@ -14,9 +14,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "transaction")
-@Data
+
 @NoArgsConstructor
-@AllArgsConstructor
+
 public class TransactionLoan extends Transaction {
 
     @OneToOne(fetch = FetchType.LAZY)

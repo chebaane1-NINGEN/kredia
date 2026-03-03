@@ -39,7 +39,7 @@ public class PortfolioPositionResponseDTO {
 
     // Getters and Setters
 
-    public Long getPositionId() {
+    public Long getId() {
         return positionId;
     }
 

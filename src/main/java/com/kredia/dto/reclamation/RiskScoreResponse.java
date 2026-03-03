@@ -1,7 +1,7 @@
 package com.kredia.dto.reclamation;
 
 public record RiskScoreResponse(
-        Long reclamationId,
+        Long id,
         double riskScore,
         RiskFeatures features
 ) {}

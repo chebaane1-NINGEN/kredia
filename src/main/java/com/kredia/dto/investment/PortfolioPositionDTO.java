@@ -4,14 +4,16 @@ import java.math.BigDecimal;
 
 /**
  * DTO pour la création d'une position de portefeuille.
- * Le prix d'achat est automatiquement récupéré depuis l'API de marché (Binance / Alpha Vantage).
+ * Le prix d'achat est automatiquement récupéré depuis l'API de marché (Binance
+ * / Alpha Vantage).
  */
 public class PortfolioPositionDTO {
     private Long userId;
     private String assetSymbol;
     private BigDecimal quantity;
 
-    public PortfolioPositionDTO() {}
+    public PortfolioPositionDTO() {
+    }
 
     public PortfolioPositionDTO(Long userId, String assetSymbol, BigDecimal quantity) {
         this.userId = userId;

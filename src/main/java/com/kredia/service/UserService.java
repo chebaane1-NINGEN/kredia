@@ -7,8 +7,8 @@ import com.kredia.dto.AgentPerformanceDTO;
 import com.kredia.dto.ClientEligibilityDTO;
 import com.kredia.dto.ClientRiskScoreDTO;
 import com.kredia.dto.UserActivityResponseDTO;
-import com.kredia.entity.UserRole;
-import com.kredia.entity.UserStatus;
+import com.kredia.enums.UserRole;
+import com.kredia.enums.UserStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

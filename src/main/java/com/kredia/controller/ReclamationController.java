@@ -55,7 +55,7 @@ public class ReclamationController {
     public RiskScoreResponse getRisk(@PathVariable Long id) {
         // For now, just return stored riskScore (computed at creation)
         var rec = reclamationService.getById(id);
-        return new RiskScoreResponse(rec.reclamationId(), rec.riskScore() != null ? rec.riskScore() : 0, null);
+        return new RiskScoreResponse(rec.id(), rec.riskScore() != null ? rec.riskScore() : 0, null);
     }
 
 

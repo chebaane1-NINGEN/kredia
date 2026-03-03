@@ -1,7 +1,7 @@
 package com.kredia.entity.investment;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,30 +15,30 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class PortfolioPosition {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "position_id")
     private Long positionId;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    
+
     @Column(name = "asset_symbol", nullable = false)
     private String assetSymbol;
-    
+
     @Column(name = "current_quantity", nullable = false, precision = 15, scale = 8)
     private BigDecimal currentQuantity;
-    
+
     @Column(name = "avg_purchase_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal avgPurchasePrice;
-    
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

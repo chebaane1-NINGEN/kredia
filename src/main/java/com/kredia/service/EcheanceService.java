@@ -38,10 +38,10 @@ public class EcheanceService {
         if (echeance.getStatus() == EcheanceStatus.PENDING || echeance.getStatus() == EcheanceStatus.PARTIALLY_PAID) {
             // Calculer le montant total des transactions liées à cette échéance
             java.math.BigDecimal totalPaid = echeanceRepository
-                    .sumTransactionAmountsByEcheanceId(echeance.getEcheanceId());
+                    .sumTransactionAmountsByEcheanceId(echeance.getId());
 
             if (totalPaid != null && totalPaid.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                log.info("Echeance {} has total transactions amount: {}", echeance.getEcheanceId(), totalPaid);
+                log.info("Echeance {} has total transactions amount: {}", echeance.getId(), totalPaid);
 
                 // IMPORTANT: amount_paid ne doit JAMAIS dépasser amount_due
                 if (totalPaid.compareTo(echeance.getAmountDue()) >= 0) {
@@ -54,16 +54,16 @@ public class EcheanceService {
 
                     // Si surplus, l'appliquer à la prochaine échéance
                     if (surplus.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        log.info("Surplus de {} détecté pour l'échéance {}", surplus, echeance.getEcheanceId());
+                        log.info("Surplus de {} détecté pour l'échéance {}", surplus, echeance.getId());
 
                         // Chercher les prochaines échéances non payées du même crédit
-                        Long creditId = echeance.getCredit().getCreditId();
-                        List<Echeance> nextEcheances = echeanceRepository.findNextUnpaidEcheancesByCreditId(creditId);
+                        Long id = echeance.getCredit().getId();
+                        List<Echeance> nextEcheances = echeanceRepository.findNextUnpaidEcheancesByCreditId(id);
 
                         // Filtrer pour exclure l'échéance actuelle (au cas où la requête SQL la
                         // remonterait encore)
                         List<Echeance> remainingEcheances = nextEcheances.stream()
-                                .filter(e -> !e.getEcheanceId().equals(echeance.getEcheanceId()))
+                                .filter(e -> !e.getId().equals(echeance.getId()))
                                 .collect(java.util.stream.Collectors.toList());
 
                         int index = 0;
@@ -83,7 +83,7 @@ public class EcheanceService {
 
                                 surplus = surplus.subtract(nextRemainingDue);
                                 log.info("Surplus appliqué. Échéance {} payée complètement. Surplus restant: {}",
-                                        nextEcheance.getEcheanceId(), surplus);
+                                        nextEcheance.getId(), surplus);
                             } else {
                                 // Surplus couvre partiellement cette échéance
                                 nextEcheance.setAmountPaid(nextCurrentPaid.add(surplus));
@@ -92,7 +92,7 @@ public class EcheanceService {
                                 echeanceRepository.save(nextEcheance);
 
                                 log.info("Surplus de {} appliqué à l'échéance {}. Paiement partiel. Plus de surplus.",
-                                        surplus, nextEcheance.getEcheanceId());
+                                        surplus, nextEcheance.getId());
                                 surplus = java.math.BigDecimal.ZERO;
                             }
                             index++;
@@ -101,7 +101,7 @@ public class EcheanceService {
                         if (surplus.compareTo(java.math.BigDecimal.ZERO) > 0) {
                             log.info(
                                     "Il reste un surplus global de {} mais aucune échéance suivante à payer pour le crédit {}",
-                                    surplus, creditId);
+                                    surplus, id);
                         }
                     }
                 } else {
@@ -123,18 +123,18 @@ public class EcheanceService {
         }
         echeance.setPaidAt(LocalDateTime.now());
         echeanceRepository.save(echeance);
-        log.info("Echeance {} marked as PAID with amount_paid: {}", echeance.getEcheanceId(), echeance.getAmountPaid());
+        log.info("Echeance {} marked as PAID with amount_paid: {}", echeance.getId(), echeance.getAmountPaid());
 
         // Check if all echeances for this credit are paid
         if (echeance.getCredit() != null) {
-            Long creditId = echeance.getCredit().getCreditId();
-            long pendingCount = echeanceRepository.countPendingEcheancesByCreditId(creditId);
+            Long id = echeance.getCredit().getId();
+            long pendingCount = echeanceRepository.countPendingEcheancesByCreditId(id);
             if (pendingCount == 0) {
-                Credit credit = creditRepository.findById(creditId)
+                Credit credit = creditRepository.findById(id)
                         .orElseThrow(() -> new RuntimeException("Credit not found"));
                 credit.setStatus(CreditStatus.COMPLETED);
                 creditRepository.save(credit);
-                log.info("Credit {} marked as COMPLETED", creditId);
+                log.info("Credit {} marked as COMPLETED", id);
             }
         }
     }
@@ -179,14 +179,14 @@ public class EcheanceService {
         if (echeance.getStatus() == EcheanceStatus.PAID) {
             // Pour les échéances payées, vérifier s'il y a un surplus via les transactions
             java.math.BigDecimal totalTransactions = echeanceRepository
-                    .sumTransactionAmountsByEcheanceId(echeance.getEcheanceId());
+                    .sumTransactionAmountsByEcheanceId(echeance.getId());
 
             if (totalTransactions != null && totalTransactions.compareTo(amountDue) > 0) {
                 java.math.BigDecimal surplus = totalTransactions.subtract(amountDue);
 
                 // Récupérer le montant de la dernière transaction
                 java.math.BigDecimal lastTransactionAmount = echeanceRepository
-                        .getLastTransactionAmountByEcheanceId(echeance.getEcheanceId());
+                        .getLastTransactionAmountByEcheanceId(echeance.getId());
 
                 if (lastTransactionAmount != null) {
                     // Calculer le montant comptabilisé de la dernière transaction
@@ -282,12 +282,12 @@ public class EcheanceService {
                     echeanceId, amountPaid, amountCounted, surplus);
 
             // Chercher les prochaines échéances non payées du même crédit
-            Long creditId = echeance.getCredit().getCreditId();
-            List<Echeance> nextEcheances = echeanceRepository.findNextUnpaidEcheancesByCreditId(creditId);
+            Long id = echeance.getCredit().getId();
+            List<Echeance> nextEcheances = echeanceRepository.findNextUnpaidEcheancesByCreditId(id);
 
             // Filtrer pour exclure l'échéance actuelle
             List<Echeance> remainingEcheances = nextEcheances.stream()
-                    .filter(e -> !e.getEcheanceId().equals(echeanceId))
+                    .filter(e -> !e.getId().equals(echeanceId))
                     .collect(java.util.stream.Collectors.toList());
 
             StringBuilder surplusMessage = new StringBuilder();
@@ -309,19 +309,19 @@ public class EcheanceService {
                         nextEcheance.setAmountPaid(nextEcheance.getAmountDue());
                         markAsPaid(nextEcheance);
                         surplusMessage.append("[").append(nextRemainingDue).append(" -> Échéance #")
-                                .append(nextEcheance.getEcheanceId()).append("] ");
+                                .append(nextEcheance.getId()).append("] ");
                         surplus = surplus.subtract(nextRemainingDue);
                         log.info("Surplus appliqué. Échéance {} payée complètement. Surplus restant: {}",
-                                nextEcheance.getEcheanceId(), surplus);
+                                nextEcheance.getId(), surplus);
                     } else {
                         nextEcheance.setAmountPaid(nextCurrentPaid.add(surplus));
                         nextEcheance.setStatus(EcheanceStatus.PARTIALLY_PAID);
                         nextEcheance.setPaidAt(LocalDateTime.now());
                         echeanceRepository.save(nextEcheance);
                         surplusMessage.append("[").append(surplus).append(" (partiel) -> Échéance #")
-                                .append(nextEcheance.getEcheanceId()).append("] ");
+                                .append(nextEcheance.getId()).append("] ");
                         log.info("Surplus de {} appliqué à l'échéance {}. Paiement partiel. Plus de surplus.",
-                                surplus, nextEcheance.getEcheanceId());
+                                surplus, nextEcheance.getId());
                         surplus = java.math.BigDecimal.ZERO;
                     }
                     index++;
@@ -330,11 +330,11 @@ public class EcheanceService {
                 if (surplus.compareTo(java.math.BigDecimal.ZERO) > 0) {
                     surplusMessage.append(" | Il reste un surplus non applicable de ").append(surplus)
                             .append(" (aucune autre échéance).");
-                    log.info("Surplus global non appliqué de {} sur le crédit {}", surplus, creditId);
+                    log.info("Surplus global non appliqué de {} sur le crédit {}", surplus, id);
                 }
                 message = surplusMessage.toString().trim();
             } else {
-                log.info("Surplus de {} mais aucune échéance suivante trouvée pour le crédit {}", surplus, creditId);
+                log.info("Surplus de {} mais aucune échéance suivante trouvée pour le crédit {}", surplus, id);
                 surplusMessage.append("Surplus : ").append(surplus).append(" (aucune échéance suivante à payer).");
                 message = surplusMessage.toString();
             }

@@ -21,11 +21,11 @@ public class ReclamationTriggerServiceImpl implements ReclamationTriggerService 
     @Override
     public void onCreated(Reclamation r) {
         Notification n = NotificationFactory.forUser(
-                r.getUserId(),
-                r.getReclamationId(),
+                r.getId(),
+                r.getId(),
                 NotificationType.PUSH,
                 "Complaint received",
-                "Your complaint #" + r.getReclamationId() + " has been received."
+                "Your complaint #" + r.getId() + " has been received."
         );
         notificationRepository.save(n);
     }
@@ -33,21 +33,21 @@ public class ReclamationTriggerServiceImpl implements ReclamationTriggerService 
     @Override
     public void onStatusChanged(Reclamation r, ReclamationStatus oldStatus, ReclamationStatus newStatus, String note, Long actorUserId) {
         Notification userNotif = NotificationFactory.forUser(
-                r.getUserId(),
-                r.getReclamationId(),
+                r.getId(),
+                r.getId(),
                 NotificationType.PUSH,
                 "Complaint status updated",
-                "Your complaint #" + r.getReclamationId() + " changed to " + newStatus
+                "Your complaint #" + r.getId() + " changed to " + newStatus
         );
         notificationRepository.save(userNotif);
 
         if (r.getAssignedTo() != null) {
             Notification agentNotif = NotificationFactory.forUser(
                     r.getAssignedTo(),
-                    r.getReclamationId(),
+                    r.getId(),
                     NotificationType.PUSH,
                     "Assigned complaint update",
-                    "Complaint #" + r.getReclamationId() + " is now " + newStatus
+                    "Complaint #" + r.getId() + " is now " + newStatus
             );
             notificationRepository.save(agentNotif);
         }
@@ -57,10 +57,10 @@ public class ReclamationTriggerServiceImpl implements ReclamationTriggerService 
     public void onEscalated(Reclamation r, double riskScore, String reason) {
         Notification supervisorNotif = NotificationFactory.forUser(
                 SUPERVISOR_ID,
-                r.getReclamationId(),
+                r.getId(),
                 NotificationType.PUSH,
                 "Escalation alert",
-                "Complaint #" + r.getReclamationId() + " escalated. RiskScore=" + (int) riskScore
+                "Complaint #" + r.getId() + " escalated. RiskScore=" + (int) riskScore
         );
         notificationRepository.save(supervisorNotif);
     }

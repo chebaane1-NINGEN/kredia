@@ -2,20 +2,19 @@ package com.kredia.dto.reclamation;
 
 import lombok.Builder;
 
-@Builder
 public record RiskFeatures(
-        Long userId,
+                Long userId,
 
-        // complaint-level
-        int complaintsLast90d,
-        int messageLen,
+                // complaint-level
+                int complaintsLast90d,
+                int messageLen,
 
-        // finance
-        double walletBalance,
-        double walletFrozenBalance,
+                // finance
+                double walletBalance,
+                double walletFrozenBalance,
 
-        // credit
-        boolean creditHasActive,
-        int creditInstallmentsMissed,
-        int creditDaysLate
-) {}
+                // credit
+                boolean creditHasActive,
+                int creditInstallmentsMissed,
+                int creditDaysLate) {
+}

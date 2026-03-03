@@ -2,9 +2,9 @@ package com.kredia.controller;
 
 import com.kredia.dto.investment.OrderExecutionNotificationDTO;
 import com.kredia.entity.investment.InvestmentOrder;
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import com.kredia.repository.InvestmentOrderRepository;
-import com.kredia.repository.LegacyUserRepository;
+import com.kredia.repository.UserRepository;
 import com.kredia.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,19 +19,19 @@ public class OrderExecutionController {
 
     private final EmailService emailService;
     private final InvestmentOrderRepository orderRepository;
-    private final LegacyUserRepository userRepository;
+    private final UserRepository userRepository;
 
     @PostMapping("/notify")
     public ResponseEntity<String> notifyOrderExecution(@RequestBody OrderExecutionNotificationDTO notification) {
         try {
-            log.info("Notification d'exécution reçue pour l'ordre {}", notification.getOrderId());
+            log.info("Notification d'exécution reçue pour l'ordre {}", notification.getId());
 
             // Récupérer l'ordre et l'utilisateur
-            InvestmentOrder order = orderRepository.findById(notification.getOrderId())
-                    .orElseThrow(() -> new RuntimeException("Order not found: " + notification.getOrderId()));
+            InvestmentOrder order = orderRepository.findById(notification.getId())
+                    .orElseThrow(() -> new RuntimeException("Order not found: " + notification.getId()));
 
-            User user = userRepository.findById(notification.getUserId())
-                    .orElseThrow(() -> new RuntimeException("User not found: " + notification.getUserId()));
+            User user = userRepository.findById(notification.getId())
+                    .orElseThrow(() -> new RuntimeException("User not found: " + notification.getId()));
 
             // Envoyer l'email
             emailService.sendOrderExecutedEmail(user, order, notification.getExecutedPrice());

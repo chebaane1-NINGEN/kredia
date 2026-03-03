@@ -3,11 +3,11 @@ package com.kredia.service;
 import com.kredia.dto.investment.PortfolioPositionDTO;
 import com.kredia.dto.investment.PortfolioPositionResponseDTO;
 import com.kredia.entity.investment.*;
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import com.kredia.enums.AssetCategory;
 import com.kredia.enums.OrderStatus;
 import com.kredia.enums.RiskLevel;
-import com.kredia.repository.LegacyUserRepository;
+import com.kredia.repository.UserRepository;
 import com.kredia.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ public class InvestmentService {
     private final InvestmentOrderRepository orderRepository;
     private final InvestmentStrategyRepository strategyRepository;
     private final PortfolioPositionRepository positionRepository;
-    private final LegacyUserRepository userRepository;
+    private final UserRepository userRepository;
     private final MarketPriceService marketPriceService;
 
     @Autowired
@@ -37,7 +37,7 @@ public class InvestmentService {
             InvestmentOrderRepository orderRepository,
             InvestmentStrategyRepository strategyRepository,
             PortfolioPositionRepository positionRepository,
-            LegacyUserRepository userRepository,
+            UserRepository userRepository,
             MarketPriceService marketPriceService) {
         this.assetRepository = assetRepository;
         this.orderRepository = orderRepository;
@@ -48,7 +48,7 @@ public class InvestmentService {
     }
 
     // ==================== InvestmentAsset CRUD ====================
-    
+
     public InvestmentAsset createAsset(InvestmentAsset asset) {
         return assetRepository.save(asset);
     }
@@ -64,12 +64,12 @@ public class InvestmentService {
     public InvestmentAsset updateAsset(Long id, InvestmentAsset assetDetails) {
         InvestmentAsset asset = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found with id " + id));
-        
+
         asset.setSymbol(assetDetails.getSymbol());
         asset.setAssetName(assetDetails.getAssetName());
         asset.setCategory(assetDetails.getCategory());
         asset.setRiskLevel(assetDetails.getRiskLevel());
-        
+
         return assetRepository.save(asset);
     }
 
@@ -93,10 +93,10 @@ public class InvestmentService {
     }
 
     // ==================== InvestmentOrder CRUD ====================
-    
+
     public InvestmentOrder createOrder(InvestmentOrder order) {
         // Validate and fetch full User entity
-        Long userId = order.getUser().getUserId();
+        Long userId = order.getUser().getId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id " + userId));
         order.setUser(user);
@@ -115,23 +115,23 @@ public class InvestmentService {
     public InvestmentOrder updateOrder(Long id, InvestmentOrder orderDetails) {
         InvestmentOrder order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id " + id));
-        
-        if (orderDetails.getUser() != null && orderDetails.getUser().getUserId() != null) {
-            User user = userRepository.findById(orderDetails.getUser().getUserId())
+
+        if (orderDetails.getUser() != null && orderDetails.getUser().getId() != null) {
+            User user = userRepository.findById(orderDetails.getUser().getId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
             order.setUser(user);
         }
-        
+
         if (orderDetails.getAssetSymbol() != null) {
             order.setAssetSymbol(orderDetails.getAssetSymbol());
         }
-        
+
         order.setOrderType(orderDetails.getOrderType());
         order.setQuantity(orderDetails.getQuantity());
         order.setPrice(orderDetails.getPrice());
         order.setOrderStatus(orderDetails.getOrderStatus());
         order.setExecutedAt(orderDetails.getExecutedAt());
-        
+
         return orderRepository.save(order);
     }
 
@@ -159,10 +159,10 @@ public class InvestmentService {
     }
 
     // ==================== InvestmentStrategy CRUD ====================
-    
+
     public InvestmentStrategy createStrategy(InvestmentStrategy strategy) {
         // Validate and fetch full User entity
-        Long userId = strategy.getUser().getUserId();
+        Long userId = strategy.getUser().getId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id " + userId));
         strategy.setUser(user);
@@ -181,19 +181,19 @@ public class InvestmentService {
     public InvestmentStrategy updateStrategy(Long id, InvestmentStrategy strategyDetails) {
         InvestmentStrategy strategy = strategyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Strategy not found with id " + id));
-        
-        if (strategyDetails.getUser() != null && strategyDetails.getUser().getUserId() != null) {
-            User user = userRepository.findById(strategyDetails.getUser().getUserId())
+
+        if (strategyDetails.getUser() != null && strategyDetails.getUser().getId() != null) {
+            User user = userRepository.findById(strategyDetails.getUser().getId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
             strategy.setUser(user);
         }
-        
+
         strategy.setStrategyName(strategyDetails.getStrategyName());
         strategy.setMaxBudget(strategyDetails.getMaxBudget());
         strategy.setStopLossPct(strategyDetails.getStopLossPct());
         strategy.setReinvestProfits(strategyDetails.getReinvestProfits());
         strategy.setIsActive(strategyDetails.getIsActive());
-        
+
         return strategyRepository.save(strategy);
     }
 
@@ -217,31 +217,32 @@ public class InvestmentService {
     }
 
     // ==================== PortfolioPosition CRUD ====================
-    
+
     public PortfolioPosition createPositionFromDTO(PortfolioPositionDTO positionDTO) {
         // Fetch and validate User
-        User user = userRepository.findById(positionDTO.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id " + positionDTO.getUserId()));
+        User user = userRepository.findById(positionDTO.getId())
+                .orElseThrow(() -> new RuntimeException("User not found with id " + positionDTO.getId()));
 
-        // Fetch the current market price automatically from external API (Binance / Alpha Vantage)
+        // Fetch the current market price automatically from external API (Binance /
+        // Alpha Vantage)
         BigDecimal currentMarketPrice = marketPriceService.getCurrentPrice(positionDTO.getAssetSymbol());
 
-        // Create new PortfolioPosition using the fetched market price as avg purchase price
+        // Create new PortfolioPosition using the fetched market price as avg purchase
+        // price
         PortfolioPosition position = new PortfolioPosition(
-            null, // positionId will be generated
-            user,
-            positionDTO.getAssetSymbol(),
-            positionDTO.getQuantity(),
-            currentMarketPrice,
-            LocalDateTime.now()
-        );
+                null, // positionId will be generated
+                user,
+                positionDTO.getAssetSymbol(),
+                positionDTO.getQuantity(),
+                currentMarketPrice,
+                LocalDateTime.now());
 
         return positionRepository.save(position);
     }
-    
+
     public PortfolioPosition createPosition(PortfolioPosition position) {
         // Validate and fetch full User entity
-        Long userId = position.getUser().getUserId();
+        Long userId = position.getUser().getId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id " + userId));
         position.setUser(user);
@@ -260,20 +261,20 @@ public class InvestmentService {
     public PortfolioPosition updatePosition(Long id, PortfolioPosition positionDetails) {
         PortfolioPosition position = positionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Position not found with id " + id));
-        
-        if (positionDetails.getUser() != null && positionDetails.getUser().getUserId() != null) {
-            User user = userRepository.findById(positionDetails.getUser().getUserId())
+
+        if (positionDetails.getUser() != null && positionDetails.getUser().getId() != null) {
+            User user = userRepository.findById(positionDetails.getUser().getId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
             position.setUser(user);
         }
-        
+
         if (positionDetails.getAssetSymbol() != null) {
             position.setAssetSymbol(positionDetails.getAssetSymbol());
         }
-        
+
         position.setCurrentQuantity(positionDetails.getCurrentQuantity());
         position.setAvgPurchasePrice(positionDetails.getAvgPurchasePrice());
-        
+
         return positionRepository.save(position);
     }
 
@@ -290,7 +291,8 @@ public class InvestmentService {
 
     public List<PortfolioPosition> getPositionsByAssetId(Long assetId) {
         // Note: assetId parameter is kept for API compatibility
-        // but we can't filter by assetId anymore since PortfolioPosition uses assetSymbol
+        // but we can't filter by assetId anymore since PortfolioPosition uses
+        // assetSymbol
         return positionRepository.findAll();
     }
 
@@ -299,35 +301,37 @@ public class InvestmentService {
     }
 
     // ==================== Portfolio Value Calculation ====================
-    
+
     /**
-     * Convertit une PortfolioPosition en PortfolioPositionResponseDTO avec calculs de profit.
+     * Convertit une PortfolioPosition en PortfolioPositionResponseDTO avec calculs
+     * de profit.
      */
     private PortfolioPositionResponseDTO convertToResponseDTO(PortfolioPosition position) {
         try {
             // Récupérer le prix actuel du marché
             BigDecimal currentMarketPrice = marketPriceService.getCurrentPrice(position.getAssetSymbol());
-            
+
             // Calculer la valeur actuelle: quantité * prix actuel
             BigDecimal currentValue = position.getCurrentQuantity().multiply(currentMarketPrice);
-            
+
             // Calculer la valeur d'achat initiale: quantité * prix d'achat moyen
             BigDecimal purchaseValue = position.getCurrentQuantity().multiply(position.getAvgPurchasePrice());
-            
+
             // Calculer le profit/perte en dollars: valeur actuelle - valeur d'achat
             BigDecimal profitLossDollars = currentValue.subtract(purchaseValue);
-            
-            // Calculer le profit/perte en pourcentage: ((prix actuel - prix achat) / prix achat) * 100
+
+            // Calculer le profit/perte en pourcentage: ((prix actuel - prix achat) / prix
+            // achat) * 100
             BigDecimal profitLossPercentage = BigDecimal.ZERO;
             if (position.getAvgPurchasePrice().compareTo(BigDecimal.ZERO) > 0) {
                 profitLossPercentage = currentMarketPrice.subtract(position.getAvgPurchasePrice())
                         .divide(position.getAvgPurchasePrice(), 4, RoundingMode.HALF_UP)
                         .multiply(new BigDecimal("100"));
             }
-            
+
             return new PortfolioPositionResponseDTO(
-                    position.getPositionId(),
-                    position.getUser().getUserId(),
+                    position.getId(),
+                    position.getUser().getId(),
                     position.getAssetSymbol(),
                     position.getCurrentQuantity(),
                     position.getAvgPurchasePrice(),
@@ -335,14 +339,14 @@ public class InvestmentService {
                     currentValue,
                     profitLossDollars,
                     profitLossPercentage,
-                    position.getCreatedAt()
-            );
+                    position.getCreatedAt());
         } catch (Exception e) {
-            System.err.println("Erreur lors de la conversion de la position " + position.getPositionId() + ": " + e.getMessage());
+            System.err
+                    .println("Erreur lors de la conversion de la position " + position.getId() + ": " + e.getMessage());
             // En cas d'erreur, retourner un DTO avec des valeurs null pour les calculs
             return new PortfolioPositionResponseDTO(
-                    position.getPositionId(),
-                    position.getUser().getUserId(),
+                    position.getId(),
+                    position.getUser().getId(),
                     position.getAssetSymbol(),
                     position.getCurrentQuantity(),
                     position.getAvgPurchasePrice(),
@@ -350,8 +354,7 @@ public class InvestmentService {
                     null,
                     null,
                     null,
-                    position.getCreatedAt()
-            );
+                    position.getCreatedAt());
         }
     }
 
@@ -364,7 +367,8 @@ public class InvestmentService {
     }
 
     /**
-     * Récupère toutes les positions d'un utilisateur enrichies avec les calculs de profit.
+     * Récupère toutes les positions d'un utilisateur enrichies avec les calculs de
+     * profit.
      */
     public List<PortfolioPositionResponseDTO> getPositionsWithProfitByUserId(Long userId) {
         List<PortfolioPosition> positions = positionRepository.findByUserUserId(userId);
@@ -384,9 +388,11 @@ public class InvestmentService {
     }
 
     /**
-     * Récupère une position spécifique d'un utilisateur enrichie avec les calculs de profit.
+     * Récupère une position spécifique d'un utilisateur enrichie avec les calculs
+     * de profit.
      */
-    public Optional<PortfolioPositionResponseDTO> getPositionWithProfitByUserIdAndAssetSymbol(Long userId, String assetSymbol) {
+    public Optional<PortfolioPositionResponseDTO> getPositionWithProfitByUserIdAndAssetSymbol(Long userId,
+            String assetSymbol) {
         return positionRepository.findByUserUserIdAndAssetSymbol(userId, assetSymbol)
                 .map(this::convertToResponseDTO);
     }

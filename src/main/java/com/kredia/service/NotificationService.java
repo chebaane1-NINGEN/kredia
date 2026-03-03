@@ -8,7 +8,7 @@ public interface NotificationService {
 
     Page<NotificationResponse> getByUser(Long userId, Boolean isRead, int page, int size);
 
-    NotificationResponse markAsRead(Long notificationId);
+    NotificationResponse markAsRead(Long id);
 
-    void delete(Long notificationId);
+    void delete(Long id);
 }

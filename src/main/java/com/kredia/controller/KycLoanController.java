@@ -25,12 +25,12 @@ public class KycLoanController {
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadDocument(
-            @RequestParam("creditId") Long creditId,
+            @RequestParam("id") Long id,
             @RequestParam("userId") Long userId,
             @RequestParam("documentType") DocumentTypeLoan documentType,
             @RequestParam("file") MultipartFile file) {
         try {
-            KycLoanResponse response = kycLoanService.uploadDocument(creditId, userId, documentType, file);
+            KycLoanResponse response = kycLoanService.uploadDocument(id, userId, documentType, file);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -40,36 +40,36 @@ public class KycLoanController {
     @PostMapping("/create-from-url")
     public ResponseEntity<?> createFromUrl(@RequestBody Map<String, Object> request) {
         try {
-            Long creditId = Long.valueOf(request.get("credit_id").toString());
+            Long id = Long.valueOf(request.get("credit_id").toString());
             Long userId = Long.valueOf(request.get("user_id").toString());
             DocumentTypeLoan documentType = DocumentTypeLoan.valueOf(request.get("document_type").toString());
             String documentPath = request.get("document_path").toString();
             
-            KycLoanResponse response = kycLoanService.createFromUrl(creditId, userId, documentType, documentPath);
+            KycLoanResponse response = kycLoanService.createFromUrl(id, userId, documentType, documentPath);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
-    @GetMapping("/credit/{creditId}")
-    public ResponseEntity<List<KycLoanResponse>> getDocumentsByCredit(@PathVariable Long creditId) {
-        return new ResponseEntity<>(kycLoanService.getDocumentsByCredit(creditId), HttpStatus.OK);
+    @GetMapping("/credit/{id}")
+    public ResponseEntity<List<KycLoanResponse>> getDocumentsByCredit(@PathVariable Long id) {
+        return new ResponseEntity<>(kycLoanService.getDocumentsByCredit(id), HttpStatus.OK);
     }
 
-    @GetMapping("/{kycLoanId}")
-    public ResponseEntity<?> getDocumentById(@PathVariable Long kycLoanId) {
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getDocumentById(@PathVariable Long id) {
         try {
-            return new ResponseEntity<>(kycLoanService.getDocumentById(kycLoanId), HttpStatus.OK);
+            return new ResponseEntity<>(kycLoanService.getDocumentById(id), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 
-    @PutMapping("/{kycLoanId}/verify")
-    public ResponseEntity<?> forceVerification(@PathVariable Long kycLoanId) {
+    @PutMapping("/{id}/verify")
+    public ResponseEntity<?> forceVerification(@PathVariable Long id) {
         try {
-            KycLoanResponse response = kycLoanService.forceVerification(kycLoanId);
+            KycLoanResponse response = kycLoanService.forceVerification(id);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);

@@ -49,12 +49,12 @@ public class StatisticsPdfExportService {
         this.kycLoanRepository = kycLoanRepository;
     }
 
-    public byte[] generateStatisticsPdf(Long creditId) throws IOException {
-        Credit credit = creditRepository.findById(creditId)
-                .orElseThrow(() -> new RuntimeException("Credit not found for id: " + creditId));
+    public byte[] generateStatisticsPdf(Long id) throws IOException {
+        Credit credit = creditRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Credit not found for id: " + id));
 
-        List<Echeance> echeances = echeanceRepository.findByCreditCreditId(creditId);
-        List<KycLoan> kycLoans = kycLoanRepository.findByCreditCreditId(creditId);
+        List<Echeance> echeances = echeanceRepository.findByCreditId(id);
+        List<KycLoan> kycLoans = kycLoanRepository.findByCreditId(id);
 
         Map<EcheanceStatus, Long> echeancesByStatus = echeances.stream()
                 .collect(Collectors.groupingBy(Echeance::getStatus, Collectors.counting()));
@@ -74,7 +74,7 @@ public class StatisticsPdfExportService {
             Font dateFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 10, Color.GRAY);
 
             // Title
-            Paragraph title = new Paragraph("Rapport de Statistiques du Crédit #" + creditId, titleFont);
+            Paragraph title = new Paragraph("Rapport de Statistiques du Crédit #" + id, titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(10);
             document.add(title);

@@ -52,9 +52,9 @@ public class TransactionAuditLogService {
     }
     
     public TransactionAuditLog createAuditLog(TransactionAuditLog log) {
-         if (log.getTransaction() != null && log.getTransaction().getTransactionId() != null) {
-              Transaction transaction = transactionRepository.findById(log.getTransaction().getTransactionId())
-                .orElseThrow(() -> new RuntimeException("Transaction not found with id: " + log.getTransaction().getTransactionId()));
+         if (log.getTransaction() != null && log.getTransaction().getId() != null) {
+              Transaction transaction = transactionRepository.findById(log.getTransaction().getId())
+                .orElseThrow(() -> new RuntimeException("Transaction not found with id: " + log.getTransaction().getId()));
               log.setTransaction(transaction);
          }
          
@@ -112,7 +112,7 @@ public class TransactionAuditLogService {
     public TransactionAuditLog auditTransaction(Transaction transaction) {
         // Create a string representation of the transaction for hashing
         String transactionData = String.format("id:%d,amount:%f,status:%s,ref:%s,date:%s",
-                transaction.getTransactionId(),
+                transaction.getId(),
                 transaction.getAmount() != null ? transaction.getAmount().doubleValue() : 0.0,
                 transaction.getStatus(),
                 transaction.getReference(),
@@ -127,6 +127,6 @@ public class TransactionAuditLogService {
             previousHash = logs.get(logs.size() - 1).getDataHash();
         }
 
-        return createAuditLog(transaction.getTransactionId(), dataHash, previousHash, null);
+        return createAuditLog(transaction.getId(), dataHash, previousHash, null);
     }
 }

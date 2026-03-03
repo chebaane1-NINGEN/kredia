@@ -10,10 +10,12 @@ import com.kredia.dto.reclamation.ReclamationUpdateRequest;
 import com.kredia.entity.support.Reclamation;
 import com.kredia.entity.support.ReclamationHistory;
 import com.kredia.enums.Priority;
+import com.kredia.entity.credit.Echeance;
+import org.springframework.data.jpa.repository.JpaRepository;
 import com.kredia.enums.ReclamationRiskLevel;
 import com.kredia.enums.ReclamationStatus;
-import com.kredia.exception.BadRequestException;
-import com.kredia.exception.NotFoundException;
+import com.kredia.exception.BusinessException;
+import com.kredia.exception.ResourceNotFoundException;
 import com.kredia.repository.ReclamationHistoryRepository;
 import com.kredia.repository.ReclamationRepository;
 import com.kredia.service.ReclamationService;
@@ -63,16 +65,16 @@ public class ReclamationServiceImpl implements ReclamationService {
         rec.setRiskLevel(ReclamationRiskLevel.LOW);
         rec.setAssignedTo(null);
 
-        // Build model input before insert so past/duplicate stats use historical rows only.
+        // Build model input before insert so past/duplicate stats use historical rows
+        // only.
         RiskFeaturesDto modelInput = riskFeatureExtractorService.extract(
                 request.userId(),
                 request.subject(),
                 request.description(),
                 ReclamationStatus.OPEN.name(),
-                initialPriority.name()
-        );
+                initialPriority.name());
 
-        // 1) Save first to get reclamationId
+        // 1) Save first to get id
         Reclamation saved = reclamationRepository.save(rec);
 
         // 2) History: CREATED (actor is the user who created it)
@@ -95,8 +97,7 @@ public class ReclamationServiceImpl implements ReclamationService {
                     modelInput.duplicate_count(),
                     modelInput.past_reclamations(),
                     modelInput.transaction_amount(),
-                    modelInput.late_credit()
-            );
+                    modelInput.late_credit());
             score = mlRiskClient.predictRiskScore(modelInput);
         } catch (Exception ignored) {
             // Fallback: app should not crash if ML service is down
@@ -127,18 +128,19 @@ public class ReclamationServiceImpl implements ReclamationService {
             triggerService.onEscalated(saved, score, "High ML risk score");
         }
 
-        // 7) Save final updated record (risk_score + risk_level + maybe status/priority)
+        // 7) Save final updated record (risk_score + risk_level + maybe
+        // status/priority)
         Reclamation finalSaved = reclamationRepository.save(saved);
         return toResponse(finalSaved, modelInput);
     }
 
     // ---------------- UPDATE CONTENT ----------------
     @Override
-    public ReclamationResponse update(Long reclamationId, ReclamationUpdateRequest request) {
-        Reclamation rec = getEntity(reclamationId);
+    public ReclamationResponse update(Long id, ReclamationUpdateRequest request) {
+        Reclamation rec = getEntity(id);
 
         if (rec.getStatus() == ReclamationStatus.RESOLVED || rec.getStatus() == ReclamationStatus.REJECTED) {
-            throw new BadRequestException("Cannot update a closed reclamation");
+            throw new BusinessException("Cannot update a closed reclamation");
         }
 
         rec.setSubject(request.subject());
@@ -151,10 +153,11 @@ public class ReclamationServiceImpl implements ReclamationService {
         return toResponse(saved);
     }
 
-    // ---------------- UPDATE STATUS (workflow + history + notifications) ----------------
+    // ---------------- UPDATE STATUS (workflow + history + notifications)
+    // ----------------
     @Override
-    public ReclamationResponse updateStatus(Long reclamationId, ReclamationStatusUpdateRequest request) {
-        Reclamation rec = getEntity(reclamationId);
+    public ReclamationResponse updateStatus(Long id, ReclamationStatusUpdateRequest request) {
+        Reclamation rec = getEntity(id);
 
         ReclamationStatus oldStatus = rec.getStatus();
         ReclamationStatus newStatus = request.newStatus();
@@ -186,11 +189,11 @@ public class ReclamationServiceImpl implements ReclamationService {
 
     // ---------------- ASSIGN TO AGENT ----------------
     @Override
-    public ReclamationResponse assign(Long reclamationId, ReclamationAssignRequest request) {
-        Reclamation rec = getEntity(reclamationId);
+    public ReclamationResponse assign(Long id, ReclamationAssignRequest request) {
+        Reclamation rec = getEntity(id);
 
         if (rec.getStatus() == ReclamationStatus.RESOLVED || rec.getStatus() == ReclamationStatus.REJECTED) {
-            throw new BadRequestException("Cannot assign a closed reclamation");
+            throw new BusinessException("Cannot assign a closed reclamation");
         }
 
         rec.setAssignedTo(request.agentUserId());
@@ -215,8 +218,8 @@ public class ReclamationServiceImpl implements ReclamationService {
     // ---------------- READ ----------------
     @Override
     @Transactional(readOnly = true)
-    public ReclamationResponse getById(Long reclamationId) {
-        return toResponse(getEntity(reclamationId));
+    public ReclamationResponse getById(Long id) {
+        return toResponse(getEntity(id));
     }
 
     @Override
@@ -242,24 +245,22 @@ public class ReclamationServiceImpl implements ReclamationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReclamationHistoryResponse> getHistory(Long reclamationId) {
-        List<ReclamationHistory> rows =
-                historyRepository.findByReclamation_ReclamationIdOrderByChangedAtDesc(reclamationId);
+    public List<ReclamationHistoryResponse> getHistory(Long id) {
+        List<ReclamationHistory> rows = historyRepository.findByReclamation_IdOrderByChangedAtDesc(id);
 
         return rows.stream().map(h -> new ReclamationHistoryResponse(
-                h.getHistoryId(),
-                h.getUserId(),          // can be null for SYSTEM action
+                h.getId(),
+                h.getId(), // can be null for SYSTEM action
                 h.getOldStatus(),
                 h.getNewStatus(),
                 h.getChangedAt(),
-                h.getNote()
-        )).toList();
+                h.getNote())).toList();
     }
 
     // ---------------- Helpers ----------------
     private Reclamation getEntity(Long id) {
         return reclamationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Reclamation not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Reclamation not found: " + id));
     }
 
     private ReclamationResponse toResponse(Reclamation r) {
@@ -268,8 +269,8 @@ public class ReclamationServiceImpl implements ReclamationService {
 
     private ReclamationResponse toResponse(Reclamation r, RiskFeaturesDto modelInput) {
         return new ReclamationResponse(
-                r.getReclamationId(),
-                r.getUserId(),
+                r.getId(),
+                r.getId(),
                 r.getSubject(),
                 r.getDescription(),
                 r.getStatus(),
@@ -278,29 +279,31 @@ public class ReclamationServiceImpl implements ReclamationService {
                 r.getRiskLevel(),
                 r.getCreatedAt(),
                 r.getResolvedAt(),
-                modelInput
-        );
+                modelInput);
     }
 
     private void validateTransition(ReclamationStatus oldS, ReclamationStatus newS) {
-        if (oldS == newS) return;
+        if (oldS == newS)
+            return;
 
-        boolean ok =
-                (oldS == ReclamationStatus.OPEN &&
-                        (newS == ReclamationStatus.IN_PROGRESS || newS == ReclamationStatus.REJECTED))
-                        ||
-                        (oldS == ReclamationStatus.IN_PROGRESS &&
-                                (newS == ReclamationStatus.RESOLVED || newS == ReclamationStatus.REJECTED));
+        boolean ok = (oldS == ReclamationStatus.OPEN &&
+                (newS == ReclamationStatus.IN_PROGRESS || newS == ReclamationStatus.REJECTED))
+                ||
+                (oldS == ReclamationStatus.IN_PROGRESS &&
+                        (newS == ReclamationStatus.RESOLVED || newS == ReclamationStatus.REJECTED));
 
         if (!ok) {
-            throw new BadRequestException("Invalid status transition: " + oldS + " -> " + newS);
+            throw new BusinessException("Invalid status transition: " + oldS + " -> " + newS);
         }
     }
 
     private ReclamationRiskLevel riskLevelFromScore(double score) {
-        if (score >= 85) return ReclamationRiskLevel.CRITICAL;
-        if (score >= 65) return ReclamationRiskLevel.HIGH;
-        if (score >= 35) return ReclamationRiskLevel.MEDIUM;
+        if (score >= 85)
+            return ReclamationRiskLevel.CRITICAL;
+        if (score >= 65)
+            return ReclamationRiskLevel.HIGH;
+        if (score >= 35)
+            return ReclamationRiskLevel.MEDIUM;
         return ReclamationRiskLevel.LOW;
     }
 
@@ -308,7 +311,8 @@ public class ReclamationServiceImpl implements ReclamationService {
         if (riskLevel == ReclamationRiskLevel.HIGH || riskLevel == ReclamationRiskLevel.CRITICAL) {
             return Priority.HIGH;
         }
-        if (riskLevel == ReclamationRiskLevel.MEDIUM) return Priority.MEDIUM;
+        if (riskLevel == ReclamationRiskLevel.MEDIUM)
+            return Priority.MEDIUM;
         return Priority.LOW;
     }
 }

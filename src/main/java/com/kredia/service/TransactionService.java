@@ -31,15 +31,15 @@ public class TransactionService {
     }
 
     public Transaction createTransaction(Transaction transaction) {
-        if (transaction.getSourceWallet() == null || transaction.getSourceWallet().getWalletId() == null) {
+        if (transaction.getSourceWallet() == null || transaction.getSourceWallet().getId() == null) {
             throw new IllegalArgumentException("Source wallet must be provided");
         }
-        Wallet sourceWallet = walletRepository.findById(transaction.getSourceWallet().getWalletId())
+        Wallet sourceWallet = walletRepository.findById(transaction.getSourceWallet().getId())
                 .orElseThrow(() -> new RuntimeException("Source wallet not found"));
         transaction.setSourceWallet(sourceWallet);
 
-        if (transaction.getDestinationWallet() != null && transaction.getDestinationWallet().getWalletId() != null) {
-             Wallet destinationWallet = walletRepository.findById(transaction.getDestinationWallet().getWalletId())
+        if (transaction.getDestinationWallet() != null && transaction.getDestinationWallet().getId() != null) {
+             Wallet destinationWallet = walletRepository.findById(transaction.getDestinationWallet().getId())
                     .orElseThrow(() -> new RuntimeException("Destination wallet not found"));
              transaction.setDestinationWallet(destinationWallet);
         }

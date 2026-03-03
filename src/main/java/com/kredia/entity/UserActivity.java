@@ -5,13 +5,10 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(
-        name = "user_activities",
-        indexes = {
-                @Index(name = "idx_user_activities_user_id", columnList = "user_id"),
-                @Index(name = "idx_user_activities_timestamp", columnList = "timestamp")
-        }
-)
+@Table(name = "user_activities", indexes = {
+        @Index(name = "idx_user_activities_user_id", columnList = "user_id"),
+        @Index(name = "idx_user_activities_timestamp", columnList = "timestamp")
+})
 public class UserActivity {
 
     @Id

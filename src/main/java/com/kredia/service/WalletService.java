@@ -1,9 +1,9 @@
 package com.kredia.service;
 import com.kredia.entity.wallet.Wallet;
-import com.kredia.repository.LegacyUserRepository;
+import com.kredia.repository.UserRepository;
 import com.kredia.repository.WalletRepository;
 import com.kredia.enums.WalletStatus;
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,16 +13,16 @@ import java.time.LocalDateTime;
 @Transactional
 public class WalletService {
     private WalletRepository walletRepository;
-    private LegacyUserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
-    public WalletService(LegacyUserRepository userRepository, WalletRepository walletRepository) {
+    public WalletService(UserRepository userRepository, WalletRepository walletRepository) {
         this.userRepository = userRepository;
         this.walletRepository = walletRepository;
     }
     public Wallet createWallet(Wallet wallet) {
-        if (wallet.getUser() != null && wallet.getUser().getUserId() != null) {
-            long userId = wallet.getUser().getUserId();
+        if (wallet.getUser() != null && wallet.getUser().getId() != null) {
+            long userId = wallet.getUser().getId();
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             wallet.setUser(user);

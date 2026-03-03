@@ -2,11 +2,11 @@ package com.kredia.service;
 
 import com.kredia.entity.credit.Credit;
 import com.kredia.entity.credit.Echeance;
-import com.kredia.entity.user.User;
+import com.kredia.entity.User;
 import com.kredia.enums.EcheanceStatus;
 import com.kredia.enums.RepaymentType;
 import com.kredia.repository.CreditRepository;
-import com.kredia.repository.LegacyUserRepository;
+import com.kredia.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,17 +27,17 @@ public class CreditService {
     private static final RoundingMode ROUNDING = RoundingMode.HALF_EVEN;
 
     private final CreditRepository creditRepository;
-    private final LegacyUserRepository userRepository;
+    private final UserRepository userRepository;
 
     @Autowired
-    public CreditService(CreditRepository creditRepository, LegacyUserRepository userRepository) {
+    public CreditService(CreditRepository creditRepository, UserRepository userRepository) {
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
     }
 
     public Credit createCredit(Credit credit) {
         // 1. Validate and fetch full User entity
-        Long userId = credit.getUser().getUserId();
+        Long userId = credit.getUser().getId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id " + userId));
         credit.setUser(user);

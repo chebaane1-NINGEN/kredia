@@ -9,9 +9,9 @@ import com.kredia.dto.UserRequestDTO;
 import com.kredia.dto.UserResponseDTO;
 import com.kredia.entity.User;
 import com.kredia.entity.UserActivity;
-import com.kredia.entity.UserActivityActionType;
-import com.kredia.entity.UserRole;
-import com.kredia.entity.UserStatus;
+import com.kredia.enums.UserActivityActionType;
+import com.kredia.enums.UserRole;
+import com.kredia.enums.UserStatus;
 import com.kredia.exception.BusinessException;
 import com.kredia.exception.ForbiddenException;
 import com.kredia.exception.ResourceNotFoundException;
@@ -139,7 +139,7 @@ public class UserServiceImpl implements UserService {
         validateRole(actor, UserRole.ADMIN);
         User target = loadActor(userId);
         validateNotDeleted(target);
-        return mapActivities(userActivityRepository.findByUserIdOrderByTimestampAsc(userId));
+        return mapActivities(userActivityRepository.findByTargetIdOrderByTimestampAsc(userId));
     }
 
     @Override
@@ -153,7 +153,7 @@ public class UserServiceImpl implements UserService {
         if (ids.isEmpty()) {
             return List.of();
         }
-        return mapActivities(userActivityRepository.findByUserIdInOrderByTimestampAsc(ids));
+        return mapActivities(userActivityRepository.findByTargetIdInOrderByTimestampAsc(ids));
     }
 
     @Override
@@ -172,7 +172,7 @@ public class UserServiceImpl implements UserService {
             return new AgentPerformanceDTO();
         }
 
-        List<UserActivity> acts = userActivityRepository.findByUserIdOrderByTimestampAsc(agentId);
+        List<UserActivity> acts = userActivityRepository.findByTargetIdOrderByTimestampAsc(agentId);
         long approvals = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.APPROVAL).count();
         long rejections = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.REJECTION).count();
         long handled = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.CLIENT_HANDLED).count();
@@ -200,7 +200,7 @@ public class UserServiceImpl implements UserService {
     public List<UserActivityResponseDTO> agentActivities(Long agentId) {
         User agent = loadActor(agentId);
         validateRole(agent, UserRole.AGENT);
-        return mapActivities(userActivityRepository.findByUserIdOrderByTimestampAsc(agentId));
+        return mapActivities(userActivityRepository.findByTargetIdOrderByTimestampAsc(agentId));
     }
 
     @Override
@@ -221,7 +221,7 @@ public class UserServiceImpl implements UserService {
     public List<UserActivityResponseDTO> clientActivity(Long clientId) {
         User client = loadActor(clientId);
         validateRole(client, UserRole.CLIENT);
-        return mapActivities(userActivityRepository.findByUserIdOrderByTimestampAsc(clientId));
+        return mapActivities(userActivityRepository.findByTargetIdOrderByTimestampAsc(clientId));
     }
 
     @Override
@@ -230,7 +230,7 @@ public class UserServiceImpl implements UserService {
         User client = loadActor(clientId);
         validateRole(client, UserRole.CLIENT);
 
-        List<UserActivity> acts = userActivityRepository.findByUserIdOrderByTimestampAsc(clientId);
+        List<UserActivity> acts = userActivityRepository.findByTargetIdOrderByTimestampAsc(clientId);
 
         int score = 50;
         if (client.getStatus() == UserStatus.ACTIVE) {
@@ -499,7 +499,7 @@ public class UserServiceImpl implements UserService {
 
     private void recordActivity(Long userId, UserActivityActionType type, String description) {
         UserActivity activity = new UserActivity();
-        activity.setUserId(userId);
+        activity.setTargetId(userId);
         activity.setActionType(type);
         activity.setDescription(description);
         activity.setTimestamp(Instant.now());
@@ -531,7 +531,7 @@ public class UserServiceImpl implements UserService {
         for (UserActivity a : activities) {
             UserActivityResponseDTO dto = new UserActivityResponseDTO();
             dto.setId(a.getId());
-            dto.setUserId(a.getUserId());
+            dto.setUserId(a.getId());
             dto.setActionType(a.getActionType());
             dto.setDescription(a.getDescription());
             dto.setTimestamp(a.getTimestamp());

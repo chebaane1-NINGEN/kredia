@@ -7,27 +7,27 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notification",
-        indexes = {
-                @Index(name = "idx_notif_user_read", columnList = "user_id,is_read"),
-                @Index(name = "idx_notif_sent", columnList = "sent_at")
-        }
-)
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Table(name = "notification", indexes = {
+        @Index(name = "idx_notif_user_read", columnList = "user_id,is_read"),
+        @Index(name = "idx_notif_sent", columnList = "sent_at")
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "notification_id")
-    private Long notificationId;
+    private Long id;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
     @Column(name = "reclamation_id")
-    private Long reclamationId;
+    private Long id;
 
     // link if related to complaint
 

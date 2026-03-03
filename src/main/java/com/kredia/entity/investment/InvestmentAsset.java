@@ -15,29 +15,29 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InvestmentAsset {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "asset_id")
     private Long assetId;
-    
+
     @Column(name = "symbol", nullable = false, unique = true, length = 20)
     private String symbol;
-    
+
     @Column(name = "asset_name", nullable = false, length = 200)
     private String assetName;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false)
     private AssetCategory category;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(name = "risk_level", nullable = false)
     private RiskLevel riskLevel;
-    
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
