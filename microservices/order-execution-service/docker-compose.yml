@@ -1,0 +1,19 @@
+services:
+  order-execution-service:
+    build: .
+    container_name: kredia-order-execution
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=mysql+pymysql://root@host.docker.internal:3306/kredia_db
+      - ALPHA_VANTAGE_API_KEY=ACH9TF7OZXXUFNH0
+      - MONITORING_INTERVAL=60
+    restart: unless-stopped
+    networks:
+      - kredia-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  kredia-network:
+    driver: bridge

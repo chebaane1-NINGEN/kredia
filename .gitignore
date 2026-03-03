@@ -47,7 +47,6 @@ spring-boot-devtools.properties
 logs/
 *.log
 
-
 # Env
 .env
 
@@ -70,3 +69,6 @@ src/main/resources/static/images/SECTION CONFIANCE : CROISSANCE.png
 src/main/resources/static/images/SECTION SÉCURITÉ.png
 src/main/resources/static/images/SECTION S*.png
 src/main/resources/static/images/test.txt
+
+# Fichiers de configuration sensibles
+src/main/resources/secrets.properties
