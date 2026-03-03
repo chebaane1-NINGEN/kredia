@@ -1,6 +1,7 @@
 package com.kredia.service.impl;
 
 import com.kredia.entity.support.Reclamation;
+import com.kredia.entity.support.ReclamationHistory;
 import com.kredia.enums.Priority;
 import com.kredia.enums.ReclamationStatus;
 import com.kredia.repository.ReclamationHistoryRepository;
@@ -42,13 +43,13 @@ public class ReclamationSlaScheduler {
 
             triggerService.onEscalated(saved, saved.getRiskScore(), "SLA exceeded");
 
-            historyRepository.save(com.kredia.entity.support.ReclamationHistory.builder()
-                    .reclamation(saved)
-                    .userId(0L)
-                    .oldStatus(ReclamationStatus.OPEN)
-                    .newStatus(ReclamationStatus.IN_PROGRESS)
-                    .note("AUTO_ESCALATED due to SLA")
-                    .build());
+            ReclamationHistory history = new ReclamationHistory();
+            history.setReclamation(saved);
+            history.setUserId(0L);
+            history.setOldStatus(ReclamationStatus.OPEN);
+            history.setNewStatus(ReclamationStatus.IN_PROGRESS);
+            history.setNote("AUTO_ESCALATED due to SLA");
+            historyRepository.save(history);
         }
     }
 }

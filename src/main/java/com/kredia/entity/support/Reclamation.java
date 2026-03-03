@@ -1,6 +1,7 @@
 package com.kredia.entity.support;
 
 import com.kredia.enums.Priority;
+import com.kredia.enums.ReclamationRiskLevel;
 import com.kredia.enums.ReclamationStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -54,6 +55,10 @@ public class Reclamation {
     @Column(name = "risk_score")
     private Double riskScore;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level", nullable = false)
+    private ReclamationRiskLevel riskLevel;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -69,6 +74,7 @@ public class Reclamation {
         lastActivityAt = createdAt;
         if (status == null) status = ReclamationStatus.OPEN;
         if (priority == null) priority = Priority.MEDIUM;
+        if (riskLevel == null) riskLevel = ReclamationRiskLevel.LOW;
     }
 
     @PreUpdate

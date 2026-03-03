@@ -33,4 +33,14 @@ public interface EcheanceRepository extends JpaRepository<Echeance, Long> {
     List<Echeance> findNextUnpaidEcheancesByCreditId(@Param("creditId") Long creditId);
 
     List<Echeance> findByCreditCreditId(Long creditId);
+
+    @Query(value = """
+            SELECT COUNT(*)
+            FROM echeance e
+            INNER JOIN credit c ON c.credit_id = e.credit_id
+            WHERE c.user_id = :userId
+              AND e.status IN ('OVERDUE', 'PARTIALLY_PAID')
+              AND e.due_date < CURDATE()
+            """, nativeQuery = true)
+    long countLateCreditByUserId(@Param("userId") Long userId);
 }

@@ -3,11 +3,14 @@ package com.kredia.service.ml;
 import com.kredia.dto.ml.RiskFeaturesDto;
 import com.kredia.dto.ml.RiskPredictionResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class MlRiskClient {
 
@@ -24,10 +27,19 @@ public class MlRiskClient {
                     .retrieve()
                     .body(RiskPredictionResponse.class);
 
-            return res != null ? res.riskScore() : 0.0;
+            if (res == null) {
+                log.warn("ML /predict returned null body for payload: {}", features);
+                return 0.0;
+            }
 
+            log.info("ML /predict success: score={}, level={}", res.riskScore(), res.riskLevel());
+            return res.riskScore();
+
+        } catch (RestClientResponseException e) {
+            log.error("ML /predict HTTP error {} body={}", e.getStatusCode(), e.getResponseBodyAsString(), e);
+            return 0.0;
         } catch (Exception e) {
-            // fallback: safe default score
+            log.error("ML /predict call failed for payload: {}", features, e);
             return 0.0;
         }
     }

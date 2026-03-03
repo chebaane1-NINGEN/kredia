@@ -1,49 +1,55 @@
 package com.kredia.service.ml.impl;
 
 import com.kredia.dto.ml.RiskFeaturesDto;
+import com.kredia.repository.EcheanceRepository;
 import com.kredia.repository.ReclamationRepository;
+import com.kredia.repository.TransactionRepository;
 import com.kredia.service.ml.RiskFeatureExtractorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
 public class RiskFeatureExtractorServiceImpl implements RiskFeatureExtractorService {
 
     private final ReclamationRepository reclamationRepository;
-
-    // Later: inject WalletRepository/CreditRepository/EcheanceRepository
-    // private final WalletRepository walletRepository;
-    // private final CreditRepository creditRepository;
-    // private final EcheanceRepository echeanceRepository;
+    private final TransactionRepository transactionRepository;
+    private final EcheanceRepository echeanceRepository;
 
     @Override
-    public RiskFeaturesDto extract(Long userId, String description) {
+    public RiskFeaturesDto extract(Long userId, String subject, String description, String status, String priority) {
 
-        int msgLen = description == null ? 0 : description.length();
+        String safeSubject = subject == null ? "" : subject.trim();
+        String safeDescription = description == null ? "" : description.trim();
+        String safeStatus = status == null ? "OPEN" : status;
+        String safePriority = priority == null ? "MEDIUM" : priority;
 
-        long count90 = reclamationRepository.countByUserIdAndCreatedAtAfter(
-                userId,
-                LocalDateTime.now().minusDays(90)
-        );
+        long pastReclamationsLong = reclamationRepository.countByUserId(userId);
+        int pastReclamations = pastReclamationsLong > Integer.MAX_VALUE
+                ? Integer.MAX_VALUE
+                : (int) pastReclamationsLong;
 
-        // For now (until you wire Wallet/Credit repos):
-        double walletBalance = 0.0;
-        double walletFrozen = 0.0;
-        int creditHasActive = 0;
-        int missed = 0;
-        int daysLate = 0;
+        long duplicateLong = reclamationRepository.countDuplicateCandidates(userId, safeSubject, safeDescription);
+        int duplicateCount = duplicateLong > Integer.MAX_VALUE
+                ? Integer.MAX_VALUE
+                : (int) duplicateLong;
+
+        BigDecimal latestCompletedAmount = transactionRepository.findLatestCompletedAmountByUserId(userId);
+        double transactionAmount = latestCompletedAmount != null ? latestCompletedAmount.doubleValue() : 0.0;
+
+        int lateCredit = echeanceRepository.countLateCreditByUserId(userId) > 0 ? 1 : 0;
 
         return new RiskFeaturesDto(
-                (int) count90,
-                msgLen,
-                walletBalance,
-                walletFrozen,
-                creditHasActive,
-                missed,
-                daysLate
+                safeSubject,
+                safeDescription,
+                safeStatus,
+                safePriority,
+                duplicateCount,
+                pastReclamations,
+                transactionAmount,
+                lateCredit
         );
     }
 }

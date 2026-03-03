@@ -1,10 +1,16 @@
 package com.kredia.service.impl;
 
 import com.kredia.dto.ml.RiskFeaturesDto;
-import com.kredia.dto.reclamation.*;
+import com.kredia.dto.reclamation.ReclamationAssignRequest;
+import com.kredia.dto.reclamation.ReclamationCreateRequest;
+import com.kredia.dto.reclamation.ReclamationHistoryResponse;
+import com.kredia.dto.reclamation.ReclamationResponse;
+import com.kredia.dto.reclamation.ReclamationStatusUpdateRequest;
+import com.kredia.dto.reclamation.ReclamationUpdateRequest;
 import com.kredia.entity.support.Reclamation;
 import com.kredia.entity.support.ReclamationHistory;
 import com.kredia.enums.Priority;
+import com.kredia.enums.ReclamationRiskLevel;
 import com.kredia.enums.ReclamationStatus;
 import com.kredia.exception.BadRequestException;
 import com.kredia.exception.NotFoundException;
@@ -15,7 +21,11 @@ import com.kredia.service.ReclamationTriggerService;
 import com.kredia.service.ml.MlRiskClient;
 import com.kredia.service.ml.RiskFeatureExtractorService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional
 public class ReclamationServiceImpl implements ReclamationService {
@@ -40,29 +51,38 @@ public class ReclamationServiceImpl implements ReclamationService {
     // ---------------- CREATE ----------------
     @Override
     public ReclamationResponse create(ReclamationCreateRequest request) {
+        Priority initialPriority = request.priority() != null ? request.priority() : Priority.MEDIUM;
 
-        // Create with default priority (ML will decide later)
-        Reclamation rec = Reclamation.builder()
-                .userId(request.userId())
-                .subject(request.subject())
-                .description(request.description())
-                .status(ReclamationStatus.OPEN)
-                .priority(Priority.MEDIUM)   // ML-driven priority
-                .riskScore(null)
-                .assignedTo(null)
-                .build();
+        Reclamation rec = new Reclamation();
+        rec.setUserId(request.userId());
+        rec.setSubject(request.subject());
+        rec.setDescription(request.description());
+        rec.setStatus(ReclamationStatus.OPEN);
+        rec.setPriority(initialPriority);
+        rec.setRiskScore(null);
+        rec.setRiskLevel(ReclamationRiskLevel.LOW);
+        rec.setAssignedTo(null);
+
+        // Build model input before insert so past/duplicate stats use historical rows only.
+        RiskFeaturesDto modelInput = riskFeatureExtractorService.extract(
+                request.userId(),
+                request.subject(),
+                request.description(),
+                ReclamationStatus.OPEN.name(),
+                initialPriority.name()
+        );
 
         // 1) Save first to get reclamationId
         Reclamation saved = reclamationRepository.save(rec);
 
         // 2) History: CREATED (actor is the user who created it)
-        historyRepository.save(ReclamationHistory.builder()
-                .reclamation(saved)
-                .userId(request.userId())
-                .oldStatus(ReclamationStatus.OPEN)
-                .newStatus(ReclamationStatus.OPEN)
-                .note("Created")
-                .build());
+        ReclamationHistory createdHistory = new ReclamationHistory();
+        createdHistory.setReclamation(saved);
+        createdHistory.setUserId(request.userId());
+        createdHistory.setOldStatus(ReclamationStatus.OPEN);
+        createdHistory.setNewStatus(ReclamationStatus.OPEN);
+        createdHistory.setNote("Created");
+        historyRepository.save(createdHistory);
 
         // 3) Trigger: notify user "received"
         triggerService.onCreated(saved);
@@ -70,37 +90,46 @@ public class ReclamationServiceImpl implements ReclamationService {
         // 4) ML risk scoring (FastAPI)
         double score = 0.0;
         try {
-            RiskFeaturesDto features = riskFeatureExtractorService.extract(saved.getUserId(), saved.getDescription());
-            score = mlRiskClient.predictRiskScore(features);
+            log.info(
+                    "ML features before /predict: duplicate_count={}, past_reclamations={}, transaction_amount={}, late_credit={}",
+                    modelInput.duplicate_count(),
+                    modelInput.past_reclamations(),
+                    modelInput.transaction_amount(),
+                    modelInput.late_credit()
+            );
+            score = mlRiskClient.predictRiskScore(modelInput);
         } catch (Exception ignored) {
             // Fallback: app should not crash if ML service is down
         }
 
-        // 5) Store score + set priority from score
+        // 5) Store score + risk level + set priority from risk level
+        ReclamationRiskLevel riskLevel = riskLevelFromScore(score);
         saved.setRiskScore(score);
-        saved.setPriority(priorityFromScore(score));
+        saved.setRiskLevel(riskLevel);
+        saved.setPriority(priorityFromRiskLevel(riskLevel));
+        log.info("ML score persisted for reclamationId={}: score={}, riskLevel={}, priority={}",
+                saved.getReclamationId(), score, riskLevel, saved.getPriority());
 
-        // 6) Auto-escalation ONLY if score >= 70
-        if (score >= 70) {
+        // 6) Auto-escalation for HIGH/CRITICAL risk
+        if (riskLevel == ReclamationRiskLevel.HIGH || riskLevel == ReclamationRiskLevel.CRITICAL) {
             ReclamationStatus old = saved.getStatus();
             saved.setStatus(ReclamationStatus.IN_PROGRESS);
 
-            // History: AUTO_ESCALATED (system action => userId MUST be null to avoid FK issue)
-            historyRepository.save(ReclamationHistory.builder()
-                    .reclamation(saved)
-                    .userId(null) // ✅ SYSTEM action (requires reclamation_history.user_id nullable)
-                    .oldStatus(old)
-                    .newStatus(ReclamationStatus.IN_PROGRESS)
-                    .note("AUTO_ESCALATED (ML riskScore=" + (int) score + ")")
-                    .build());
+            // SYSTEM action; userId is null by design.
+            ReclamationHistory autoEscalatedHistory = new ReclamationHistory();
+            autoEscalatedHistory.setReclamation(saved);
+            autoEscalatedHistory.setUserId(null);
+            autoEscalatedHistory.setOldStatus(old);
+            autoEscalatedHistory.setNewStatus(ReclamationStatus.IN_PROGRESS);
+            autoEscalatedHistory.setNote("AUTO_ESCALATED (ML riskScore=" + (int) score + ", level=" + riskLevel + ")");
+            historyRepository.save(autoEscalatedHistory);
 
-            // Trigger: notify supervisor
             triggerService.onEscalated(saved, score, "High ML risk score");
         }
 
-        // 7) Save final updated record (risk_score + maybe status/priority)
+        // 7) Save final updated record (risk_score + risk_level + maybe status/priority)
         Reclamation finalSaved = reclamationRepository.save(saved);
-        return toResponse(finalSaved);
+        return toResponse(finalSaved, modelInput);
     }
 
     // ---------------- UPDATE CONTENT ----------------
@@ -141,13 +170,13 @@ public class ReclamationServiceImpl implements ReclamationService {
         Reclamation saved = reclamationRepository.save(rec);
 
         // History row (actor is real user -> must exist)
-        historyRepository.save(ReclamationHistory.builder()
-                .reclamation(saved)
-                .userId(request.actorUserId())
-                .oldStatus(oldStatus)
-                .newStatus(newStatus)
-                .note(request.note())
-                .build());
+        ReclamationHistory statusHistory = new ReclamationHistory();
+        statusHistory.setReclamation(saved);
+        statusHistory.setUserId(request.actorUserId());
+        statusHistory.setOldStatus(oldStatus);
+        statusHistory.setNewStatus(newStatus);
+        statusHistory.setNote(request.note());
+        historyRepository.save(statusHistory);
 
         // Notifications
         triggerService.onStatusChanged(saved, oldStatus, newStatus, request.note(), request.actorUserId());
@@ -168,14 +197,14 @@ public class ReclamationServiceImpl implements ReclamationService {
         Reclamation saved = reclamationRepository.save(rec);
 
         // History: ASSIGNED (actor is real user -> must exist)
-        historyRepository.save(ReclamationHistory.builder()
-                .reclamation(saved)
-                .userId(request.actorUserId())
-                .oldStatus(saved.getStatus())
-                .newStatus(saved.getStatus())
-                .note("Assigned to agent " + request.agentUserId()
-                        + (request.note() != null ? " - " + request.note() : ""))
-                .build());
+        ReclamationHistory assignHistory = new ReclamationHistory();
+        assignHistory.setReclamation(saved);
+        assignHistory.setUserId(request.actorUserId());
+        assignHistory.setOldStatus(saved.getStatus());
+        assignHistory.setNewStatus(saved.getStatus());
+        assignHistory.setNote("Assigned to agent " + request.agentUserId()
+                + (request.note() != null ? " - " + request.note() : ""));
+        historyRepository.save(assignHistory);
 
         // Notify agent (reuse status changed trigger)
         triggerService.onStatusChanged(saved, saved.getStatus(), saved.getStatus(), "Assigned", request.actorUserId());
@@ -234,6 +263,10 @@ public class ReclamationServiceImpl implements ReclamationService {
     }
 
     private ReclamationResponse toResponse(Reclamation r) {
+        return toResponse(r, null);
+    }
+
+    private ReclamationResponse toResponse(Reclamation r, RiskFeaturesDto modelInput) {
         return new ReclamationResponse(
                 r.getReclamationId(),
                 r.getUserId(),
@@ -242,8 +275,10 @@ public class ReclamationServiceImpl implements ReclamationService {
                 r.getStatus(),
                 r.getPriority(),
                 r.getRiskScore(),
+                r.getRiskLevel(),
                 r.getCreatedAt(),
-                r.getResolvedAt()
+                r.getResolvedAt(),
+                modelInput
         );
     }
 
@@ -262,15 +297,18 @@ public class ReclamationServiceImpl implements ReclamationService {
         }
     }
 
-    /**
-     * Priority derived from ML score.
-     * <40  -> LOW
-     * 40-69-> MEDIUM
-     * >=70 -> HIGH
-     */
-    private Priority priorityFromScore(double score) {
-        if (score >= 70) return Priority.HIGH;
-        if (score >= 40) return Priority.MEDIUM;
+    private ReclamationRiskLevel riskLevelFromScore(double score) {
+        if (score >= 85) return ReclamationRiskLevel.CRITICAL;
+        if (score >= 65) return ReclamationRiskLevel.HIGH;
+        if (score >= 35) return ReclamationRiskLevel.MEDIUM;
+        return ReclamationRiskLevel.LOW;
+    }
+
+    private Priority priorityFromRiskLevel(ReclamationRiskLevel riskLevel) {
+        if (riskLevel == ReclamationRiskLevel.HIGH || riskLevel == ReclamationRiskLevel.CRITICAL) {
+            return Priority.HIGH;
+        }
+        if (riskLevel == ReclamationRiskLevel.MEDIUM) return Priority.MEDIUM;
         return Priority.LOW;
     }
 }
