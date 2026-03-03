@@ -12,9 +12,10 @@ import java.time.LocalDateTime;
 @Service
 @Transactional
 public class WalletService {
-    @Autowired
     private WalletRepository walletRepository;
     private LegacyUserRepository userRepository;
+
+    @Autowired
     public WalletService(LegacyUserRepository userRepository, WalletRepository walletRepository) {
         this.userRepository = userRepository;
         this.walletRepository = walletRepository;
