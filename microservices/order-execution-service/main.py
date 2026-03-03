@@ -149,12 +149,42 @@ async def check_orders():
                 
                 db.commit()
                 logger.info(f"✓ Ordre {order.order_id} exécuté: {order.order_type.value} {order.asset_symbol} @ {current_price}")
+                
+                # Envoyer la notification par email
+                await send_email_notification(order, current_price)
     
     except Exception as e:
         logger.error(f"Erreur: {e}")
         db.rollback()
     finally:
         db.close()
+
+
+async def send_email_notification(order: InvestmentOrder, executed_price: float):
+    """Envoie une notification email via l'API Spring Boot"""
+    try:
+        api_url = os.getenv("SPRING_API_URL", "http://localhost:8081")
+        notification_data = {
+            "orderId": order.order_id,
+            "userId": order.user_id,
+            "assetSymbol": order.asset_symbol,
+            "orderType": order.order_type.value,
+            "quantity": str(order.quantity),
+            "executedPrice": str(executed_price),
+            "executedAt": order.executed_at.isoformat() if order.executed_at else None
+        }
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                f"{api_url}/api/order-execution/notify",
+                json=notification_data
+            )
+            if response.status_code == 200:
+                logger.info(f"✉️  Email notification envoyée pour l'ordre {order.order_id}")
+            else:
+                logger.warning(f"⚠️  Erreur envoi email (status {response.status_code}): {response.text}")
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de l'envoi de la notification email: {e}")
 
 
 async def main():

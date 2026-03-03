@@ -78,6 +78,13 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Brevo (SendinBlue) API Client -->
+        <dependency>
+            <groupId>com.sendinblue</groupId>
+            <artifactId>sib-api-v3-sdk</artifactId>
+            <version>6.0.0</version>
+        </dependency>
+
         <!-- Flyway Migration -->
         <dependency>
             <groupId>org.flywaydb</groupId>

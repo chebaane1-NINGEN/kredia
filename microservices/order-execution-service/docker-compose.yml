@@ -8,6 +8,7 @@ services:
       - DATABASE_URL=mysql+pymysql://root@host.docker.internal:3306/kredia_db
       - ALPHA_VANTAGE_API_KEY=ACH9TF7OZXXUFNH0
       - MONITORING_INTERVAL=60
+      - SPRING_API_URL=http://host.docker.internal:8081
     restart: unless-stopped
     networks:
       - kredia-network
