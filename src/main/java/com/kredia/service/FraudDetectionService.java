@@ -3,7 +3,7 @@ package com.kredia.service;
 import com.kredia.entity.wallet.Transaction;
 import com.kredia.enums.TransactionStatus;
 import com.kredia.repository.TransactionRepository;
-import org.springframework.ai.chat.client.ChatClient;
+//import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,17 +17,17 @@ public class FraudDetectionService {
 
     private final TransactionRepository transactionRepository;
     private final WalletService walletService;
-    private final ChatClient chatClient;
+   // private final ChatClient chatClient;
 
     private static final BigDecimal LARGE_AMOUNT_THRESHOLD = new BigDecimal("10000.00");
     private static final long HIGH_FREQUENCY_THRESHOLD = 10;
     private static final int DETECTION_WINDOW_HOURS = 24;
 
     @Autowired
-    public FraudDetectionService(TransactionRepository transactionRepository, WalletService walletService, ChatClient.Builder chatClientBuilder) {
+    public FraudDetectionService(TransactionRepository transactionRepository, WalletService walletService) {  //ChatClient.Builder chatClientBuilder
         this.transactionRepository = transactionRepository;
         this.walletService = walletService;
-        this.chatClient = chatClientBuilder.build();
+       // this.chatClient = chatClientBuilder.build();
     }
 
     public void analyzeTransaction(Transaction transaction) {
@@ -64,7 +64,7 @@ public class FraudDetectionService {
         return transactionRepository.findByStatus(TransactionStatus.SUSPECTED_FRAUD);
     }
 
-    public String generateTransactionDescriptionWithGemini(Transaction transaction) {
+   /* public String generateTransactionDescriptionWithGemini(Transaction transaction) {
         String prompt = String.format("Analyze the following transaction and provide a clear, user-friendly description of its purpose and risk level. \n" +
                 "Transaction ID: %d\n" +
                 "Amount: %s\n" +
@@ -86,5 +86,5 @@ public class FraudDetectionService {
         transactionRepository.save(transaction);
 
         return result;
-    }
+    }*/
 }

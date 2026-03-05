@@ -18,6 +18,8 @@ public class WalletController {
         this.walletService = walletService;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Create a new wallet", description = "Creates a wallet for an existing user")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Wallet created successfully")
     @PostMapping
     public ResponseEntity<Wallet> createWallet(@RequestBody Wallet wallet) {
         Wallet createdWallet = walletService.createWallet(wallet);

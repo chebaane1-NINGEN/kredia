@@ -65,10 +65,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
 
         <!-- Flyway Migration -->
         <dependency>
@@ -96,11 +92,7 @@
         </dependency>
 
         <!-- Spring AI Vertex AI Gemini -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-vertex-ai-gemini-spring-boot-starter</artifactId>
-            <version>1.0.0-M1</version>
-        </dependency>
+
 
         <!-- Springdoc OpenAPI (Swagger UI) -->
         <dependency>
@@ -108,7 +100,26 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.3.0</version>
         </dependency>
-    </dependencies>
+        
+
+        <!-- gRPC Dependencies for Hedera SDK -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.61.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>1.61.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>1.61.1</version>
+        </dependency>
+
+     </dependencies>
 
     <build>
         <plugins>

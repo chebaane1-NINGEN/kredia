@@ -1,4 +1,5 @@
 package com.kredia.service;
+
 import com.kredia.entity.wallet.Wallet;
 import com.kredia.repository.WalletRepository;
 import com.kredia.repository.UserRepository;
@@ -20,7 +21,8 @@ public class WalletService {
     private final TransactionAuditLogService auditLogService;
     private final UserRepository userRepository;
 
-    public WalletService(UserRepository userRepository, WalletRepository walletRepository, TransactionAuditLogService auditLogService) {
+    public WalletService(UserRepository userRepository, WalletRepository walletRepository,
+            TransactionAuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.walletRepository = walletRepository;
         this.auditLogService = auditLogService;
@@ -31,11 +33,18 @@ public class WalletService {
             long userId = wallet.getUser().getUserId();
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Check if user already has a wallet
+            if (walletRepository.findByUser_UserId(userId).isPresent()) {
+                throw new RuntimeException("This User already has an active wallet!");
+            }
+
             wallet.setUser(user);
         }
         wallet.setStatus(WalletStatus.ACTIVE);
-        wallet.setCreatedAt(LocalDateTime.now());
-        wallet.setUpdatedAt(LocalDateTime.now());
+        // Date timestamps now handled correctly by @PrePersist/@PreUpdate inside the
+        // Wallet entity.
+
         Wallet savedWallet = walletRepository.save(wallet);
 
         // Audit wallet creation
@@ -81,10 +90,10 @@ public class WalletService {
     public void deleteWallet(long walletId) {
         Wallet wallet = walletRepository.findById(walletId)
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
-        
+
         // Audit deletion before it's gone
         auditWalletAction(wallet, "DELETE");
-        
+
         walletRepository.deleteById(walletId);
     }
 
@@ -98,35 +107,38 @@ public class WalletService {
                 wallet.getBalance() != null ? wallet.getBalance().toString() : "0.00",
                 wallet.getStatus(),
                 LocalDateTime.now());
-        
+
         String dataHash = HashUtil.calculateHash(walletData);
-        
+
         // Find last audit log for chain
         String previousHash = "0";
-        // This is a simplified approach, in production we might want a lastHash field or a specific query
+        // This is a simplified approach, in production we might want a lastHash field
+        // or a specific query
         var logs = auditLogService.getAllAuditLogs();
         if (!logs.isEmpty()) {
             previousHash = logs.get(logs.size() - 1).getDataHash();
         }
 
         // Technically TransactionAuditLog entity expects a Transaction relation.
-        // If we want to audit non-transaction wallet actions, we might need to allow null transaction
-        // or create a dummy/virtual transaction record. 
-        // For now, I'll use the existing auditLogService logic which might need a null check Adjustment.
+        // If we want to audit non-transaction wallet actions, we might need to allow
+        // null transaction
+        // or create a dummy/virtual transaction record.
+        // For now, I'll use the existing auditLogService logic which might need a null
+        // check Adjustment.
         auditLogService.createAuditLog(null, dataHash, previousHash, null);
     }
 
     public void freezeWallet(Long walletId) {
         Wallet wallet = walletRepository.findById(walletId)
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
-        
+
         wallet.setStatus(WalletStatus.FROZEN);
         if (wallet.getBalance() != null && wallet.getBalance().compareTo(java.math.BigDecimal.ZERO) > 0) {
             wallet.setFrozenBalance(wallet.getFrozenBalance().add(wallet.getBalance()));
             wallet.setBalance(java.math.BigDecimal.ZERO);
         }
         wallet.setUpdatedAt(LocalDateTime.now());
-        
+
         Wallet updatedWallet = walletRepository.save(wallet);
 
         // Audit freeze action
