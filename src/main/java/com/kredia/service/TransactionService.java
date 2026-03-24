@@ -22,7 +22,7 @@ public class TransactionService {
     private final TransactionAuditLogService auditLogService;
 
     @Autowired
-    public TransactionService(TransactionRepository transactionRepository, 
+    public TransactionService(TransactionRepository transactionRepository,
                               WalletRepository walletRepository,
                               TransactionAuditLogService auditLogService) {
         this.transactionRepository = transactionRepository;
@@ -39,9 +39,9 @@ public class TransactionService {
         transaction.setSourceWallet(sourceWallet);
 
         if (transaction.getDestinationWallet() != null && transaction.getDestinationWallet().getWalletId() != null) {
-             Wallet destinationWallet = walletRepository.findById(transaction.getDestinationWallet().getWalletId())
+            Wallet destinationWallet = walletRepository.findById(transaction.getDestinationWallet().getWalletId())
                     .orElseThrow(() -> new RuntimeException("Destination wallet not found"));
-             transaction.setDestinationWallet(destinationWallet);
+            transaction.setDestinationWallet(destinationWallet);
         }
 
         if (transaction.getTransactionDate() == null) {
@@ -51,10 +51,10 @@ public class TransactionService {
             transaction.setStatus(TransactionStatus.PENDING);
         }
         Transaction savedTransaction = transactionRepository.save(transaction);
-        
+
         // Audit the transaction
         auditLogService.auditTransaction(savedTransaction);
-        
+
         return savedTransaction;
     }
 
@@ -63,10 +63,10 @@ public class TransactionService {
                 .orElseThrow(() -> new RuntimeException("Transaction not found"));
         transaction.setStatus(status);
         Transaction updatedTransaction = transactionRepository.save(transaction);
-        
+
         // Audit the status change
         auditLogService.auditTransaction(updatedTransaction);
-        
+
         return updatedTransaction;
     }
 
@@ -81,7 +81,7 @@ public class TransactionService {
             if (newTransactionDetails.getDescription() != null) {
                 transaction.setDescription(newTransactionDetails.getDescription());
             }
-             if (newTransactionDetails.getReference() != null) {
+            if (newTransactionDetails.getReference() != null) {
                 transaction.setReference(newTransactionDetails.getReference());
             }
             return transactionRepository.save(transaction);
