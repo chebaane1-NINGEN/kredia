@@ -34,6 +34,8 @@ public interface EcheanceRepository extends JpaRepository<Echeance, Long> {
 
     List<Echeance> findByCreditCreditId(Long creditId);
 
+    List<Echeance> findByStatusInAndDueDateBefore(List<EcheanceStatus> statuses, java.time.LocalDate date);
+
     @Query(value = """
             SELECT COUNT(*)
             FROM echeance e

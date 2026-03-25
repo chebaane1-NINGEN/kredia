@@ -20,14 +20,17 @@ public class CreditController {
     private final CreditService creditService;
     private final com.kredia.service.CreditExcelExportService creditExcelExportService;
     private final com.kredia.service.StatisticsPdfExportService statisticsPdfExportService;
+    private final com.kredia.service.DefaultPredictionService defaultPredictionService;
 
     @Autowired
     public CreditController(CreditService creditService,
             com.kredia.service.CreditExcelExportService creditExcelExportService,
-            com.kredia.service.StatisticsPdfExportService statisticsPdfExportService) {
+            com.kredia.service.StatisticsPdfExportService statisticsPdfExportService,
+            com.kredia.service.DefaultPredictionService defaultPredictionService) {
         this.creditService = creditService;
         this.creditExcelExportService = creditExcelExportService;
         this.statisticsPdfExportService = statisticsPdfExportService;
+        this.defaultPredictionService = defaultPredictionService;
     }
 
     @PostMapping
@@ -97,6 +100,20 @@ public class CreditController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    /**
+     * POST /api/credits/{id}/predict-default
+     * Prédit la probabilité de défaut de paiement pour un crédit donné.
+     */
+    @PostMapping("/{id}/predict-default")
+    public ResponseEntity<?> predictDefault(@PathVariable Long id) {
+        try {
+            com.kredia.dto.ml.DefaultPredictionResponse response = defaultPredictionService.predictForCredit(id);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }
