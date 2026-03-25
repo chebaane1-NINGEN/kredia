@@ -163,6 +163,63 @@ public class GeminiService {
     }
 
     /**
+     * Analyse la description du client et recommande le meilleur type de remboursement.
+     */
+    public String recommendRepaymentType(String clientDescription) {
+        log.info("Requesting repayment type recommendation from Gemini...");
+
+        try {
+            String prompt = buildRecommendationPrompt(clientDescription);
+            
+            JsonObject requestBody = new JsonObject();
+            JsonArray contents = new JsonArray();
+            JsonObject content = new JsonObject();
+            JsonArray parts = new JsonArray();
+            JsonObject textPart = new JsonObject();
+            
+            textPart.addProperty("text", prompt);
+            parts.add(textPart);
+            content.add("parts", parts);
+            contents.add(content);
+            requestBody.add("contents", contents);
+
+            String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(apiUrl))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                log.error("Gemini API error: {}", response.body());
+                return "Une erreur (" + response.statusCode() + ") est survenue avec l'IA: " + response.body();
+            }
+
+            return parseGeminiResponse(response.body());
+
+        } catch (Exception e) {
+            log.error("Gemini recommendation failed: {}", e.getMessage(), e);
+            return "Désolé, je ne peux pas formuler de recommandation pour le moment.";
+        }
+    }
+
+    /**
+     * Construit le prompt pour la recommandation du type de remboursement.
+     */
+    private String buildRecommendationPrompt(String description) {
+        return "Tu es un conseiller financier expert en crédit. " +
+               "Un client te décrit sa situation financière, ses besoins et ses revenus/charges ainsi:\n\"" + description + "\"\n\n" +
+               "Basé de manière stricte sur cette description, recommande-lui le meilleur type de remboursement parmi ces trois options EXACTES:\n\n" +
+               "1. AMORTISSEMENT_CONSTANT : Le client rembourse une part fixe du capital emprunté chaque mois. Les intérêts diminuent avec le temps, donc les mensualités baissent progressivement. Idéal pour ceux qui veulent payer moins d'intérêts au global et peuvent assumer des grosses mensualités au début.\n" +
+               "2. MENSUALITE_CONSTANTE : Le client paie exactement le même montant total chaque mois (capital + intérêts cumulés). La part d'intérêts diminue et la part de capital augmente avec le temps. Idéal pour ceux qui veulent de la prévisibilité et un budget mensuel fixe.\n" +
+               "3. IN_FINE : Le client ne paie que les intérêts pendant toute la durée du crédit, et rembourse l'intégralité du capital emprunté en une seule fois à la toute dernière échéance. Idéal pour les investissements (ex: locatif) avec une grosse rentrée d'argent ou une revente prévue à la fin.\n\n" +
+               "Ta réponse doit d'abord nommer l'option EXACTE en majuscule, puis expliquer de manière claire, empathique et concise pourquoi ce choix est le plus adapté pour sa situation particulière. Ne mentionne pas d'autres types de crédits existants hors de ces 3 choix.";
+    }
+
+    /**
      * Construit la requête JSON pour Gemini Vision
      */
     private JsonObject buildGeminiRequest(String prompt, String base64Image, String mimeType) {
