@@ -76,22 +76,28 @@ public class EcheanceService {
                             java.math.BigDecimal nextRemainingDue = nextEcheance.getAmountDue()
                                     .subtract(nextCurrentPaid);
 
-                            if (surplus.compareTo(nextRemainingDue) >= 0) {
-                                // Surplus couvre totalement cette échéance
-                                nextEcheance.setAmountPaid(nextEcheance.getAmountDue());
-                                markAsPaid(nextEcheance); // This also saves the echeance inside the method
+                            // Calcul de la remise de 5% si payée entièrement avec le surplus
+                            java.math.BigDecimal discount = nextRemainingDue.multiply(new java.math.BigDecimal("0.05"));
+                            java.math.BigDecimal discountedRemainingDue = nextRemainingDue.subtract(discount).setScale(2, java.math.RoundingMode.HALF_EVEN);
 
-                                surplus = surplus.subtract(nextRemainingDue);
-                                log.info("Surplus appliqué. Échéance {} payée complètement. Surplus restant: {}",
-                                        nextEcheance.getEcheanceId(), surplus);
+                            if (surplus.compareTo(discountedRemainingDue) >= 0) {
+                                // Surplus couvre totalement cette échéance (avec la remise de 5%)
+                                // On baisse officiellement l'amount_due pour la comptabilité
+                                nextEcheance.setAmountDue(nextEcheance.getAmountDue().subtract(discount).setScale(2, java.math.RoundingMode.HALF_EVEN));
+                                nextEcheance.setAmountPaid(nextEcheance.getAmountDue());
+                                markAsPaid(nextEcheance);
+
+                                surplus = surplus.subtract(discountedRemainingDue);
+                                log.info("Surplus appliqué avec 5% de remise (-{}). Échéance {} payée complètement. Surplus restant: {}",
+                                        discount, nextEcheance.getEcheanceId(), surplus);
                             } else {
-                                // Surplus couvre partiellement cette échéance
+                                // Surplus couvre partiellement cette échéance (AUCUNE remise)
                                 nextEcheance.setAmountPaid(nextCurrentPaid.add(surplus));
                                 nextEcheance.setStatus(EcheanceStatus.PARTIALLY_PAID);
                                 nextEcheance.setPaidAt(LocalDateTime.now());
                                 echeanceRepository.save(nextEcheance);
 
-                                log.info("Surplus de {} appliqué à l'échéance {}. Paiement partiel. Plus de surplus.",
+                                log.info("Surplus de {} appliqué à l'échéance {}. Paiement partiel. Aucune remise. Plus de surplus.",
                                         surplus, nextEcheance.getEcheanceId());
                                 surplus = java.math.BigDecimal.ZERO;
                             }
@@ -305,22 +311,27 @@ public class EcheanceService {
                             : java.math.BigDecimal.ZERO;
                     java.math.BigDecimal nextRemainingDue = nextEcheance.getAmountDue().subtract(nextCurrentPaid);
 
-                    if (surplus.compareTo(nextRemainingDue) >= 0) {
+                    // Calcul de la remise de 5% si payée entièrement avec le surplus
+                    java.math.BigDecimal discount = nextRemainingDue.multiply(new java.math.BigDecimal("0.05"));
+                    java.math.BigDecimal discountedRemainingDue = nextRemainingDue.subtract(discount).setScale(2, java.math.RoundingMode.HALF_EVEN);
+
+                    if (surplus.compareTo(discountedRemainingDue) >= 0) {
+                        nextEcheance.setAmountDue(nextEcheance.getAmountDue().subtract(discount).setScale(2, java.math.RoundingMode.HALF_EVEN));
                         nextEcheance.setAmountPaid(nextEcheance.getAmountDue());
                         markAsPaid(nextEcheance);
-                        surplusMessage.append("[").append(nextRemainingDue).append(" -> Échéance #")
+                        surplusMessage.append("[").append(discountedRemainingDue).append(" avec remise de 5% -> Échéance #")
                                 .append(nextEcheance.getEcheanceId()).append("] ");
-                        surplus = surplus.subtract(nextRemainingDue);
-                        log.info("Surplus appliqué. Échéance {} payée complètement. Surplus restant: {}",
+                        surplus = surplus.subtract(discountedRemainingDue);
+                        log.info("Surplus appliqué avec 5% remise. Échéance {} payée complètement. Surplus restant: {}",
                                 nextEcheance.getEcheanceId(), surplus);
                     } else {
                         nextEcheance.setAmountPaid(nextCurrentPaid.add(surplus));
                         nextEcheance.setStatus(EcheanceStatus.PARTIALLY_PAID);
                         nextEcheance.setPaidAt(LocalDateTime.now());
                         echeanceRepository.save(nextEcheance);
-                        surplusMessage.append("[").append(surplus).append(" (partiel) -> Échéance #")
+                        surplusMessage.append("[").append(surplus).append(" (partiel, sans remise) -> Échéance #")
                                 .append(nextEcheance.getEcheanceId()).append("] ");
-                        log.info("Surplus de {} appliqué à l'échéance {}. Paiement partiel. Plus de surplus.",
+                        log.info("Surplus de {} appliqué à l'échéance {}. Paiement partiel sans remise.",
                                 surplus, nextEcheance.getEcheanceId());
                         surplus = java.math.BigDecimal.ZERO;
                     }
