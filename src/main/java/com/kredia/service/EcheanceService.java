@@ -23,11 +23,13 @@ public class EcheanceService {
 
     private final EcheanceRepository echeanceRepository;
     private final CreditRepository creditRepository;
+    private final EmailService emailService;
 
     @Autowired
-    public EcheanceService(EcheanceRepository echeanceRepository, CreditRepository creditRepository) {
+    public EcheanceService(EcheanceRepository echeanceRepository, CreditRepository creditRepository, EmailService emailService) {
         this.echeanceRepository = echeanceRepository;
         this.creditRepository = creditRepository;
+        this.emailService = emailService;
     }
 
     /**
@@ -96,6 +98,7 @@ public class EcheanceService {
                                 nextEcheance.setStatus(EcheanceStatus.PARTIALLY_PAID);
                                 nextEcheance.setPaidAt(LocalDateTime.now());
                                 echeanceRepository.save(nextEcheance);
+                                dispatchPartiallyPaidEmailSafe(nextEcheance);
 
                                 log.info("Surplus de {} appliqué à l'échéance {}. Paiement partiel. Aucune remise. Plus de surplus.",
                                         surplus, nextEcheance.getEcheanceId());
@@ -116,8 +119,27 @@ public class EcheanceService {
                     echeance.setStatus(EcheanceStatus.PARTIALLY_PAID);
                     echeance.setPaidAt(LocalDateTime.now());
                     echeanceRepository.save(echeance);
+                    dispatchPartiallyPaidEmailSafe(echeance);
                 }
             }
+        }
+    }
+
+    private void dispatchPartiallyPaidEmailSafe(Echeance echeance) {
+        try {
+            if (echeance.getCredit() != null && echeance.getCredit().getCreditId() != null) {
+                Long creditId = echeance.getCredit().getCreditId();
+                Credit credit = creditRepository.findById(creditId).orElse(null);
+                if (credit != null && credit.getUser() != null) {
+                    com.kredia.entity.user.User user = credit.getUser();
+                    user.getEmail();
+                    user.getFirstName();
+                    user.getLastName();
+                    emailService.sendEcheancePartiallyPaidEmail(user, echeance);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to prepare and send partially paid email for Echeance {}: {}", echeance.getEcheanceId(), e.getMessage());
         }
     }
 
@@ -130,6 +152,24 @@ public class EcheanceService {
         echeance.setPaidAt(LocalDateTime.now());
         echeanceRepository.save(echeance);
         log.info("Echeance {} marked as PAID with amount_paid: {}", echeance.getEcheanceId(), echeance.getAmountPaid());
+
+        // Send confirmation email safely
+        try {
+            if (echeance.getCredit() != null && echeance.getCredit().getCreditId() != null) {
+                Long creditId = echeance.getCredit().getCreditId();
+                Credit credit = creditRepository.findById(creditId).orElse(null);
+                if (credit != null && credit.getUser() != null) {
+                    com.kredia.entity.user.User user = credit.getUser();
+                    // Initialize user proxy to prevent LazyInitializationException in @Async thread
+                    user.getEmail();
+                    user.getFirstName();
+                    user.getLastName();
+                    emailService.sendEcheancePaidEmail(user, echeance);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to prepare and send confirmation email for Echeance {}: {}", echeance.getEcheanceId(), e.getMessage());
+        }
 
         // Check if all echeances for this credit are paid
         if (echeance.getCredit() != null) {
@@ -263,6 +303,7 @@ public class EcheanceService {
             echeance.setStatus(EcheanceStatus.PARTIALLY_PAID);
             echeance.setPaidAt(LocalDateTime.now());
             echeanceRepository.save(echeance);
+            dispatchPartiallyPaidEmailSafe(echeance);
 
             log.info("Paiement partiel pour l'echeance {}. Montant payé: {}, Total payé: {}, Reste à payer: {}",
                     echeanceId, amountPaid, newTotalPaid, remainingDue);
