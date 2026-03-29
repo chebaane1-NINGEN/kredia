@@ -26,7 +26,6 @@ public class EcheanceOverdueScheduler {
     private final CreditRepository creditRepository;
     private final EmailService emailService;
 
-    // Exécution toutes les 10 secondes pour tester l'envoi d'email en temps réel
     @Scheduled(fixedDelay = 10000)
     @Transactional
     public void markOverdueEcheances() {
@@ -37,18 +36,23 @@ public class EcheanceOverdueScheduler {
                 today
         );
 
-        if (late.isEmpty()) return;
+        List<Echeance> echeancesToProcess = late.stream()
+                .filter(e -> {
+                    java.math.BigDecimal baseAmount = e.getPrincipalDue().add(e.getInterestDue());
+                    java.math.BigDecimal penaltyThreshold = baseAmount.multiply(new java.math.BigDecimal("1.01"));
+                    return e.getAmountDue().compareTo(penaltyThreshold) < 0;
+                })
+                .collect(java.util.stream.Collectors.toList());
 
-        // Taux de pénalité de 5%
+        if (echeancesToProcess.isEmpty()) return;
+
         java.math.BigDecimal penaltyRate = new java.math.BigDecimal("0.05");
 
-        late.forEach(e -> {
+        echeancesToProcess.forEach(e -> {
             e.setStatus(EcheanceStatus.OVERDUE);
-            // Ajout de 5% de pénalité sur le montant dû
             java.math.BigDecimal penalty = e.getAmountDue().multiply(penaltyRate);
             e.setAmountDue(e.getAmountDue().add(penalty).setScale(2, java.math.RoundingMode.HALF_EVEN));
             
-            // Envoi de l'email
             try {
                 if (e.getCredit() != null && e.getCredit().getCreditId() != null) {
                     Credit credit = creditRepository.findById(e.getCredit().getCreditId()).orElse(null);
@@ -64,7 +68,7 @@ public class EcheanceOverdueScheduler {
                 log.error("Failed to prepare and send OVERDUE email for Echeance {}: {}", e.getEcheanceId(), ex.getMessage());
             }
         });
-        echeanceRepository.saveAll(late);
-        log.info("{} échéance(s) passées en OVERDUE", late.size());
+        echeanceRepository.saveAll(echeancesToProcess);
+        log.info("{} échéance(s) passées en OVERDUE", echeancesToProcess.size());
     }
 }

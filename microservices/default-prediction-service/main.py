@@ -11,7 +11,6 @@ import os
 
 app = FastAPI(title="KREDIA Default Prediction Service", version="1.0.0")
 
-# Charger le modèle au démarrage
 MODEL_PATH = "model/default_model.pkl"
 model = None
 
@@ -27,7 +26,6 @@ def load_model():
     print(f"Modèle chargé depuis {MODEL_PATH}")
 
 
-# --- Schémas ---
 
 class PredictionRequest(BaseModel):
     amount: float = Field(..., gt=0, description="Montant du crédit")
@@ -43,12 +41,11 @@ class PredictionRequest(BaseModel):
 class PredictionResponse(BaseModel):
     credit_id: int | None = None
     default_probability: float
-    risk_label: str          # RISQUE_FAIBLE | RISQUE_MOYEN | RISQUE_ÉLEVÉ
-    risk_level: str          # LOW | MEDIUM | HIGH  (compatible avec RiskLevel enum Java)
+    risk_label: str
+    risk_level: str
     recommendation: str
 
 
-# --- Helpers ---
 
 REPAYMENT_MAP = {
     "AMORTISSEMENT_CONSTANT": 0,
@@ -84,10 +81,8 @@ def build_features(req: PredictionRequest) -> pd.DataFrame:
     }])
 
 def classify(prob: float, overdue_ratio: float, partial_ratio: float, debt_ratio: float) -> tuple[str, str, str]:
-    # Règle absolue: 100% des échéances en retard = HIGH sans discussion
     if overdue_ratio >= 1.0:
         return "RISQUE_ÉLEVÉ", "HIGH", "Risque élevé de défaut. Toutes les échéances sont en retard."
-    # Le ML décide pour tout le reste
     if prob < 0.35:
         return "RISQUE_FAIBLE", "LOW", "Crédit approuvable. Profil financier sain."
     elif prob < 0.55:
@@ -96,7 +91,6 @@ def classify(prob: float, overdue_ratio: float, partial_ratio: float, debt_ratio
         return "RISQUE_ÉLEVÉ", "HIGH", "Risque élevé de défaut. Analyse approfondie requise avant approbation."
 
 
-# --- Endpoints ---
 
 @app.get("/health")
 def health():

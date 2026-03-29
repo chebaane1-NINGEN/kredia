@@ -17,17 +17,14 @@ for _ in range(N):
     dependents = np.random.randint(0, 7)
     term_months = np.random.choice([12, 24, 36, 48, 60, 84, 120])
 
-    # Montant corrélé au revenu
     max_amount = income * term_months * 0.4
     amount = np.random.uniform(3000, max(3001, max_amount))
 
-    # Taux corrélé au risque du profil
     base_rate = 4.0 + (dependents * 0.5) + (1 if repayment == "IN_FINE" else 0)
     interest_rate = np.clip(np.random.normal(base_rate, 2.0), 3.0, 18.0)
 
     debt_ratio = amount / (income * term_months)
 
-    # Ratio overdue basé sur le profil de risque
     risk_score = (
         0.30 * min(debt_ratio / 0.5, 1.0)
         + 0.20 * (dependents / 6)
@@ -36,7 +33,6 @@ for _ in range(N):
         + 0.15 * (1 if income < 2500 else 0)
     )
 
-    # overdue_ratio discret basé sur nombre d'échéances réelles (1/12, 2/12, etc.)
     possible_ratios = [0.0, 0.083, 0.167, 0.25, 0.333, 0.5, 0.667, 0.833, 1.0]
     if risk_score > 0.65:
         weights = [0.05, 0.05, 0.10, 0.15, 0.15, 0.20, 0.15, 0.10, 0.05]
@@ -51,9 +47,7 @@ for _ in range(N):
         p=[0.75, 0.15, 0.10]
     ) if overdue_ratio < 0.5 else 0.0
 
-    # Label default: logique claire et cohérente
-    # 0 overdue + profil correct = sain
-    # overdue élevé = défaut quasi certain
+
     default_prob = (
         0.65 * overdue_ratio
         + 0.15 * min(debt_ratio / 0.5, 1.0)

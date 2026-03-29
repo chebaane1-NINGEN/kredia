@@ -103,10 +103,6 @@ public class CreditController {
         }
     }
 
-    /**
-     * POST /api/credits/{id}/predict-default
-     * Prédit la probabilité de défaut de paiement pour un crédit donné.
-     */
     @PostMapping("/{id}/predict-default")
     public ResponseEntity<?> predictDefault(@PathVariable Long id) {
         try {

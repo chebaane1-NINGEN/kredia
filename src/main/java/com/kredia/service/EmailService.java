@@ -201,26 +201,21 @@ public class EmailService {
         try {
             SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
             
-            // Sender
             SendSmtpEmailSender sender = new SendSmtpEmailSender();
             sender.setEmail(fromEmail);
             sender.setName(fromName);
             sendSmtpEmail.setSender(sender);
             
-            // Recipient
             SendSmtpEmailTo recipient = new SendSmtpEmailTo();
             recipient.setEmail(user.getEmail());
             recipient.setName(user.getFirstName() + " " + user.getLastName());
             sendSmtpEmail.setTo(Collections.singletonList(recipient));
             
-            // Subject
             sendSmtpEmail.setSubject("✅ Quittance de paiement - Échéance #" + echeance.getEcheanceNumber());
             
-            // HTML Content
             String htmlContent = buildEcheancePaidEmailHtml(user, echeance);
             sendSmtpEmail.setHtmlContent(htmlContent);
             
-            // Send email via Brevo API
             CreateSmtpEmail result = apiInstance.sendTransacEmail(sendSmtpEmail);
             log.info("Email de paiement d'échéance envoyé à {} pour l'échéance {} - MessageId: {}", 
                     user.getEmail(), echeance.getEcheanceId(), result.getMessageId());
@@ -532,6 +527,88 @@ public class EmailService {
             </html>
             """,
                 userName, echeance.getEcheanceNumber(), dueDateFormatted, amountDueFormatted
+        );
+    }
+
+    @Async
+    public void sendPaymentRejectedChronologicalEmail(User user, Echeance echeance) {
+        try {
+            SendSmtpEmail sendSmtpEmail = new SendSmtpEmail();
+            SendSmtpEmailSender sender = new SendSmtpEmailSender();
+            sender.setEmail(fromEmail);
+            sender.setName(fromName);
+            sendSmtpEmail.setSender(sender);
+            
+            SendSmtpEmailTo recipient = new SendSmtpEmailTo();
+            recipient.setEmail(user.getEmail());
+            recipient.setName(user.getFirstName() + " " + user.getLastName());
+            sendSmtpEmail.setTo(Collections.singletonList(recipient));
+            
+            sendSmtpEmail.setSubject("❌ Paiement suspendu - Échéances précédentes impayées");
+            
+            String htmlContent = buildPaymentRejectedChronologicalEmailHtml(user, echeance);
+            sendSmtpEmail.setHtmlContent(htmlContent);
+            
+            CreateSmtpEmail result = apiInstance.sendTransacEmail(sendSmtpEmail);
+            log.info("Email de rejet chronologique envoyé à {} pour l'échéance {} - MessageId: {}", 
+                    user.getEmail(), echeance.getEcheanceId(), result.getMessageId());
+        } catch (ApiException e) {
+            log.error("Erreur Brevo pour REJET CHRONOLOGIQUE {}: Code={}, Body={}", user.getEmail(), e.getCode(), e.getResponseBody(), e);
+        } catch (Exception e) {
+            log.error("Erreur inattendue REJET CHRONOLOGIQUE {}: {}", user.getEmail(), e.getMessage(), e);
+        }
+    }
+
+    private String buildPaymentRejectedChronologicalEmailHtml(User user, Echeance echeance) {
+        String userName = user.getFirstName() + " " + user.getLastName();
+
+        return String.format("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+                    .header { background: linear-gradient(135deg, #EF4444 0%%, #B91C1C 100%%); padding: 30px; text-align: center; color: white; }
+                    .header h1 { margin: 0; font-size: 28px; }
+                    .content { padding: 30px; }
+                    .danger-badge { background-color: #EF4444; color: white; padding: 8px 16px; border-radius: 20px; display: inline-block; font-weight: bold; margin-bottom: 20px; }
+                    .order-details { background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+                    .footer { background-color: #f9fafb; padding: 20px 30px; text-align: center; color: #6b7280; font-size: 14px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>❌ Opération Suspendue</h1>
+                    </div>
+                    <div class="content">
+                        <p>Bonjour <strong>%s</strong>,</p>
+                        <div class="danger-badge">PAIEMENT BLOQUÉ</div>
+                        
+                        <p>Nous vous informons qu'<strong>impossible d'effectuer le paiement</strong> pour l'échéance <strong>#%s</strong>.</p>
+                        
+                        <div class="order-details">
+                            <h3 style="margin-top: 0; color: #1f2937;">⚠️ Motif du Refus</h3>
+                            <p style="color: #4b5563;">
+                                Vous devez d'abord régler l'intégralité de vos échéances précédentes (qui sont actuellement en retard ou partiellement payées). La politique de Kredia impose un remboursement dans l'ordre chronologique.
+                            </p>
+                        </div>
+                        
+                        <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+                            Le montant de votre transaction a été mis en attente. Dès que vous aurez régularisé vos échéances antérieures, cette transaction sera automatiquement traitée.
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p><strong>Kredia Platform</strong></p>
+                        <p>Ceci est un email automatique, merci de ne pas y répondre.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """,
+                userName, echeance.getEcheanceNumber()
         );
     }
 }

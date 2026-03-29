@@ -28,21 +28,21 @@ public class CreditService {
 
     private final CreditRepository creditRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Autowired
-    public CreditService(CreditRepository creditRepository, UserRepository userRepository) {
+    public CreditService(CreditRepository creditRepository, UserRepository userRepository, EmailService emailService) {
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     public Credit createCredit(Credit credit) {
-        // 1. Validate and fetch full User entity
         Long userId = credit.getUser().getUserId();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id " + userId));
         credit.setUser(user);
 
-        // 2. Dispatch selon le type de remboursement
         List<Echeance> echeances;
         if (credit.getRepaymentType() == RepaymentType.MENSUALITE_CONSTANTE) {
             echeances = generateAnnuiteConstante(credit);
@@ -51,43 +51,32 @@ public class CreditService {
         } else {
             echeances = generateAmortissementConstant(credit);
         }
-        // 3. Mettre à jour immédiatement le statut si la date est déjà passée
         LocalDate today = LocalDate.now();
         java.math.BigDecimal penaltyRate = new java.math.BigDecimal("0.05");
 
         for (Echeance e : echeances) {
             if (e.getDueDate().isBefore(today)) {
                 e.setStatus(EcheanceStatus.OVERDUE);
-                // Majoration de 5% pour pénalité de retard
                 java.math.BigDecimal penalty = e.getAmountDue().multiply(penaltyRate);
                 e.setAmountDue(e.getAmountDue().add(penalty).setScale(2, RoundingMode.HALF_EVEN));
+                emailService.sendEcheanceOverdueEmail(user, e);
             }
         }
 
         credit.setEcheances(echeances);
 
-        // 4. Save credit with all echeances in one transaction
         return creditRepository.save(credit);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MÉTHODE 1 : AMORTISSEMENT CONSTANT
-    // - principal_due = C / n → CONSTANT
-    // - interest_due = capital_debut × i → DÉCROISSANT
-    // - amount_due = principal_due + interest_due → DÉCROISSANTE
-    // - remaining = capital_debut − principal_due → DÉCROISSANT
-    // ─────────────────────────────────────────────────────────────────────────
     private List<Echeance> generateAmortissementConstant(Credit credit) {
         BigDecimal principal = BigDecimal.valueOf(credit.getAmount());
         BigDecimal annualRate = BigDecimal.valueOf(credit.getInterestRate());
         int durationMonths = credit.getTermMonths();
 
-        // i = taux_annuel / 12 / 100
         BigDecimal monthlyRate = annualRate
                 .divide(BigDecimal.valueOf(100), PRECISION_SCALE, ROUNDING)
                 .divide(BigDecimal.valueOf(12), PRECISION_SCALE, ROUNDING);
 
-        // Amortissement fixe : C / n
         BigDecimal constantPrincipal = principal.divide(
                 BigDecimal.valueOf(durationMonths), SCALE, ROUNDING);
 
@@ -98,7 +87,6 @@ public class CreditService {
         for (int month = 1; month <= durationMonths; month++) {
             BigDecimal interestDue = capitalDebut.multiply(monthlyRate).setScale(SCALE, ROUNDING);
 
-            // Dernier mois : exact pour éviter les arrondis
             BigDecimal principalDue = (month == durationMonths) ? capitalDebut : constantPrincipal;
 
             BigDecimal amountDue = principalDue.add(interestDue);
@@ -126,50 +114,29 @@ public class CreditService {
         return echeances;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MÉTHODE 2 : ANNUITÉ CONSTANTE (Mensualité Constante)
-    //
-    // Formule mensualité :
-    // M = E × i / (1 - (1 + i)^-n)
-    // Avec :
-    // i = taux_annuel / 12 / 100 (taux mensuel)
-    // n = durée en mois
-    //
-    // Chaque mois :
-    // (1) interest_due = capital_debut × i → DÉCROISSANT
-    // (2) principal_due = M - interest_due → CROISSANT
-    // (3) capital_debut(m+1) = capital_debut(m) - principal_due
-    // ─────────────────────────────────────────────────────────────────────────
+
     private List<Echeance> generateAnnuiteConstante(Credit credit) {
         BigDecimal principal = BigDecimal.valueOf(credit.getAmount());
         BigDecimal annualRate = BigDecimal.valueOf(credit.getInterestRate());
         int durationMonths = credit.getTermMonths();
 
-        // i = taux_annuel / 12 / 100
         BigDecimal monthlyRate = annualRate
                 .divide(BigDecimal.valueOf(100), PRECISION_SCALE, ROUNDING)
                 .divide(BigDecimal.valueOf(12), PRECISION_SCALE, ROUNDING);
 
-        // M = E × i / (1 − (1 + i)^−n)
         BigDecimal monthlyPayment;
         if (monthlyRate.compareTo(BigDecimal.ZERO) == 0) {
-            // Cas taux = 0 : mensualité = capital / n
             monthlyPayment = principal.divide(BigDecimal.valueOf(durationMonths), SCALE, ROUNDING);
         } else {
             BigDecimal onePlusRate = BigDecimal.ONE.add(monthlyRate);
-            // (1 + i)^n calculé avec précision
             BigDecimal power = onePlusRate.pow(durationMonths);
-            // (1 + i)^-n = 1 / (1 + i)^n
             BigDecimal inversePower = BigDecimal.ONE.divide(power, PRECISION_SCALE, ROUNDING);
-            // dénominateur = 1 - (1 + i)^-n
             BigDecimal denominator = BigDecimal.ONE.subtract(inversePower);
-            // M = E × i / dénominateur
             monthlyPayment = principal
                     .multiply(monthlyRate)
                     .divide(denominator, SCALE, ROUNDING);
         }
 
-        // Stocker la mensualité fixe dans le crédit
         credit.setMonthlyPayment(monthlyPayment);
 
         List<Echeance> echeances = new ArrayList<>();
@@ -177,10 +144,8 @@ public class CreditService {
         LocalDate dueDateIterator = credit.getStartDate();
 
         for (int month = 1; month <= durationMonths; month++) {
-            // (1) Intérêt = capital_debut × i
             BigDecimal interestDue = capitalDebut.multiply(monthlyRate).setScale(SCALE, ROUNDING);
 
-            // (2) Amortissement = M - Intérêt (dernier mois = capital restant exact)
             BigDecimal principalDue;
             BigDecimal actualMonthlyPayment;
             if (month == durationMonths) {
@@ -191,7 +156,6 @@ public class CreditService {
                 actualMonthlyPayment = monthlyPayment;
             }
 
-            // (3) Capital restant = capital_debut - amortissement
             BigDecimal remainingBalance = capitalDebut.subtract(principalDue).max(BigDecimal.ZERO);
 
             dueDateIterator = dueDateIterator.plusMonths(1);
@@ -215,30 +179,16 @@ public class CreditService {
         return echeances;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MÉTHODE 3 : IN FINE
-    //
-    // Principe :
-    // - Chaque mois : on paie UNIQUEMENT l'intérêt
-    // - Dernier mois : on rembourse le capital ENTIER + dernier intérêt
-    //
-    // Formule :
-    // interest_due = capital_debut × i (constant car capital ne bouge pas)
-    // principal_due = 0 (sauf dernier mois = capital total)
-    // amount_due = interest_due (sauf dernier mois = capital + intérêt)
-    // remaining_balance = capital (inchangé jusqu'au dernier mois)
-    // ─────────────────────────────────────────────────────────────────────────
+
     private List<Echeance> generateInFine(Credit credit) {
         BigDecimal principal = BigDecimal.valueOf(credit.getAmount());
         BigDecimal annualRate = BigDecimal.valueOf(credit.getInterestRate());
         int durationMonths = credit.getTermMonths();
 
-        // i = taux_annuel / 12 / 100
         BigDecimal monthlyRate = annualRate
                 .divide(BigDecimal.valueOf(100), PRECISION_SCALE, ROUNDING)
                 .divide(BigDecimal.valueOf(12), PRECISION_SCALE, ROUNDING);
 
-        // Intérêt mensuel constant = E × i (capital ne diminue pas)
         BigDecimal monthlyInterest = principal.multiply(monthlyRate).setScale(SCALE, ROUNDING);
 
         List<Echeance> echeances = new ArrayList<>();
@@ -247,7 +197,6 @@ public class CreditService {
         for (int month = 1; month <= durationMonths; month++) {
             boolean isLastMonth = (month == durationMonths);
 
-            // Dernier mois : on rembourse tout le capital + intérêt
             BigDecimal principalDue = isLastMonth ? principal : BigDecimal.ZERO;
             BigDecimal interestDue = monthlyInterest;
             BigDecimal amountDue = principalDue.add(interestDue);

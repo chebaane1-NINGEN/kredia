@@ -15,11 +15,6 @@ public class ChatbotController {
         this.geminiService = geminiService;
     }
 
-    /**
-     * POST /api/chatbot/recommend-repayment
-     * Demande au chatbot de recommander le meilleur type de remboursement
-     * en fonction de la description du client.
-     */
     @PostMapping("/recommend-repayment")
     public ResponseEntity<Map<String, String>> recommendRepaymentTypes(@RequestBody Map<String, String> payload) {
         String description = payload.get("description");

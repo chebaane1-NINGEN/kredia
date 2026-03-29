@@ -37,15 +37,13 @@ public class KycLoanController {
         }
     }
 
-    @PostMapping("/create-from-url")
-    public ResponseEntity<?> createFromUrl(@RequestBody Map<String, Object> request) {
+    @PostMapping("/credits/{creditId}/create-from-url")
+    public ResponseEntity<?> createFromUrl(@PathVariable Long creditId, @RequestBody Map<String, Object> request) {
         try {
-            Long creditId = Long.valueOf(request.get("credit_id").toString());
-            Long userId = Long.valueOf(request.get("user_id").toString());
             DocumentTypeLoan documentType = DocumentTypeLoan.valueOf(request.get("document_type").toString());
             String documentPath = request.get("document_path").toString();
             
-            KycLoanResponse response = kycLoanService.createFromUrl(creditId, userId, documentType, documentPath);
+            KycLoanResponse response = kycLoanService.createFromUrl(creditId, documentType, documentPath);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);

@@ -35,7 +35,6 @@ public class Credit {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private User user;
 
-    // Virtual property for userId
     @JsonProperty("userId")
     public Long getUserId() {
         return user != null ? user.getUserId() : null;

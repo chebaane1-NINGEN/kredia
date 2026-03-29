@@ -19,16 +19,13 @@ public class EcheancePaymentSyncScheduler {
     private final EcheanceRepository echeanceRepository;
     private final EcheanceService echeanceService;
 
-    // S'exécute toutes les 5 secondes pour une détection quasi "temps réel"
     @Scheduled(fixedDelay = 5000)
     public void syncEcheancesWithTransactions() {
-        // Find echeances that have transactions but might not have their status synchronized yet
         List<Echeance> pendingEcheances = echeanceRepository.findPendingEcheancesWithTransaction();
         
         if (!pendingEcheances.isEmpty()) {
             log.info("Found {} echeances with transactions to sync.", pendingEcheances.size());
             for (Echeance echeance : pendingEcheances) {
-                // This updates the echeance to PAID or PARTIALLY_PAID if transaction amount is sufficient
                 echeanceService.checkAndUpdateStatus(echeance);
             }
         }

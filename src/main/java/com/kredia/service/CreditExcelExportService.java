@@ -29,7 +29,6 @@ public class CreditExcelExportService {
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-            // Style Header
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -38,13 +37,10 @@ public class CreditExcelExportService {
             headerStyle.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
             headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-            // Sheet 1: Informations Crédit
             createCreditInfoSheet(workbook, credit, headerStyle);
 
-            // Sheet 2: Échéancier
             createEcheancierSheet(workbook, credit.getEcheances(), headerStyle);
 
-            // Sheet 3: Documents KYC
             createKycLoanSheet(workbook, credit.getKycLoanDocuments(), headerStyle);
 
             workbook.write(out);
@@ -87,7 +83,6 @@ public class CreditExcelExportService {
     private void createEcheancierSheet(Workbook workbook, List<Echeance> echeances, CellStyle headerStyle) {
         Sheet sheet = workbook.createSheet("Échéancier");
 
-        // Header
         Row headerRow = sheet.createRow(0);
         String[] columns = { "Numéro", "Date", "Capital Début", "Mensualité", "Amortissement", "Intérêt",
                 "Solde Restant", "Statut", "Montant Payé", "Date de Paiement" };
@@ -97,7 +92,6 @@ public class CreditExcelExportService {
             cell.setCellStyle(headerStyle);
         }
 
-        // Data
         int rowIdx = 1;
         int lastDataRow = rowIdx;
         if (echeances != null) {
@@ -105,7 +99,6 @@ public class CreditExcelExportService {
                 Row row = sheet.createRow(rowIdx++);
                 lastDataRow = rowIdx - 1;
                 
-                // Déterminer la couleur selon le statut
                 String status = e.getStatus() != null ? e.getStatus().name() : "";
                 IndexedColors bgColor = null;
                 
@@ -113,15 +106,15 @@ public class CreditExcelExportService {
                     bgColor = IndexedColors.LIGHT_GREEN;
                 } else if ("PARTIALLY_PAID".equals(status)) {
                     bgColor = IndexedColors.YELLOW;
-                } else if ("PENDING".equals(status)) {
+                } else if ("OVERDUE".equals(status)) {
                     bgColor = IndexedColors.RED;
+                } else if ("PENDING".equals(status)) {
+                    bgColor = IndexedColors.LIGHT_BLUE;
                 }
                 
-                // Créer et appliquer le style pour chaque cellule
                 for (int i = 0; i < 10; i++) {
                     Cell cell = row.createCell(i);
                     
-                    // Remplir les valeurs
                     switch (i) {
                         case 0:
                             cell.setCellValue(e.getEcheanceNumber() != null ? e.getEcheanceNumber() : 0);
@@ -155,7 +148,6 @@ public class CreditExcelExportService {
                             break;
                     }
                     
-                    // Appliquer la couleur si nécessaire
                     if (bgColor != null) {
                         CellStyle cellStyle = workbook.createCellStyle();
                         cellStyle.setFillForegroundColor(bgColor.getIndex());
@@ -166,17 +158,14 @@ public class CreditExcelExportService {
             }
         }
 
-        // Activer le filtre automatique sur les en-têtes
         if (echeances != null && !echeances.isEmpty()) {
             sheet.setAutoFilter(new org.apache.poi.ss.util.CellRangeAddress(0, lastDataRow, 0, columns.length - 1));
         }
 
-        // Ajouter une légende en bas du tableau
-        rowIdx++; // Ligne vide
+        rowIdx++;
         Row legendRow1 = sheet.createRow(rowIdx++);
         legendRow1.createCell(0).setCellValue("Légende des couleurs:");
         
-        // Style pour la légende - Vert
         CellStyle greenLegendStyle = workbook.createCellStyle();
         greenLegendStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
         greenLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -187,7 +176,6 @@ public class CreditExcelExportService {
         greenCell.setCellStyle(greenLegendStyle);
         legendRow2.createCell(1).setCellValue("= Échéance payée intégralement");
         
-        // Style pour la légende - Jaune
         CellStyle yellowLegendStyle = workbook.createCellStyle();
         yellowLegendStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
         yellowLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -198,16 +186,25 @@ public class CreditExcelExportService {
         yellowCell.setCellStyle(yellowLegendStyle);
         legendRow3.createCell(1).setCellValue("= Échéance partiellement payée");
         
-        // Style pour la légende - Rouge
         CellStyle redLegendStyle = workbook.createCellStyle();
         redLegendStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
         redLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         
         Row legendRow4 = sheet.createRow(rowIdx++);
         Cell redCell = legendRow4.createCell(0);
-        redCell.setCellValue("PENDING");
+        redCell.setCellValue("OVERDUE");
         redCell.setCellStyle(redLegendStyle);
-        legendRow4.createCell(1).setCellValue("= Échéance en attente");
+        legendRow4.createCell(1).setCellValue("= Échéance en retard");
+
+        CellStyle blueLegendStyle = workbook.createCellStyle();
+        blueLegendStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        blueLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        Row legendRow5 = sheet.createRow(rowIdx++);
+        Cell blueCell = legendRow5.createCell(0);
+        blueCell.setCellValue("PENDING");
+        blueCell.setCellStyle(blueLegendStyle);
+        legendRow5.createCell(1).setCellValue("= Échéance en attente");
 
         for (int i = 0; i < columns.length; i++) {
             sheet.autoSizeColumn(i);
@@ -217,7 +214,6 @@ public class CreditExcelExportService {
     private void createKycLoanSheet(Workbook workbook, List<KycLoan> kycLoans, CellStyle headerStyle) {
         Sheet sheet = workbook.createSheet("Documents KYC");
 
-        // Header
         Row headerRow = sheet.createRow(0);
         String[] columns = { "ID Document", "Type", "Chemin d'accès", "Statut", "Date de soumission" };
         for (int i = 0; i < columns.length; i++) {
@@ -226,7 +222,6 @@ public class CreditExcelExportService {
             cell.setCellStyle(headerStyle);
         }
 
-        // Data
         int rowIdx = 1;
         int lastDataRow = rowIdx;
         if (kycLoans != null) {
@@ -234,7 +229,6 @@ public class CreditExcelExportService {
                 Row row = sheet.createRow(rowIdx++);
                 lastDataRow = rowIdx - 1;
                 
-                // Déterminer la couleur selon le statut KYC
                 String status = kyc.getVerifiedStatus() != null ? kyc.getVerifiedStatus().name() : "";
                 IndexedColors bgColor = null;
                 
@@ -244,11 +238,9 @@ public class CreditExcelExportService {
                     bgColor = IndexedColors.RED;
                 }
                 
-                // Créer et appliquer le style pour chaque cellule
                 for (int i = 0; i < 5; i++) {
                     Cell cell = row.createCell(i);
                     
-                    // Remplir les valeurs
                     switch (i) {
                         case 0:
                             cell.setCellValue(kyc.getKycLoanId() != null ? String.valueOf(kyc.getKycLoanId()) : "");
@@ -267,7 +259,6 @@ public class CreditExcelExportService {
                             break;
                     }
                     
-                    // Appliquer la couleur si nécessaire
                     if (bgColor != null) {
                         CellStyle cellStyle = workbook.createCellStyle();
                         cellStyle.setFillForegroundColor(bgColor.getIndex());
@@ -278,17 +269,14 @@ public class CreditExcelExportService {
             }
         }
 
-        // Activer le filtre automatique sur les en-têtes
         if (kycLoans != null && !kycLoans.isEmpty()) {
             sheet.setAutoFilter(new org.apache.poi.ss.util.CellRangeAddress(0, lastDataRow, 0, columns.length - 1));
         }
 
-        // Ajouter une légende en bas du tableau
-        rowIdx++; // Ligne vide
+        rowIdx++;
         Row legendRow1 = sheet.createRow(rowIdx++);
         legendRow1.createCell(0).setCellValue("Légende des couleurs:");
         
-        // Style pour la légende - Vert
         CellStyle greenLegendStyle = workbook.createCellStyle();
         greenLegendStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
         greenLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -299,7 +287,6 @@ public class CreditExcelExportService {
         greenCell.setCellStyle(greenLegendStyle);
         legendRow2.createCell(1).setCellValue("= Document approuvé");
         
-        // Style pour la légende - Rouge
         CellStyle redLegendStyle = workbook.createCellStyle();
         redLegendStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
         redLegendStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
