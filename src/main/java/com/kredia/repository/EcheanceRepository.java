@@ -12,16 +12,23 @@ import java.util.List;
 @Repository
 public interface EcheanceRepository extends JpaRepository<Echeance, Long> {
 
-    @Query(value = "SELECT e.* FROM echeance e " +
+    @Query(value = "SELECT DISTINCT e.* FROM echeance e " +
             "INNER JOIN `transaction` t ON t.echeance_id = e.echeance_id " +
-            "WHERE e.status IN ('PENDING', 'PARTIALLY_PAID', 'OVERDUE')", nativeQuery = true)
+            "WHERE t.status = 'PENDING'", nativeQuery = true)
     List<Echeance> findPendingEcheancesWithTransaction();
-
-    @Query(value = "SELECT COUNT(*) FROM `transaction` t WHERE t.echeance_id = :echeanceId", nativeQuery = true)
-    int countTransactionsByEcheanceId(@Param("echeanceId") Long echeanceId);
 
     @Query(value = "SELECT COALESCE(SUM(t.amount), 0) FROM `transaction` t WHERE t.echeance_id = :echeanceId", nativeQuery = true)
     java.math.BigDecimal sumTransactionAmountsByEcheanceId(@Param("echeanceId") Long echeanceId);
+
+    @Query(value = "SELECT COALESCE(SUM(t.amount), 0) FROM `transaction` t WHERE t.echeance_id = :echeanceId AND t.status = 'PENDING'", nativeQuery = true)
+    java.math.BigDecimal sumPendingTransactionAmountsByEcheanceId(@Param("echeanceId") Long echeanceId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query(value = "UPDATE `transaction` SET status = 'COMPLETED' WHERE echeance_id = :echeanceId AND status = 'PENDING'", nativeQuery = true)
+    void markTransactionsAsCompletedByEcheanceId(@Param("echeanceId") Long echeanceId);
+
+
 
     @Query(value = "SELECT t.amount FROM `transaction` t WHERE t.echeance_id = :echeanceId ORDER BY t.transaction_date DESC LIMIT 1", nativeQuery = true)
     java.math.BigDecimal getLastTransactionAmountByEcheanceId(@Param("echeanceId") Long echeanceId);
@@ -35,6 +42,8 @@ public interface EcheanceRepository extends JpaRepository<Echeance, Long> {
     List<Echeance> findByCreditCreditId(Long creditId);
 
     List<Echeance> findByStatusInAndDueDateBefore(List<EcheanceStatus> statuses, java.time.LocalDate date);
+
+    boolean existsByCreditCreditIdAndEcheanceNumberLessThanAndStatusNot(Long creditId, Integer echeanceNumber, EcheanceStatus status);
 
     @Query(value = """
             SELECT COUNT(*)

@@ -112,21 +112,16 @@ public class GeminiService {
         log.info("Verifying document type {} with Gemini {}", documentType, modelName);
 
         try {
-            // Télécharger l'image
             byte[] imageBytes = downloadImage(documentUrl);
             log.info("Image downloaded successfully, size: {} bytes", imageBytes.length);
 
-            // Encoder en base64
             String base64Image = Base64.getEncoder().encodeToString(imageBytes);
 
-            // Déterminer le type MIME
             String mimeType = getMimeType(documentUrl);
 
-            // Construire la requête pour Gemini Vision
             String prompt = buildVerificationPrompt(documentType);
             JsonObject requestBody = buildGeminiRequest(prompt, base64Image, mimeType);
 
-            // Envoyer à Gemini
             String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
 
             HttpRequest request = HttpRequest.newBuilder()
@@ -182,10 +177,8 @@ public class GeminiService {
     private String processCloudinaryUrl(String url) {
         if (url.contains("/raw/upload/")) {
             if (url.toLowerCase().endsWith(".pdf")) {
-                // Pour les PDF, convertir en image (première page)
                 return url.replace("/raw/upload/", "/image/upload/f_jpg,pg_1/");
             } else {
-                // Pour les images, juste changer raw en image
                 return url.replace("/raw/upload/", "/image/upload/");
             }
         }
@@ -296,12 +289,10 @@ public class GeminiService {
         JsonObject content = new JsonObject();
         JsonArray parts = new JsonArray();
 
-        // Part 1: Le texte du prompt
         JsonObject textPart = new JsonObject();
         textPart.addProperty("text", prompt);
         parts.add(textPart);
 
-        // Part 2: L'image en base64
         JsonObject imagePart = new JsonObject();
         JsonObject inlineData = new JsonObject();
         inlineData.addProperty("mime_type", mimeType);

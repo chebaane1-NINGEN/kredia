@@ -68,25 +68,21 @@ public class StatisticsPdfExportService {
 
             document.open();
 
-            // Font configurations
             Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 22, Color.BLACK);
             Font subtitleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, new Color(0, 102, 204));
             Font dateFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 10, Color.GRAY);
 
-            // Title
             Paragraph title = new Paragraph("Rapport de Statistiques du Crédit #" + creditId, titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(10);
             document.add(title);
 
-            // Date of generation
             SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm");
             Paragraph dateParagraph = new Paragraph("Généré le: " + formatter.format(new Date()), dateFont);
             dateParagraph.setAlignment(Element.ALIGN_CENTER);
             dateParagraph.setSpacingAfter(30);
             document.add(dateParagraph);
 
-            // Credit Info Section
             Paragraph creditSubtitle = new Paragraph("1. Informations du Crédit", subtitleFont);
             creditSubtitle.setSpacingAfter(15);
             document.add(creditSubtitle);
@@ -101,12 +97,10 @@ public class StatisticsPdfExportService {
             padding.setSpacingAfter(20);
             document.add(padding);
 
-            // Echeances Section
             Paragraph echeanceSubtitle = new Paragraph("2. Répartition des Échéances par Statut", subtitleFont);
             echeanceSubtitle.setSpacingAfter(15);
             document.add(echeanceSubtitle);
 
-            // Create Echeance Pie Chart
             DefaultPieDataset<String> echeanceDataset = new DefaultPieDataset<>();
             for (Map.Entry<EcheanceStatus, Long> entry : echeancesByStatus.entrySet()) {
                 echeanceDataset.setValue(entry.getKey().name() + " (" + entry.getValue() + ")", entry.getValue());
@@ -122,12 +116,10 @@ public class StatisticsPdfExportService {
             echeanceImage.setSpacingAfter(20);
             document.add(echeanceImage);
 
-            // KycLoan Section (Bar Chart)
             Paragraph kycSubtitle = new Paragraph("3. Répartition des Documents KYC par Statut", subtitleFont);
             kycSubtitle.setSpacingAfter(15);
             document.add(kycSubtitle);
 
-            // Create KycLoan Bar Chart
             DefaultCategoryDataset kycDataset = new DefaultCategoryDataset();
             for (Map.Entry<KycStatus, Long> entry : kycLoansByStatus.entrySet()) {
                 kycDataset.setValue(entry.getValue(), "Nombre", entry.getKey().name());
@@ -144,14 +136,12 @@ public class StatisticsPdfExportService {
             NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
             yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
             
-            // Augmenter la marge supérieure pour que les chiffres ne soient pas coupés
-            yAxis.setUpperMargin(0.20);  // 20% d'espace au-dessus
+            yAxis.setUpperMargin(0.20);
 
             BarRenderer renderer = (BarRenderer) plot.getRenderer();
             renderer.setDefaultItemLabelsVisible(true);
             renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
             
-            // Améliorer l'affichage des chiffres sur les barres
             renderer.setDefaultItemLabelFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 20));
 
             BufferedImage kycBImage = kycChart.createBufferedImage(500, 350);

@@ -16,19 +16,16 @@ import os
 np.random.seed(42)
 N = 5000
 
-# --- Chargement dataset (réel ou synthétique) ---
 DATASET_PATH = "dataset_example.csv"
 
 if os.path.exists(DATASET_PATH):
     print(f"Dataset trouvé: {DATASET_PATH} — entraînement sur données réelles")
     df = pd.read_csv(DATASET_PATH)
-    # Encoder repayment_type
     repayment_map = {"AMORTISSEMENT_CONSTANT": 0, "MENSUALITE_CONSTANTE": 1, "IN_FINE": 2}
     df["repayment_type"] = df["repayment_type"].map(repayment_map)
     df["debt_ratio"] = (df["amount"] / (df["income"] * df["term_months"])).clip(0, 5)
 else:
     print("Aucun dataset trouvé — génération de données synthétiques")
-    # --- Génération des données synthétiques ---
     amount       = np.random.uniform(5000, 200000, N)
     income       = np.random.uniform(1500, 20000, N)
     dependents   = np.random.randint(0, 7, N)
@@ -55,7 +52,6 @@ else:
         "default": (default_prob > 0.45).astype(int)
     })
 
-# --- Entraînement ---
 FEATURES = ["amount", "income", "dependents", "interest_rate",
             "term_months", "repayment_type", "overdue_ratio", "partial_ratio", "debt_ratio"]
 
@@ -76,7 +72,6 @@ model.fit(X_train, y_train)
 print("=== Rapport de classification ===")
 print(classification_report(y_test, model.predict(X_test)))
 
-# --- Sauvegarde ---
 os.makedirs("model", exist_ok=True)
 joblib.dump(model, "model/default_model.pkl")
 print("Modèle sauvegardé dans model/default_model.pkl")

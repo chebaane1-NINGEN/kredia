@@ -38,7 +38,6 @@ public class DefaultPredictionService {
 
         List<Echeance> echeances = echeanceRepository.findByCreditCreditId(creditId);
 
-        // Ratio overdues / total échéances (0.0 à 1.0)
         long totalEcheances = echeances.size();
         long overdueCount = echeances.stream()
                 .filter(e -> e.getStatus() == EcheanceStatus.OVERDUE)

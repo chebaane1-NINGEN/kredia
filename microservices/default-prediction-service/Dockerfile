@@ -7,7 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Entraîner le modèle au build
 RUN python train_model.py
 
 EXPOSE 8002
