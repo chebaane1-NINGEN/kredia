@@ -509,4 +509,4 @@ Le module **User** est structuré et prêt pour une intégration dans l’applic
 - robustesse via optimistic locking
 - endpoints REST clairs + réponses standardisées
 
-**Prochaine étape recommandée** : ajouter des tests dédiés aux endpoints multi-role (403 isolation + KPIs/performance/risque) pour finaliser la couverture.
+**Prochaine étape recommandéeeeeeeee** : ajouter des tests dédiés aux endpoints multi-role (403 isolation + KPIs/performance/risque) pour finaliser la couverture.
