@@ -1,13 +1,13 @@
 package com.kredia.integration;
 
-import com.kredia.dto.UserRequestDTO;
-import com.kredia.dto.UserResponseDTO;
-import com.kredia.entity.UserActivity;
-import com.kredia.entity.UserActivityActionType;
-import com.kredia.entity.UserRole;
+import com.kredia.dto.user.UserRequestDTO;
+import com.kredia.dto.user.UserResponseDTO;
+import com.kredia.entity.user.UserActivity;
+import com.kredia.entity.user.UserActivityActionType;
+import com.kredia.entity.user.UserRole;
 import com.kredia.exception.BusinessException;
-import com.kredia.repository.UserActivityRepository;
-import com.kredia.service.UserService;
+import com.kredia.repository.user.UserActivityRepository;
+import com.kredia.service.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

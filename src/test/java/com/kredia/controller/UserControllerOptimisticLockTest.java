@@ -1,7 +1,8 @@
 package com.kredia.controller;
 
+import com.kredia.controller.user.UserController;
 import com.kredia.exception.GlobalExceptionHandler;
-import com.kredia.service.UserService;
+import com.kredia.service.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -23,7 +24,6 @@ class UserControllerOptimisticLockTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @SuppressWarnings("removal")
     @MockBean
     private UserService userService;
 
@@ -33,7 +33,7 @@ class UserControllerOptimisticLockTest {
                 .thenThrow(new ObjectOptimisticLockingFailureException("User", 1L));
 
         mockMvc.perform(
-                        put("/api/users/1")
+                        put("/api/user/1")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"email\":\"a@kredia.com\",\"firstName\":\"A\",\"lastName\":\"B\",\"phoneNumber\":\"060\"}")
                 )

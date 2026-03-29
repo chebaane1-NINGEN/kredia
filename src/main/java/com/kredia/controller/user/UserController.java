@@ -1,17 +1,17 @@
-package com.kredia.controller;
+package com.kredia.controller.user;
 
 import com.kredia.dto.ApiResponse;
-import com.kredia.dto.AdminStatsDTO;
-import com.kredia.dto.AgentPerformanceDTO;
-import com.kredia.dto.ClientEligibilityDTO;
-import com.kredia.dto.ClientRiskScoreDTO;
-import com.kredia.dto.UserActivityResponseDTO;
-import com.kredia.dto.UserRequestDTO;
-import com.kredia.dto.UserResponseDTO;
-import com.kredia.dto.UserRoleChangeRequestDTO;
-import com.kredia.service.UserService;
-import com.kredia.entity.UserRole;
-import com.kredia.entity.UserStatus;
+import com.kredia.dto.user.AdminStatsDTO;
+import com.kredia.dto.user.AgentPerformanceDTO;
+import com.kredia.dto.user.ClientEligibilityDTO;
+import com.kredia.dto.user.ClientRiskScoreDTO;
+import com.kredia.dto.user.UserActivityResponseDTO;
+import com.kredia.dto.user.UserRequestDTO;
+import com.kredia.dto.user.UserResponseDTO;
+import com.kredia.dto.user.UserRoleChangeRequestDTO;
+import com.kredia.service.user.UserService;
+import com.kredia.entity.user.UserRole;
+import com.kredia.entity.user.UserStatus;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/user")
 public class UserController {
 
     private final UserService userService;

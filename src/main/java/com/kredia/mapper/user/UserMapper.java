@@ -1,8 +1,8 @@
-package com.kredia.mapper;
+package com.kredia.mapper.user;
 
-import com.kredia.dto.UserRequestDTO;
-import com.kredia.dto.UserResponseDTO;
-import com.kredia.entity.User;
+import com.kredia.dto.user.UserRequestDTO;
+import com.kredia.dto.user.UserResponseDTO;
+import com.kredia.entity.user.User;
 import org.springframework.stereotype.Component;
 
 @Component

@@ -6,7 +6,7 @@ import com.kredia.entity.user.User;
 import com.kredia.enums.OrderStatus;
 import com.kredia.enums.OrderType;
 import com.kredia.repository.InvestmentOrderRepository;
-import com.kredia.repository.UserRepository;
+import com.kredia.repository.user.UserRepository;
 import com.kredia.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

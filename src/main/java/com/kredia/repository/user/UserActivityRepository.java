@@ -1,6 +1,6 @@
-package com.kredia.repository;
+package com.kredia.repository.user;
 
-import com.kredia.entity.UserActivity;
+import com.kredia.entity.user.UserActivity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

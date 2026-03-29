@@ -1,8 +1,8 @@
-package com.kredia.repository;
+package com.kredia.repository.user;
 
-import com.kredia.entity.User;
-import com.kredia.entity.UserRole;
-import com.kredia.entity.UserStatus;
+import com.kredia.entity.user.User;
+import com.kredia.entity.user.UserRole;
+import com.kredia.entity.user.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.domain.Page;

@@ -1,14 +1,14 @@
-package com.kredia.service;
+package com.kredia.service.user;
 
-import com.kredia.dto.UserRequestDTO;
-import com.kredia.dto.UserResponseDTO;
-import com.kredia.dto.AdminStatsDTO;
-import com.kredia.dto.AgentPerformanceDTO;
-import com.kredia.dto.ClientEligibilityDTO;
-import com.kredia.dto.ClientRiskScoreDTO;
-import com.kredia.dto.UserActivityResponseDTO;
-import com.kredia.entity.UserRole;
-import com.kredia.entity.UserStatus;
+import com.kredia.dto.user.UserRequestDTO;
+import com.kredia.dto.user.UserResponseDTO;
+import com.kredia.dto.user.AdminStatsDTO;
+import com.kredia.dto.user.AgentPerformanceDTO;
+import com.kredia.dto.user.ClientEligibilityDTO;
+import com.kredia.dto.user.ClientRiskScoreDTO;
+import com.kredia.dto.user.UserActivityResponseDTO;
+import com.kredia.entity.user.UserRole;
+import com.kredia.entity.user.UserStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

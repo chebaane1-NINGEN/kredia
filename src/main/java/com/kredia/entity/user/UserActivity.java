@@ -1,4 +1,4 @@
-package com.kredia.entity;
+package com.kredia.entity.user;
 
 import jakarta.persistence.*;
 
@@ -34,43 +34,18 @@ public class UserActivity {
     public UserActivity() {
     }
 
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
-    public Long getUserId() {
-        return userId;
-    }
+    public UserActivityActionType getActionType() { return actionType; }
+    public void setActionType(UserActivityActionType actionType) { this.actionType = actionType; }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public UserActivityActionType getActionType() {
-        return actionType;
-    }
-
-    public void setActionType(UserActivityActionType actionType) {
-        this.actionType = actionType;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Instant getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(Instant timestamp) {
-        this.timestamp = timestamp;
-    }
+    public Instant getTimestamp() { return timestamp; }
+    public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
 }

@@ -20,8 +20,9 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ApiErrorResponse> res = handler.handleOptimisticLock(ex, req);
 
         assertEquals(409, res.getStatusCode().value());
-        assertNotNull(res.getBody());
-        assertEquals("Concurrency Error", res.getBody().getError());
-        assertEquals("/api/users/1", res.getBody().getPath());
+        ApiErrorResponse body = res.getBody();
+        assertNotNull(body);
+        assertEquals("Concurrency Error", body.getError());
+        assertEquals("/api/users/1", body.getPath());
     }
 }

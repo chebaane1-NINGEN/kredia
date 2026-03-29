@@ -1,13 +1,15 @@
 package com.kredia.service.impl;
 
-import com.kredia.dto.UserRequestDTO;
-import com.kredia.entity.User;
-import com.kredia.entity.UserRole;
-import com.kredia.entity.UserStatus;
+import com.kredia.service.impl.user.UserServiceImpl;
+
+import com.kredia.dto.user.UserRequestDTO;
+import com.kredia.entity.user.User;
+import com.kredia.entity.user.UserRole;
+import com.kredia.entity.user.UserStatus;
 import com.kredia.exception.BusinessException;
-import com.kredia.mapper.UserMapper;
-import com.kredia.repository.UserActivityRepository;
-import com.kredia.repository.UserRepository;
+import com.kredia.mapper.user.UserMapper;
+import com.kredia.repository.user.UserActivityRepository;
+import com.kredia.repository.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

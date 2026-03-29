@@ -1,4 +1,4 @@
-package com.kredia.entity;
+package com.kredia.entity.user;
 
 public enum UserActivityActionType {
     CREATED,

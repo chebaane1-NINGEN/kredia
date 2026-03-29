@@ -7,7 +7,7 @@ import com.kredia.entity.user.User;
 import com.kredia.enums.AssetCategory;
 import com.kredia.enums.OrderStatus;
 import com.kredia.enums.RiskLevel;
-import com.kredia.repository.LegacyUserRepository;
+import com.kredia.repository.user.LegacyUserRepository;
 import com.kredia.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

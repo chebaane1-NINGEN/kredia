@@ -1,4 +1,4 @@
-package com.kredia.repository;
+package com.kredia.repository.user;
 
 import com.kredia.entity.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;

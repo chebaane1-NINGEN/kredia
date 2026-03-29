@@ -238,8 +238,7 @@ public class EcheanceService {
         java.math.BigDecimal currentAmountPaid = echeance.getAmountPaid() != null ? echeance.getAmountPaid()
                 : java.math.BigDecimal.ZERO;
 
-        // Calculer le reste à payer avant ce paiement
-        java.math.BigDecimal remainingBeforePayment = echeance.getAmountDue().subtract(currentAmountPaid);
+        // Calculer le nouveau total payé
 
         // Calculer le nouveau total payé
         java.math.BigDecimal newTotalPaid = currentAmountPaid.add(amountPaid);

@@ -1,6 +1,6 @@
 package com.kredia.service;
 import com.kredia.entity.wallet.Wallet;
-import com.kredia.repository.LegacyUserRepository;
+import com.kredia.repository.user.LegacyUserRepository;
 import com.kredia.repository.WalletRepository;
 import com.kredia.enums.WalletStatus;
 import com.kredia.entity.user.User;

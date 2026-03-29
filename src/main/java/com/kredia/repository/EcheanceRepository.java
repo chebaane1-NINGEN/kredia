@@ -1,7 +1,6 @@
 package com.kredia.repository;
 
 import com.kredia.entity.credit.Echeance;
-import com.kredia.enums.EcheanceStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
