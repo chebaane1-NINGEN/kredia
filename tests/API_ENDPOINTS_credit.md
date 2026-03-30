@@ -117,7 +117,7 @@ Prédire le risque de défaut de paiement via le modèle ML. Pas de body.
   "recommendation": "Surveillance recommandée. Vérifier les revenus et charges."
 }
 ```
-
+/////python -m uvicorn main:app --port 8002
 **Niveaux de risque:**
 | Probabilité | Label | Signification |
 |-------------|-------|---------------|
