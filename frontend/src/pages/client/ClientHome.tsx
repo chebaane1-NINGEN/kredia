@@ -38,9 +38,9 @@ const ClientHome: React.FC = () => {
     fetchAll();
   }, [currentUser]);
 
-  const eligKey = (eligibility?.eligibilityLevel as keyof typeof ELIGIBILITY_CONFIG) || 'MEDIUM';
+  const eligKey = eligibility?.isEligibleForPremium ? 'HIGH' : 'MEDIUM';
   const eligConfig = ELIGIBILITY_CONFIG[eligKey];
-  const score = riskScore?.reliabilityScore ?? MOCK_CLIENT_RISK.reliabilityScore;
+  const score = riskScore?.riskScore ?? (MOCK_CLIENT_RISK as any).reliabilityScore;
   const scoreData = [{ name: 'Score', value: score, fill: eligConfig.color }];
 
   if (loading) {
@@ -96,7 +96,7 @@ const ClientHome: React.FC = () => {
           <h3 className="font-bold text-lg mb-4">Estimated Loan Capacity</h3>
           <div>
             <div className="text-4xl font-bold text-primary mb-2">
-              {(eligibility?.estimatedLoanCapacity ?? 15000).toLocaleString()} TND
+              {(eligibility?.maxLoanAmount ?? 15000).toLocaleString()} TND
             </div>
             <div className="text-sm text-muted mb-4">Based on your current financial profile</div>
             <div className="space-y-3">

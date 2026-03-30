@@ -53,7 +53,7 @@ const EmployeeClients: React.FC = () => {
   );
 
   const getEligKey = (e?: ClientEligibilityDTO | null): keyof typeof ELIGIBILITY_CONFIG => {
-    return (e?.eligibilityLevel as keyof typeof ELIGIBILITY_CONFIG) || 'MEDIUM';
+    return (e?.isEligibleForPremium ? 'HIGH' : 'MEDIUM');
   };
 
   return (
@@ -137,13 +137,13 @@ const EmployeeClients: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="p-4 rounded-xl text-center" style={{ background: '#F4F7FE' }}>
                       <div className="text-xs text-muted mb-1 font-medium">Risk Score</div>
-                      <div className="text-3xl font-bold text-primary">{selectedClient.riskScore?.reliabilityScore ?? '—'}</div>
+                      <div className="text-3xl font-bold text-primary">{selectedClient.riskScore?.riskScore ?? '—'}</div>
                       <div className="text-xs text-muted">/ 100</div>
                     </div>
                     <div className="p-4 rounded-xl text-center" style={{ background: ELIGIBILITY_CONFIG[getEligKey(selectedClient.eligibility)].bg }}>
                       <div className="text-xs text-muted mb-1 font-medium">Eligibility</div>
                       <div className="text-xl font-bold" style={{ color: ELIGIBILITY_CONFIG[getEligKey(selectedClient.eligibility)].color }}>
-                        {ELIGIBILITY_CONFIG[getEligKey(selectedClient.eligibility)].score} {selectedClient.eligibility?.eligibilityLevel ?? 'MEDIUM'}
+                        {ELIGIBILITY_CONFIG[getEligKey(selectedClient.eligibility)].score} {selectedClient.eligibility?.isEligibleForPremium ? 'HIGH' : 'MEDIUM'}
                       </div>
                       <div className="text-xs text-muted">{ELIGIBILITY_CONFIG[getEligKey(selectedClient.eligibility)].label}</div>
                     </div>
@@ -152,7 +152,7 @@ const EmployeeClients: React.FC = () => {
                   <div className="p-4 rounded-xl mb-4" style={{ background: '#E6FAF5' }}>
                     <div className="text-xs text-muted mb-1 font-medium">Estimated Loan Capacity</div>
                     <div className="text-2xl font-bold" style={{ color: '#04A67A' }}>
-                      {selectedClient.eligibility?.estimatedLoanCapacity?.toLocaleString() ?? '—'} TND
+                      {selectedClient.eligibility?.maxLoanAmount?.toLocaleString() ?? '—'} TND
                     </div>
                   </div>
 
