@@ -144,4 +144,22 @@ public class WalletService {
         // Audit freeze action
         auditWalletAction(updatedWallet, "FREEZE");
     }
+
+    public void unfreezeWallet(Long walletId) {
+        Wallet wallet = walletRepository.findById(walletId)
+                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+
+        wallet.setStatus(WalletStatus.ACTIVE);
+        if (wallet.getFrozenBalance() != null && wallet.getFrozenBalance().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            java.math.BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : java.math.BigDecimal.ZERO;
+            wallet.setBalance(currentBalance.add(wallet.getFrozenBalance()));
+            wallet.setFrozenBalance(java.math.BigDecimal.ZERO);
+        }
+        wallet.setUpdatedAt(LocalDateTime.now());
+
+        Wallet updatedWallet = walletRepository.save(wallet);
+
+        // Audit unfreeze action
+        auditWalletAction(updatedWallet, "UNFREEZE");
+    }
 }
