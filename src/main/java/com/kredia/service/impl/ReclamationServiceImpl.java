@@ -90,9 +90,14 @@ public class ReclamationServiceImpl implements ReclamationService {
                 ReclamationStatus.OPEN.name(),
                 initialPriority.name()
         );
+        int duplicateCount = safeToInt(reclamationRepository.countDuplicateCandidates(
+                request.userId(),
+                clean(request.subject()),
+                clean(request.description())
+        ));
 
         Reclamation saved = reclamationRepository.save(rec);
-        saved.setDuplicateCount(modelInput.duplicate_count());
+        saved.setDuplicateCount(duplicateCount);
 
         addHistory(saved, request.userId(), ReclamationStatus.OPEN, ReclamationStatus.OPEN, "Created");
         triggerService.onCreated(saved);
@@ -100,11 +105,14 @@ public class ReclamationServiceImpl implements ReclamationService {
         double score = 0.0;
         try {
             log.info(
-                    "ML features before /predict: duplicate_count={}, past_reclamations={}, transaction_amount={}, late_credit={}",
-                    modelInput.duplicate_count(),
-                    modelInput.past_reclamations(),
-                    modelInput.transaction_amount(),
-                    modelInput.late_credit()
+                    "ML features before /predict: complaints_last_90d={}, message_len={}, wallet_balance={}, wallet_frozen_balance={}, credit_has_active={}, credit_installments_missed={}, credit_days_late={}",
+                    modelInput.complaints_last_90d(),
+                    modelInput.message_len(),
+                    modelInput.wallet_balance(),
+                    modelInput.wallet_frozen_balance(),
+                    modelInput.credit_has_active(),
+                    modelInput.credit_installments_missed(),
+                    modelInput.credit_days_late()
             );
             score = mlRiskClient.predictRiskScore(modelInput);
         } catch (Exception ignored) {

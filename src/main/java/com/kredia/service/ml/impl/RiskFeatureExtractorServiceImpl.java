@@ -1,55 +1,71 @@
 package com.kredia.service.ml.impl;
 
 import com.kredia.dto.ml.RiskFeaturesDto;
+import com.kredia.enums.CreditStatus;
+import com.kredia.repository.CreditRepository;
 import com.kredia.repository.EcheanceRepository;
 import com.kredia.repository.ReclamationRepository;
-import com.kredia.repository.TransactionRepository;
+import com.kredia.repository.WalletRepository;
 import com.kredia.service.ml.RiskFeatureExtractorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class RiskFeatureExtractorServiceImpl implements RiskFeatureExtractorService {
 
     private final ReclamationRepository reclamationRepository;
-    private final TransactionRepository transactionRepository;
+    private final WalletRepository walletRepository;
+    private final CreditRepository creditRepository;
     private final EcheanceRepository echeanceRepository;
 
     @Override
     public RiskFeaturesDto extract(Long userId, String subject, String description, String status, String priority) {
-
         String safeSubject = subject == null ? "" : subject.trim();
         String safeDescription = description == null ? "" : description.trim();
-        String safeStatus = status == null ? "OPEN" : status;
-        String safePriority = priority == null ? "MEDIUM" : priority;
+        String fullMessage = (safeSubject + " " + safeDescription).trim();
 
-        long pastReclamationsLong = reclamationRepository.countByUserId(userId);
-        int pastReclamations = pastReclamationsLong > Integer.MAX_VALUE
+        long complaintsLast90dLong = reclamationRepository.countByUserIdAndCreatedAtAfter(
+                userId,
+                LocalDateTime.now().minusDays(90)
+        );
+        int complaintsLast90d = complaintsLast90dLong > Integer.MAX_VALUE
                 ? Integer.MAX_VALUE
-                : (int) pastReclamationsLong;
+                : (int) complaintsLast90dLong;
 
-        long duplicateLong = reclamationRepository.countDuplicateCandidates(userId, safeSubject, safeDescription);
-        int duplicateCount = duplicateLong > Integer.MAX_VALUE
+        int messageLen = fullMessage.length();
+
+        var walletOpt = walletRepository.findByUser_UserId(userId);
+        double walletBalance = walletOpt
+                .map(w -> w.getBalance() != null ? w.getBalance().doubleValue() : 0.0)
+                .orElse(0.0);
+        double walletFrozenBalance = walletOpt
+                .map(w -> w.getFrozenBalance() != null ? w.getFrozenBalance().doubleValue() : 0.0)
+                .orElse(0.0);
+
+        int creditHasActive = creditRepository.existsByUserUserIdAndStatusIn(
+                userId,
+                List.of(CreditStatus.ACTIVE, CreditStatus.APPROVED)
+        ) ? 1 : 0;
+
+        long missedInstallmentsLong = echeanceRepository.countLateCreditByUserId(userId);
+        int creditInstallmentsMissed = missedInstallmentsLong > Integer.MAX_VALUE
                 ? Integer.MAX_VALUE
-                : (int) duplicateLong;
-
-        BigDecimal latestCompletedAmount = transactionRepository.findLatestCompletedAmountByUserId(userId);
-        double transactionAmount = latestCompletedAmount != null ? latestCompletedAmount.doubleValue() : 0.0;
-
-        int lateCredit = echeanceRepository.countLateCreditByUserId(userId) > 0 ? 1 : 0;
+                : (int) missedInstallmentsLong;
+        int creditDaysLate = Math.max(0, echeanceRepository.maxCreditDaysLateByUserId(userId));
 
         return new RiskFeaturesDto(
-                safeSubject,
-                safeDescription,
-                safeStatus,
-                safePriority,
-                duplicateCount,
-                pastReclamations,
-                transactionAmount,
-                lateCredit
+                complaintsLast90d,
+                messageLen,
+                walletBalance,
+                walletFrozenBalance,
+                creditHasActive,
+                creditInstallmentsMissed,
+                creditDaysLate
         );
     }
 }

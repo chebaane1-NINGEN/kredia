@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+public interface    TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findBySourceWallet_WalletId(Long walletId);
     List<Transaction> findByDestinationWallet_WalletId(Long walletId);
 
