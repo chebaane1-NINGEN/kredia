@@ -50,12 +50,45 @@ public class TransactionService {
         if (transaction.getTransactionDate() == null) {
             transaction.setTransactionDate(LocalDateTime.now());
         }
+        
+        // Initial status is PENDING
         if (transaction.getStatus() == null) {
             transaction.setStatus(TransactionStatus.PENDING);
         }
+
+        // --- Core processing logic ---
+        if (transaction.getAmount() == null || transaction.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be greater than zero");
+        }
+
+        // Check if there is enough balance
+        if (sourceWallet.getBalance().compareTo(transaction.getAmount()) < 0) {
+            transaction.setStatus(TransactionStatus.FAILED);
+            transaction.setDescription("Insufficient balance");
+        } else if (sourceWallet.getWalletId().equals(transaction.getDestinationWallet() != null ? transaction.getDestinationWallet().getWalletId() : null)) {
+            transaction.setStatus(TransactionStatus.FAILED);
+            transaction.setDescription("Cannot transfer to the same wallet");
+        } else {
+            // Subtract from source
+            sourceWallet.setBalance(sourceWallet.getBalance().subtract(transaction.getAmount()));
+            sourceWallet.setUpdatedAt(LocalDateTime.now());
+            walletRepository.save(sourceWallet);
+
+            // Add to destination (if it exists)
+            if (transaction.getDestinationWallet() != null) {
+                 Wallet destWallet = transaction.getDestinationWallet();
+                 destWallet.setBalance(destWallet.getBalance().add(transaction.getAmount()));
+                 destWallet.setUpdatedAt(LocalDateTime.now());
+                 walletRepository.save(destWallet);
+            }
+
+            transaction.setStatus(TransactionStatus.COMPLETED);
+        }
+        // --- End of processing logic ---
+
         Transaction savedTransaction = transactionRepository.save(transaction);
         
-        // Audit the transaction
+        // Audit the transaction (including the result status)
         auditLogService.auditTransaction(savedTransaction);
 
         // Analyze for fraud

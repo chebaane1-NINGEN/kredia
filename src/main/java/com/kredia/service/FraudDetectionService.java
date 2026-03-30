@@ -80,11 +80,23 @@ public class FraudDetectionService {
                 transaction.getDescription()
         );
 
-        String result = chatClient.prompt().user(prompt).call().content();
-        
-        transaction.setDescription(transaction.getDescription() + " | AI Analysis: " + result);
-        transactionRepository.save(transaction);
+        try {
+            String result = chatClient.prompt().user(prompt).call().content();
+            
+            if (result == null || result.isEmpty()) {
+                result = "AI was unable to generate a detailed summary at this time.";
+            }
 
-        return result;
+            transaction.setDescription(transaction.getDescription() + " | AI Analysis: " + result);
+            transactionRepository.save(transaction);
+
+            return result;
+        } catch (Exception e) {
+            System.err.println("AI Error: " + e.getMessage());
+            String fallback = "Standard system analysis: This transaction is currently flagged for manual review.";
+            transaction.setDescription(transaction.getDescription() + " | AI analysis unavailable.");
+            transactionRepository.save(transaction);
+            return fallback;
+        }
     }
 }

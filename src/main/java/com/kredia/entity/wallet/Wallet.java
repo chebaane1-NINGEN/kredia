@@ -1,5 +1,7 @@
 package com.kredia.entity.wallet;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.kredia.entity.user.User;
 import com.kredia.enums.WalletStatus;
 import jakarta.persistence.*;
@@ -13,6 +15,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "wallet")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -44,9 +47,11 @@ public class Wallet {
     private LocalDateTime updatedAt;
     
     @OneToMany(mappedBy = "sourceWallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Transaction> outgoingTransactions;
     
     @OneToMany(mappedBy = "destinationWallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Transaction> incomingTransactions;
     
     @PrePersist

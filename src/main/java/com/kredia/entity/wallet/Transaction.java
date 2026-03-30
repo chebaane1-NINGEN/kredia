@@ -1,5 +1,8 @@
 package com.kredia.entity.wallet;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.kredia.enums.TransactionStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -13,6 +16,19 @@ import java.util.List;
 @Entity
 @Table(name = "transaction")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
+@DiscriminatorValue("TRANSACTION")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    include = JsonTypeInfo.As.PROPERTY,
+    property = "dtype",
+    defaultImpl = Transaction.class
+)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = Transaction.class, name = "TRANSACTION"),
+    @JsonSubTypes.Type(value = TransactionLoan.class, name = "TRANSACTION_LOAN")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -1,27 +1,26 @@
 package com.kredia.entity.wallet;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.kredia.entity.credit.Echeance;
-
-import com.kredia.entity.credit.Echeance;
-import com.kredia.enums.TransactionStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Entity
-@Table(name = "transaction")
+@DiscriminatorValue("TRANSACTION_LOAN")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class TransactionLoan extends Transaction {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "echeance_id")
-    private Echeance echnace_id;
+    private Echeance echeance;
 
 
 }
