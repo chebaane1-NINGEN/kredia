@@ -59,19 +59,21 @@ public class GeminiService {
             String prompt = buildStrategicMarketPrompt(effectiveLanguage, effectiveTone, effectiveAdditionalContext);
             JsonObject requestBody = buildGeminiTextRequest(prompt);
 
-            String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
+            String apiUrlV1 = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
+            HttpResponse<String> response = sendGeminiRequest(apiUrlV1, requestBody);
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(apiUrl))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
-                    .build();
+            if (response.statusCode() != 200) {
+                log.warn("Gemini API v1 request failed (market summary), retrying with relaxed payload and v1beta. Status={}, body={}",
+                        response.statusCode(), response.body());
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                JsonObject relaxedRequestBody = buildGeminiBasicTextRequest(prompt);
+                String apiUrlV1beta = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
+                response = sendGeminiRequest(apiUrlV1beta, relaxedRequestBody);
+            }
 
             if (response.statusCode() != 200) {
                 log.error("Gemini API error (market summary): {}", response.body());
-                throw new RuntimeException("Gemini API returned status " + response.statusCode());
+                throw new RuntimeException("Gemini API returned status " + response.statusCode() + ": " + extractGeminiError(response.body()));
             }
 
             String rawText = parseGeminiResponse(response.body());
@@ -99,6 +101,16 @@ public class GeminiService {
             fallback.put("details", e.getMessage());
             return fallback;
         }
+    }
+
+    private HttpResponse<String> sendGeminiRequest(String apiUrl, JsonObject requestBody) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                .build();
+
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     /**
@@ -332,6 +344,42 @@ public class GeminiService {
         requestBody.add("generationConfig", generationConfig);
 
         return requestBody;
+    }
+
+    /**
+     * Requête texte minimale (sans generationConfig) pour compatibilité maximale.
+     */
+    private JsonObject buildGeminiBasicTextRequest(String prompt) {
+        JsonObject requestBody = new JsonObject();
+
+        JsonArray contents = new JsonArray();
+        JsonObject content = new JsonObject();
+        JsonArray parts = new JsonArray();
+
+        JsonObject textPart = new JsonObject();
+        textPart.addProperty("text", prompt);
+        parts.add(textPart);
+
+        content.add("parts", parts);
+        contents.add(content);
+        requestBody.add("contents", contents);
+
+        return requestBody;
+    }
+
+    private String extractGeminiError(String responseBody) {
+        try {
+            JsonObject jsonResponse = gson.fromJson(responseBody, JsonObject.class);
+            if (jsonResponse != null && jsonResponse.has("error")) {
+                JsonObject error = jsonResponse.getAsJsonObject("error");
+                if (error.has("message")) {
+                    return error.get("message").getAsString();
+                }
+            }
+        } catch (Exception ignored) {
+            // no-op: return raw body fallback below
+        }
+        return responseBody;
     }
 
     /**
