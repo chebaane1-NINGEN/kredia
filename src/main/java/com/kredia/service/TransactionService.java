@@ -8,6 +8,7 @@ import com.kredia.repository.WalletRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.kredia.service.EcheanceService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -65,6 +66,7 @@ public class TransactionService {
         if (sourceWallet.getBalance().compareTo(transaction.getAmount()) < 0) {
             transaction.setStatus(TransactionStatus.FAILED);
             transaction.setDescription("Insufficient balance");
+
         } else if (sourceWallet.getWalletId().equals(transaction.getDestinationWallet() != null ? transaction.getDestinationWallet().getWalletId() : null)) {
             transaction.setStatus(TransactionStatus.FAILED);
             transaction.setDescription("Cannot transfer to the same wallet");
@@ -81,6 +83,7 @@ public class TransactionService {
                  destWallet.setUpdatedAt(LocalDateTime.now());
                  walletRepository.save(destWallet);
             }
+
 
             transaction.setStatus(TransactionStatus.COMPLETED);
         }
