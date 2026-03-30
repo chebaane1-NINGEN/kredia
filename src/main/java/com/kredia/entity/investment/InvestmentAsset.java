@@ -8,7 +8,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "investment_assets")
@@ -38,12 +37,6 @@ public class InvestmentAsset {
     
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
-    @OneToMany(mappedBy = "asset", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<InvestmentOrder> orders;
-    
-    @OneToMany(mappedBy = "asset", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<PortfolioPosition> portfolioPositions;
     
     @PrePersist
     protected void onCreate() {

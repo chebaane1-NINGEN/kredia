@@ -1,7 +1,10 @@
 package com.kredia.dto.reclamation;
 
 import com.kredia.enums.Priority;
-import jakarta.validation.constraints.*;
+import com.kredia.enums.ReclamationCategory;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public record ReclamationCreateRequest(
         @NotNull(message = "userId is required")
@@ -16,5 +19,7 @@ public record ReclamationCreateRequest(
         String description,
 
         // optional: if null -> MEDIUM
-        Priority priority
+        Priority priority,
+
+        ReclamationCategory category
 ) {}

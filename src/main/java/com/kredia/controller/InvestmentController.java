@@ -1,5 +1,8 @@
 package com.kredia.controller;
 
+import com.kredia.dto.investment.MarketStrategicSummaryRequest;
+import com.kredia.dto.investment.PortfolioPositionDTO;
+import com.kredia.dto.investment.PortfolioPositionResponseDTO;
 import com.kredia.entity.investment.*;
 import com.kredia.enums.AssetCategory;
 import com.kredia.enums.OrderStatus;
@@ -10,7 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/investments")
@@ -91,6 +96,7 @@ public class InvestmentController {
             InvestmentOrder createdOrder = investmentService.createOrder(order);
             return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
         } catch (RuntimeException e) {
+            System.out.println("Error creating order: " + e.getMessage());
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
     }
@@ -134,9 +140,9 @@ public class InvestmentController {
         return new ResponseEntity<>(orders, HttpStatus.OK);
     }
 
-    @GetMapping("/orders/asset/{assetId}")
-    public ResponseEntity<List<InvestmentOrder>> getOrdersByAssetId(@PathVariable Long assetId) {
-        List<InvestmentOrder> orders = investmentService.getOrdersByAssetId(assetId);
+    @GetMapping("/orders/asset/{assetSymbol}")
+    public ResponseEntity<List<InvestmentOrder>> getOrdersByAssetSymbol(@PathVariable String assetSymbol) {
+        List<InvestmentOrder> orders = investmentService.getOrdersByAssetSymbol(assetSymbol);
         return new ResponseEntity<>(orders, HttpStatus.OK);
     }
 
@@ -218,25 +224,32 @@ public class InvestmentController {
     // ==================== PortfolioPosition Endpoints ====================
     
     @PostMapping("/positions")
-    public ResponseEntity<PortfolioPosition> createPosition(@RequestBody PortfolioPosition position) {
+    public ResponseEntity<PortfolioPosition> createPosition(@RequestBody PortfolioPositionDTO positionDTO) {
         try {
-            PortfolioPosition createdPosition = investmentService.createPosition(position);
+            System.out.println("Creating position for user ID: " + positionDTO.getUserId() + ", Asset Symbol: " + positionDTO.getAssetSymbol());
+            
+            if (positionDTO.getUserId() == null || positionDTO.getAssetSymbol() == null) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+            
+            PortfolioPosition createdPosition = investmentService.createPositionFromDTO(positionDTO);
             return new ResponseEntity<>(createdPosition, HttpStatus.CREATED);
         } catch (RuntimeException e) {
+            System.out.println("Error creating position: " + e.getMessage());
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
     }
 
     @GetMapping("/positions/{id}")
-    public ResponseEntity<PortfolioPosition> getPositionById(@PathVariable Long id) {
-        return investmentService.getPositionById(id)
+    public ResponseEntity<PortfolioPositionResponseDTO> getPositionById(@PathVariable Long id) {
+        return investmentService.getPositionWithProfitById(id)
                 .map(position -> new ResponseEntity<>(position, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @GetMapping("/positions")
-    public ResponseEntity<List<PortfolioPosition>> getAllPositions() {
-        List<PortfolioPosition> positions = investmentService.getAllPositions();
+    public ResponseEntity<List<PortfolioPositionResponseDTO>> getAllPositions() {
+        List<PortfolioPositionResponseDTO> positions = investmentService.getAllPositionsWithProfit();
         return new ResponseEntity<>(positions, HttpStatus.OK);
     }
 
@@ -261,8 +274,8 @@ public class InvestmentController {
     }
 
     @GetMapping("/positions/user/{userId}")
-    public ResponseEntity<List<PortfolioPosition>> getPositionsByUserId(@PathVariable Long userId) {
-        List<PortfolioPosition> positions = investmentService.getPositionsByUserId(userId);
+    public ResponseEntity<List<PortfolioPositionResponseDTO>> getPositionsByUserId(@PathVariable Long userId) {
+        List<PortfolioPositionResponseDTO> positions = investmentService.getPositionsWithProfitByUserId(userId);
         return new ResponseEntity<>(positions, HttpStatus.OK);
     }
 
@@ -272,10 +285,37 @@ public class InvestmentController {
         return new ResponseEntity<>(positions, HttpStatus.OK);
     }
 
-    @GetMapping("/positions/user/{userId}/asset/{assetId}")
-    public ResponseEntity<PortfolioPosition> getPositionByUserIdAndAssetId(@PathVariable Long userId, @PathVariable Long assetId) {
-        return investmentService.getPositionByUserIdAndAssetId(userId, assetId)
+    @GetMapping("/positions/user/{userId}/asset/{assetSymbol}")
+    public ResponseEntity<PortfolioPositionResponseDTO> getPositionByUserIdAndAssetSymbol(@PathVariable Long userId, @PathVariable String assetSymbol) {
+        return investmentService.getPositionWithProfitByUserIdAndAssetSymbol(userId, assetSymbol)
                 .map(position -> new ResponseEntity<>(position, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
+    // ==================== AI Market Insight Endpoint ====================
+
+    @PostMapping("/market-strategy-summary")
+    public ResponseEntity<Map<String, Object>> generateMarketStrategySummary(
+            @RequestBody(required = false) MarketStrategicSummaryRequest request
+    ) {
+        try {
+            String language = request != null ? request.getLanguage() : null;
+            String tone = request != null ? request.getTone() : null;
+            String additionalContext = request != null ? request.getAdditionalContext() : null;
+
+            Map<String, Object> summary = investmentService.generateStrategicMarketSummary(
+                    language,
+                    tone,
+                    additionalContext
+            );
+
+            HttpStatus status = "error".equals(summary.get("status"))
+                    ? HttpStatus.BAD_GATEWAY
+                    : HttpStatus.OK;
+
+            return new ResponseEntity<>(summary, status);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

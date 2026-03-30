@@ -27,7 +27,7 @@ public class ReclamationHistory {
     @JoinColumn(name = "reclamation_id", nullable = false)
     private Reclamation reclamation;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id")
     private Long userId; // who did the action (agent/admin/system)
 
     @Enumerated(EnumType.STRING)

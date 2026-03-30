@@ -28,11 +28,26 @@ public class Echeance {
     @JsonIgnore
     private Credit credit;
 
+    @Column(name = "echeance_number", nullable = false)
+    private Integer echeanceNumber;
+
+    @Column(name = "capital_debut", nullable = false, precision = 15, scale = 2)
+    private BigDecimal capitalDebut;
+
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
 
     @Column(name = "amount_due", nullable = false, precision = 15, scale = 2)
     private BigDecimal amountDue;
+
+    @Column(name = "principal_due", nullable = false, precision = 15, scale = 2)
+    private BigDecimal principalDue;
+
+    @Column(name = "interest_due", nullable = false, precision = 15, scale = 2)
+    private BigDecimal interestDue;
+
+    @Column(name = "remaining_balance", nullable = false, precision = 15, scale = 2)
+    private BigDecimal remainingBalance;
 
     @Column(name = "amount_paid", precision = 15, scale = 2)
     private BigDecimal amountPaid;

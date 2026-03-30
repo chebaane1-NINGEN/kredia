@@ -23,7 +23,7 @@ create_migration.bat "description_de_la_migration"
 
 ### Étape 3 : Éditer le fichier créé
 Le fichier est dans `src/main/resources/db/migration/`
-
+    
 **Exemple:**
 ```sql
 -- Migration: add_user_phone

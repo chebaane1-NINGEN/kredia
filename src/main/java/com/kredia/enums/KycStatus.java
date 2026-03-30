@@ -2,6 +2,6 @@ package com.kredia.enums;
 
 public enum KycStatus {
     PENDING,
-    VERIFIED,
+    APPROVED,
     REJECTED
 }

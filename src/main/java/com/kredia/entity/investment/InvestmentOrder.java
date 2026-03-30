@@ -27,9 +27,8 @@ public class InvestmentOrder {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "asset_id", nullable = false)
-    private InvestmentAsset asset;
+    @Column(name = "asset_symbol", nullable = false, length = 20)
+    private String assetSymbol;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "order_type", nullable = false)
