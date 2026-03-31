@@ -1,6 +1,7 @@
 package com.kredia.entity.investment;
 
 import com.kredia.entity.user.User;
+import com.kredia.enums.StrategyRiskProfile;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -33,6 +34,19 @@ public class InvestmentStrategy {
     
     @Column(name = "stop_loss_pct", precision = 5, scale = 2)
     private BigDecimal stopLossPct;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_profile", nullable = false, length = 20)
+    private StrategyRiskProfile riskProfile = StrategyRiskProfile.MEDIUM;
+
+    @Column(name = "auto_create_orders", nullable = false)
+    private Boolean autoCreateOrders = true;
+
+    @Column(name = "auto_create_positions", nullable = false)
+    private Boolean autoCreatePositions = false;
+
+    @Column(name = "max_assets", nullable = false)
+    private Integer maxAssets = 5;
     
     @Column(name = "reinvest_profits", nullable = false)
     private Boolean reinvestProfits = false;

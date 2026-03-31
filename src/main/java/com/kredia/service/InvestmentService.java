@@ -6,7 +6,9 @@ import com.kredia.entity.investment.*;
 import com.kredia.entity.user.User;
 import com.kredia.enums.AssetCategory;
 import com.kredia.enums.OrderStatus;
+import com.kredia.enums.OrderType;
 import com.kredia.enums.RiskLevel;
+import com.kredia.enums.StrategyRiskProfile;
 import com.kredia.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -174,7 +177,9 @@ public class InvestmentService {
                 .orElseThrow(() -> new RuntimeException("User not found with id " + userId));
         strategy.setUser(user);
 
-        return strategyRepository.save(strategy);
+        InvestmentStrategy savedStrategy = strategyRepository.save(strategy);
+        bootstrapStrategy(savedStrategy);
+        return savedStrategy;
     }
 
     public Optional<InvestmentStrategy> getStrategyById(Long id) {
@@ -198,10 +203,151 @@ public class InvestmentService {
         strategy.setStrategyName(strategyDetails.getStrategyName());
         strategy.setMaxBudget(strategyDetails.getMaxBudget());
         strategy.setStopLossPct(strategyDetails.getStopLossPct());
+        strategy.setRiskProfile(strategyDetails.getRiskProfile());
+        strategy.setAutoCreateOrders(strategyDetails.getAutoCreateOrders());
+        strategy.setAutoCreatePositions(strategyDetails.getAutoCreatePositions());
+        strategy.setMaxAssets(strategyDetails.getMaxAssets());
         strategy.setReinvestProfits(strategyDetails.getReinvestProfits());
         strategy.setIsActive(strategyDetails.getIsActive());
         
         return strategyRepository.save(strategy);
+    }
+
+    private void bootstrapStrategy(InvestmentStrategy strategy) {
+        if (strategy.getIsActive() == null || !strategy.getIsActive()) {
+            return;
+        }
+
+        BigDecimal maxBudget = strategy.getMaxBudget();
+        if (maxBudget == null || maxBudget.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        int maxAssets = strategy.getMaxAssets() != null && strategy.getMaxAssets() > 0
+                ? strategy.getMaxAssets()
+                : 5;
+
+        List<InvestmentAsset> selectedAssets = selectAssetsByRiskAndKpi(strategy, maxAssets);
+        if (selectedAssets.isEmpty()) {
+            return;
+        }
+
+        BigDecimal allocationPerAsset = maxBudget
+                .divide(BigDecimal.valueOf(selectedAssets.size()), 8, RoundingMode.HALF_UP);
+
+        for (InvestmentAsset asset : selectedAssets) {
+            BigDecimal currentPrice = marketPriceService.getCurrentPrice(asset.getSymbol());
+            if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            BigDecimal quantity = allocationPerAsset.divide(currentPrice, 8, RoundingMode.HALF_UP);
+            if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            // KPI calculé pour la stratégie : seuil stop-loss estimé
+            BigDecimal stopLossPrice = calculateStopLossPrice(currentPrice, strategy.getStopLossPct());
+            if (stopLossPrice != null && stopLossPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            if (Boolean.TRUE.equals(strategy.getAutoCreateOrders())) {
+                createAutoBuyOrder(strategy, asset, quantity, currentPrice);
+            }
+
+            if (Boolean.TRUE.equals(strategy.getAutoCreatePositions())) {
+                createOrUpdatePosition(strategy, asset, quantity, currentPrice);
+            }
+        }
+    }
+
+    private List<InvestmentAsset> selectAssetsByRiskAndKpi(InvestmentStrategy strategy, int maxAssets) {
+        List<RiskLevel> allowedRiskLevels = mapRiskProfileToRiskLevels(strategy.getRiskProfile());
+
+        return assetRepository.findAll().stream()
+                .filter(asset -> allowedRiskLevels.contains(asset.getRiskLevel()))
+                .map(asset -> Map.entry(asset, calculateAssetScore(strategy, asset)))
+                .sorted(Map.Entry.<InvestmentAsset, BigDecimal>comparingByValue(Comparator.reverseOrder()))
+                .limit(maxAssets)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    private BigDecimal calculateAssetScore(InvestmentStrategy strategy, InvestmentAsset asset) {
+        BigDecimal riskScore = switch (asset.getRiskLevel()) {
+            case LOW -> new BigDecimal("1.00");
+            case MEDIUM -> new BigDecimal("0.85");
+            case HIGH -> new BigDecimal("0.70");
+            case VERY_HIGH -> new BigDecimal("0.55");
+        };
+
+        BigDecimal profileWeight = switch (strategy.getRiskProfile() != null ? strategy.getRiskProfile() : StrategyRiskProfile.MEDIUM) {
+            case LOW -> new BigDecimal("1.10");
+            case MEDIUM -> new BigDecimal("1.00");
+            case HIGH -> new BigDecimal("0.90");
+        };
+
+        return riskScore.multiply(profileWeight).setScale(4, RoundingMode.HALF_UP);
+    }
+
+    private List<RiskLevel> mapRiskProfileToRiskLevels(StrategyRiskProfile profile) {
+        StrategyRiskProfile resolvedProfile = profile != null ? profile : StrategyRiskProfile.MEDIUM;
+
+        return switch (resolvedProfile) {
+            case LOW -> List.of(RiskLevel.LOW);
+            case MEDIUM -> List.of(RiskLevel.LOW, RiskLevel.MEDIUM);
+            case HIGH -> List.of(RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.VERY_HIGH);
+        };
+    }
+
+    private BigDecimal calculateStopLossPrice(BigDecimal currentPrice, BigDecimal stopLossPct) {
+        if (currentPrice == null || stopLossPct == null) {
+            return null;
+        }
+
+        BigDecimal ratio = stopLossPct.divide(new BigDecimal("100"), 8, RoundingMode.HALF_UP);
+        BigDecimal multiplier = BigDecimal.ONE.subtract(ratio);
+        return currentPrice.multiply(multiplier).setScale(8, RoundingMode.HALF_UP);
+    }
+
+    private void createAutoBuyOrder(InvestmentStrategy strategy, InvestmentAsset asset, BigDecimal quantity, BigDecimal currentPrice) {
+        InvestmentOrder order = new InvestmentOrder();
+        order.setUser(strategy.getUser());
+        order.setAssetSymbol(asset.getSymbol());
+        order.setOrderType(OrderType.BUY);
+        order.setQuantity(quantity);
+        order.setPrice(currentPrice);
+        order.setOrderStatus(OrderStatus.PENDING);
+        orderRepository.save(order);
+    }
+
+    private void createOrUpdatePosition(InvestmentStrategy strategy, InvestmentAsset asset, BigDecimal quantity, BigDecimal currentPrice) {
+        Optional<PortfolioPosition> existingPosition = positionRepository
+                .findByUserUserIdAndAssetSymbol(strategy.getUser().getUserId(), asset.getSymbol());
+
+        if (existingPosition.isPresent()) {
+            PortfolioPosition position = existingPosition.get();
+            BigDecimal oldQuantity = position.getCurrentQuantity();
+            BigDecimal newQuantity = oldQuantity.add(quantity);
+
+            BigDecimal weightedOldValue = oldQuantity.multiply(position.getAvgPurchasePrice());
+            BigDecimal weightedNewValue = quantity.multiply(currentPrice);
+            BigDecimal newAveragePrice = weightedOldValue.add(weightedNewValue)
+                    .divide(newQuantity, 8, RoundingMode.HALF_UP);
+
+            position.setCurrentQuantity(newQuantity);
+            position.setAvgPurchasePrice(newAveragePrice);
+            positionRepository.save(position);
+            return;
+        }
+
+        PortfolioPosition newPosition = new PortfolioPosition();
+        newPosition.setUser(strategy.getUser());
+        newPosition.setAssetSymbol(asset.getSymbol());
+        newPosition.setCurrentQuantity(quantity);
+        newPosition.setAvgPurchasePrice(currentPrice);
+        positionRepository.save(newPosition);
     }
 
     public void deleteStrategy(Long id) {
