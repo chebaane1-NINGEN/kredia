@@ -35,4 +35,8 @@ public final class UserSpecifications {
     public static Specification<User> createdAtTo(Instant to) {
         return (root, query, cb) -> cb.lessThanOrEqualTo(root.get("createdAt"), to);
     }
+
+    public static Specification<User> assignedAgentEquals(User agent) {
+        return (root, query, cb) -> cb.equal(root.get("assignedAgent"), agent);
+    }
 }

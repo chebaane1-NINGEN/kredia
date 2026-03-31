@@ -6,35 +6,35 @@ import java.util.Map;
 
 public class AdminStatsDTO {
 
-    private long totalUsers;
-    private long totalClients;
-    private long totalAgents;
-    private long activeUsers;
-    private long blockedUsers;
-    private long suspendedUsers;
+    private long totalUser;
+    private long totalClient;
+    private long totalAgent;
+    private long activeUser;
+    private long blockedUser;
+    private long suspendedUser;
     private long last24hRegistrations;
     private Map<UserRole, Long> roleDistribution;
     private double systemHealthIndex;
 
     public AdminStatsDTO() {}
 
-    public long getTotalUsers() { return totalUsers; }
-    public void setTotalUsers(long totalUsers) { this.totalUsers = totalUsers; }
+    public long getTotalUser() { return totalUser; }
+    public void setTotalUser(long totalUser) { this.totalUser = totalUser; }
 
-    public long getTotalClients() { return totalClients; }
-    public void setTotalClients(long totalClients) { this.totalClients = totalClients; }
+    public long getTotalClient() { return totalClient; }
+    public void setTotalClient(long totalClient) { this.totalClient = totalClient; }
 
-    public long getTotalAgents() { return totalAgents; }
-    public void setTotalAgents(long totalAgents) { this.totalAgents = totalAgents; }
+    public long getTotalAgent() { return totalAgent; }
+    public void setTotalAgent(long totalAgent) { this.totalAgent = totalAgent; }
 
-    public long getActiveUsers() { return activeUsers; }
-    public void setActiveUsers(long activeUsers) { this.activeUsers = activeUsers; }
+    public long getActiveUser() { return activeUser; }
+    public void setActiveUser(long activeUser) { this.activeUser = activeUser; }
 
-    public long getBlockedUsers() { return blockedUsers; }
-    public void setBlockedUsers(long blockedUsers) { this.blockedUsers = blockedUsers; }
+    public long getBlockedUser() { return blockedUser; }
+    public void setBlockedUser(long blockedUser) { this.blockedUser = blockedUser; }
 
-    public long getSuspendedUsers() { return suspendedUsers; }
-    public void setSuspendedUsers(long suspendedUsers) { this.suspendedUsers = suspendedUsers; }
+    public long getSuspendedUser() { return suspendedUser; }
+    public void setSuspendedUser(long suspendedUser) { this.suspendedUser = suspendedUser; }
 
     public long getLast24hRegistrations() { return last24hRegistrations; }
     public void setLast24hRegistrations(long last24hRegistrations) { this.last24hRegistrations = last24hRegistrations; }

@@ -2,6 +2,8 @@ package com.kredia.service.user;
 
 import com.kredia.dto.user.UserRequestDTO;
 import com.kredia.dto.user.UserResponseDTO;
+import com.kredia.dto.user.AdminUserUpdateDTO;
+import com.kredia.dto.user.ClientProfileUpdateDTO;
 import com.kredia.dto.user.AdminStatsDTO;
 import com.kredia.dto.user.AgentPerformanceDTO;
 import com.kredia.dto.user.ClientEligibilityDTO;
@@ -22,18 +24,19 @@ import java.util.Optional;
  * <p>Business invariants enforced by this service:
  * <ul>
  *   <li>Status transitions are controlled (e.g. BLOCKED cannot be activated directly).</li>
- *   <li>Soft-deleted users cannot be mutated unless restored.</li>
+ *   <li>Soft-deleted user cannot be mutated unless restored.</li>
  *   <li>ADMIN protections: last ADMIN cannot be deleted, blocked, or downgraded.</li>
  *   <li>Role assignment: ADMIN can only be assigned to ACTIVE users.</li>
  * </ul>
  */
 public interface UserService {
 
-    UserResponseDTO create(UserRequestDTO user);
+    UserResponseDTO create(UserRequestDTO user); // Creation remains public for registration
 
-    UserResponseDTO getById(Long id);
+    UserResponseDTO getById(Long actorId, Long id);
 
     Page<UserResponseDTO> search(
+            Long actorId,
             Optional<String> email,
             Optional<UserStatus> status,
             Optional<UserRole> role,
@@ -42,72 +45,47 @@ public interface UserService {
             Pageable pageable
     );
 
-    UserResponseDTO update(Long id, UserRequestDTO payload);
+    UserResponseDTO updateProfile(Long actorId, Long id, ClientProfileUpdateDTO payload);
 
-    void delete(Long id);
+    UserResponseDTO adminUpdateUser(Long actorId, Long id, AdminUserUpdateDTO payload);
 
-    UserResponseDTO restore(Long id);
+    void delete(Long actorId, Long id);
 
-    /**
-     * Blocks a user.
-     *
-     * <p>Invariant: cannot block an already blocked user; cannot block the last ADMIN.
-     */
-    UserResponseDTO block(Long id);
+    UserResponseDTO restore(Long actorId, Long id);
 
-    /**
-     * Suspends a user.
-     *
-     * <p>Invariant: cannot suspend an already suspended user.
-     */
-    UserResponseDTO suspend(Long id);
+    UserResponseDTO block(Long actorId, Long id);
 
-    /**
-     * Activates a user.
-     *
-     * <p>Invariants:
-     * <ul>
-     *   <li>BLOCKED cannot be activated directly (must go through INACTIVE first).</li>
-     *   <li>SUSPENDED requires verification before activation.</li>
-     * </ul>
-     */
-    UserResponseDTO activate(Long id);
+    UserResponseDTO suspend(Long actorId, Long id);
 
-    /**
-     * Deactivates a user (sets status to INACTIVE).
-     */
-    UserResponseDTO deactivate(Long id);
+    UserResponseDTO activate(Long actorId, Long id);
 
-    /**
-     * Changes a user's role.
-     *
-     * <p>Invariants:
-     * <ul>
-     *   <li>ADMIN can only be assigned to ACTIVE users.</li>
-     *   <li>The last ADMIN cannot be downgraded.</li>
-     * </ul>
-     */
-    UserResponseDTO changeRole(Long id, UserRole role);
+    UserResponseDTO deactivate(Long actorId, Long id);
+
+    UserResponseDTO changeRole(Long actorId, Long id, UserRole role);
+
+    UserResponseDTO assignClientToAgent(Long actorId, Long agentId, Long clientId);
+    
+    UserResponseDTO unassignClient(Long actorId, Long clientId);
 
     AdminStatsDTO adminStats(Long actorId);
 
-    Page<UserResponseDTO> adminAgents(Long actorId, Pageable pageable);
+    Page<UserResponseDTO> adminAgent(Long actorId, Pageable pageable);
 
-    Page<UserResponseDTO> adminClients(Long actorId, Pageable pageable);
+    Page<UserResponseDTO> adminClient(Long actorId, Pageable pageable);
 
-    List<UserActivityResponseDTO> adminAudit(Long actorId, Long userId);
+    Page<UserActivityResponseDTO> adminAudit(Long actorId, Long userId, Pageable pageable);
 
-    List<UserActivityResponseDTO> adminActivitiesByRole(Long actorId, UserRole role, Pageable pageable);
+    Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, UserRole role, Pageable pageable);
 
     AgentPerformanceDTO agentDashboard(Long agentId);
 
     AgentPerformanceDTO agentPerformance(Long agentId);
 
-    List<UserActivityResponseDTO> agentActivities(Long agentId);
+    Page<UserActivityResponseDTO> agentActivity(Long agentId, Pageable pageable);
 
     UserResponseDTO clientProfile(Long clientId);
 
-    List<UserActivityResponseDTO> clientActivity(Long clientId);
+    Page<UserActivityResponseDTO> clientActivity(Long clientId, Pageable pageable);
 
     ClientRiskScoreDTO clientRiskScore(Long clientId);
 

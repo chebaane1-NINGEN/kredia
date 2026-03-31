@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS reclamation (
     KEY idx_rec_status (status),
     KEY idx_rec_created (created_at),
     CONSTRAINT fk_rec_user
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS reclamation_history (
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS reclamation_history (
     CONSTRAINT fk_hist_reclamation
     FOREIGN KEY (reclamation_id) REFERENCES reclamation(reclamation_id) ON DELETE CASCADE,
     CONSTRAINT fk_hist_user
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES user(user_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS notification (

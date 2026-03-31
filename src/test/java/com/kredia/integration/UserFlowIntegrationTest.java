@@ -7,6 +7,9 @@ import com.kredia.entity.user.UserActivityActionType;
 import com.kredia.entity.user.UserRole;
 import com.kredia.exception.BusinessException;
 import com.kredia.repository.user.UserActivityRepository;
+import com.kredia.entity.user.User;
+import com.kredia.entity.user.UserStatus;
+import com.kredia.repository.user.UserRepository;
 import com.kredia.service.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,35 +27,43 @@ class UserFlowIntegrationTest {
     private UserService userService;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private UserActivityRepository userActivityRepository;
 
     @Test
     @Transactional
     void fullFlow_shouldPersistActivities_andEnforceInvariants() {
-        UserResponseDTO adminCreated = userService.create(build("admin@kredia.com", "Admin", "One", "0600001111"));
-        Long adminId = adminCreated.getId();
-        userService.activate(adminId);
-        userService.changeRole(adminId, UserRole.ADMIN);
+        // Create first user
+        UserResponseDTO firstUser = userService.create(build("admin@kredia.com", "Admin", "One", "0600001111"));
+        Long adminId = firstUser.getId();
+        
+        // Bootstrap: Manual promotion to ADMIN for testing
+        User adminEntity = userRepository.findById(adminId).get();
+        adminEntity.setStatus(UserStatus.ACTIVE);
+        adminEntity.setRole(UserRole.ADMIN);
+        userRepository.save(adminEntity);
 
+        // Subsequent calls use adminId as actorId
         UserResponseDTO client = userService.create(build("client@kredia.com", "Client", "One", "0600002222"));
-        client = userService.activate(client.getId());
-
-        client = userService.block(client.getId());
-
-        userService.delete(client.getId());
-        UserResponseDTO restored = userService.restore(client.getId());
+        Long clientId = client.getId();
+        
+        userService.activate(adminId, clientId);
+        userService.block(adminId, clientId);
+        userService.delete(adminId, clientId);
+        
+        UserResponseDTO restored = userService.restore(adminId, clientId);
         assertFalse(restored.isDeleted());
 
         BusinessException downgradeLastAdmin = assertThrows(BusinessException.class,
-                () -> userService.changeRole(adminId, UserRole.CLIENT));
+                () -> userService.changeRole(adminId, adminId, UserRole.CLIENT));
         assertEquals("Cannot downgrade last ADMIN", downgradeLastAdmin.getMessage());
 
         List<UserActivity> adminActs = userActivityRepository.findByUserIdOrderByTimestampAsc(adminId);
         assertTrue(adminActs.stream().anyMatch(a -> a.getActionType() == UserActivityActionType.CREATED));
-        assertTrue(adminActs.stream().anyMatch(a -> a.getActionType() == UserActivityActionType.STATUS_CHANGED));
-        assertTrue(adminActs.stream().anyMatch(a -> a.getActionType() == UserActivityActionType.ROLE_CHANGED));
 
-        List<UserActivity> clientActs = userActivityRepository.findByUserIdOrderByTimestampAsc(client.getId());
+        List<UserActivity> clientActs = userActivityRepository.findByUserIdOrderByTimestampAsc(clientId);
         assertTrue(clientActs.stream().anyMatch(a -> a.getActionType() == UserActivityActionType.CREATED));
         assertTrue(clientActs.stream().anyMatch(a -> a.getActionType() == UserActivityActionType.STATUS_CHANGED));
         assertTrue(clientActs.stream().anyMatch(a -> a.getActionType() == UserActivityActionType.DELETED));

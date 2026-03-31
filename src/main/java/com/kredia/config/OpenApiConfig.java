@@ -14,7 +14,7 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("user-module")
                 .packagesToScan("com.kredia.controller")
-                .pathsToMatch("/api/users/**")
+                .pathsToMatch("/api/user/**")
                 .build();
     }
 

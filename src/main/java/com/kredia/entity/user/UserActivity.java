@@ -6,10 +6,10 @@ import java.time.Instant;
 
 @Entity
 @Table(
-        name = "user_activities",
+        name = "user_activity",
         indexes = {
-                @Index(name = "idx_user_activities_user_id", columnList = "user_id"),
-                @Index(name = "idx_user_activities_timestamp", columnList = "timestamp")
+                @Index(name = "idx_user_activity_user_id", columnList = "user_id"),
+                @Index(name = "idx_user_activity_timestamp", columnList = "timestamp")
         }
 )
 public class UserActivity {

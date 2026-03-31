@@ -1,5 +1,7 @@
 package com.kredia.mapper.user;
 
+import com.kredia.dto.user.ClientProfileUpdateDTO;
+import com.kredia.dto.user.AdminUserUpdateDTO;
 import com.kredia.dto.user.UserRequestDTO;
 import com.kredia.dto.user.UserResponseDTO;
 import com.kredia.entity.user.User;
@@ -30,6 +32,29 @@ public class UserMapper {
         target.setPhoneNumber(dto.getPhoneNumber());
     }
 
+    public void copyClientProfileFields(ClientProfileUpdateDTO dto, User target) {
+        if (dto == null || target == null) return;
+        if (dto.getFirstName() != null) target.setFirstName(dto.getFirstName());
+        if (dto.getLastName() != null) target.setLastName(dto.getLastName());
+        if (dto.getPhoneNumber() != null) target.setPhoneNumber(dto.getPhoneNumber());
+        if (dto.getDateOfBirth() != null) target.setDateOfBirth(dto.getDateOfBirth());
+        if (dto.getAddress() != null) target.setAddress(dto.getAddress());
+        if (dto.getGender() != null) target.setGender(dto.getGender());
+    }
+
+    public void copyAdminUserFields(AdminUserUpdateDTO dto, User target) {
+        if (dto == null || target == null) return;
+        target.setEmail(dto.getEmail());
+        target.setFirstName(dto.getFirstName());
+        target.setLastName(dto.getLastName());
+        target.setPhoneNumber(dto.getPhoneNumber());
+        target.setDateOfBirth(dto.getDateOfBirth());
+        target.setAddress(dto.getAddress());
+        target.setGender(dto.getGender());
+        target.setRole(dto.getRole());
+        target.setStatus(dto.getStatus());
+    }
+
     public UserResponseDTO toResponse(User user) {
         if (user == null) {
             return null;
@@ -48,6 +73,15 @@ public class UserMapper {
         dto.setUpdatedAt(user.getUpdatedAt());
         dto.setCreatedBy(user.getCreatedBy());
         dto.setUpdatedBy(user.getUpdatedBy());
+        dto.setDateOfBirth(user.getDateOfBirth());
+        dto.setAddress(user.getAddress());
+        dto.setGender(user.getGender());
+        
+        if (user.getAssignedAgent() != null) {
+            dto.setAssignedAgentId(user.getAssignedAgent().getId());
+            dto.setAssignedAgentName(user.getAssignedAgent().getFirstName() + " " + user.getAssignedAgent().getLastName());
+        }
+        
         return dto;
     }
 }

@@ -2,8 +2,9 @@ package com.kredia.dto.user;
 
 import com.kredia.entity.user.UserRole;
 import com.kredia.entity.user.UserStatus;
-
+import com.kredia.entity.user.Gender;
 import java.time.Instant;
+import java.time.LocalDate;
 
 public class UserResponseDTO {
 
@@ -20,6 +21,11 @@ public class UserResponseDTO {
     private Instant updatedAt;
     private String createdBy;
     private String updatedBy;
+    private Long assignedAgentId;
+    private String assignedAgentName;
+    private LocalDate dateOfBirth;
+    private String address;
+    private Gender gender;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -59,4 +65,19 @@ public class UserResponseDTO {
 
     public String getUpdatedBy() { return updatedBy; }
     public void setUpdatedBy(String updatedBy) { this.updatedBy = updatedBy; }
+
+    public Long getAssignedAgentId() { return assignedAgentId; }
+    public void setAssignedAgentId(Long assignedAgentId) { this.assignedAgentId = assignedAgentId; }
+
+    public String getAssignedAgentName() { return assignedAgentName; }
+    public void setAssignedAgentName(String assignedAgentName) { this.assignedAgentName = assignedAgentName; }
+
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+
+    public Gender getGender() { return gender; }
+    public void setGender(Gender gender) { this.gender = gender; }
 }

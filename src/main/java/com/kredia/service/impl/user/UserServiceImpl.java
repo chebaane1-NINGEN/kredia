@@ -1,5 +1,7 @@
 package com.kredia.service.impl.user;
 
+import com.kredia.dto.user.AdminUserUpdateDTO;
+import com.kredia.dto.user.ClientProfileUpdateDTO;
 import com.kredia.dto.user.AdminStatsDTO;
 import com.kredia.dto.user.AgentPerformanceDTO;
 import com.kredia.dto.user.ClientEligibilityDTO;
@@ -16,6 +18,7 @@ import com.kredia.exception.BusinessException;
 import com.kredia.exception.ForbiddenException;
 import com.kredia.exception.ResourceNotFoundException;
 import com.kredia.mapper.user.UserMapper;
+import com.kredia.repository.user.KycDocumentRepository;
 import com.kredia.repository.user.UserActivityRepository;
 import com.kredia.repository.user.UserRepository;
 import com.kredia.repository.user.UserSpecifications;
@@ -47,11 +50,13 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final UserActivityRepository userActivityRepository;
+    private final KycDocumentRepository kycDocumentRepository;
 
-    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, UserActivityRepository userActivityRepository) {
+    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, UserActivityRepository userActivityRepository, KycDocumentRepository kycDocumentRepository) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.userActivityRepository = userActivityRepository;
+        this.kycDocumentRepository = kycDocumentRepository;
     }
 
     @Override
@@ -81,16 +86,308 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    public UserResponseDTO getById(Long actorId, Long id) {
+        User actor = loadActor(actorId);
+        User target = loadActor(id);
+        
+        validateAccess(actor, target);
+        
+        return userMapper.toResponse(target);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserResponseDTO> search(
+            Long actorId,
+            Optional<String> email,
+            Optional<UserStatus> status,
+            Optional<UserRole> role,
+            Optional<Instant> createdFrom,
+            Optional<Instant> createdTo,
+            Pageable pageable
+    ) {
+        User actor = loadActor(actorId);
+        Specification<User> spec = UserSpecifications.notDeleted();
+
+        if (actor.getRole() == UserRole.AGENT) {
+            spec = spec.and(UserSpecifications.assignedAgentEquals(actor));
+        } else if (actor.getRole() == UserRole.CLIENT) {
+            // Clients can only search for themselves
+            if (email.isPresent() && !email.get().equalsIgnoreCase(actor.getEmail())) {
+                 return Page.empty();
+            }
+            spec = spec.and(UserSpecifications.emailEquals(actor.getEmail()));
+        }
+
+        if (email != null && email.isPresent()) {
+            spec = spec.and(UserSpecifications.emailEquals(email.get()));
+        }
+        if (status != null && status.isPresent()) {
+            spec = spec.and(UserSpecifications.statusEquals(status.get()));
+        }
+        if (role != null && role.isPresent()) {
+            spec = spec.and(UserSpecifications.roleEquals(role.get()));
+        }
+        if (createdFrom != null && createdFrom.isPresent()) {
+            spec = spec.and(UserSpecifications.createdAtFrom(createdFrom.get()));
+        }
+        if (createdTo != null && createdTo.isPresent()) {
+            spec = spec.and(UserSpecifications.createdAtTo(createdTo.get()));
+        }
+
+        return userRepository.findAll(spec, pageable).map(userMapper::toResponse);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO updateProfile(Long actorId, Long id, ClientProfileUpdateDTO payload) {
+        User actor = loadActor(actorId);
+        User target = findForMutation(id);
+        
+        validateAccess(actor, target);
+
+        if (payload.getPhoneNumber() != null && userRepository.existsByPhoneNumberAndDeletedFalseAndIdNot(payload.getPhoneNumber(), id)) {
+            throw new BusinessException("Phone number already exists");
+        }
+
+        userMapper.copyClientProfileFields(payload, target);
+        User saved = userRepository.save(target);
+        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Profile updated by actor " + actorId);
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO adminUpdateUser(Long actorId, Long id, AdminUserUpdateDTO payload) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+        
+        User target = findForMutation(id);
+
+        if (payload.getEmail() != null && userRepository.existsByEmailAndDeletedFalseAndIdNot(payload.getEmail(), id)) {
+            throw new BusinessException("Email already exists");
+        }
+        if (payload.getPhoneNumber() != null && userRepository.existsByPhoneNumberAndDeletedFalseAndIdNot(payload.getPhoneNumber(), id)) {
+            throw new BusinessException("Phone number already exists");
+        }
+
+        userMapper.copyAdminUserFields(payload, target);
+        User saved = userRepository.save(target);
+        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Admin updated user details by admin " + actorId);
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long actorId, Long id) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+        
+        User target = findForMutation(id);
+
+        if (target.getRole() == UserRole.ADMIN) {
+            long adminCount = userRepository.countByRoleAndDeletedFalse(UserRole.ADMIN);
+            if (adminCount <= 1) {
+                throw new BusinessException("Cannot delete last ADMIN");
+            }
+        }
+
+        target.setDeleted(true);
+        userRepository.save(target);
+
+        recordActivity(target.getId(), UserActivityActionType.DELETED, "User soft deleted by admin " + actorId);
+        log.info("user_soft_deleted userId={} email={}", target.getId(), target.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO restore(Long actorId, Long id) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+        
+        User target = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        if (!target.isDeleted()) {
+            return userMapper.toResponse(target);
+        }
+
+        target.setDeleted(false);
+        User saved = userRepository.save(target);
+        recordActivity(saved.getId(), UserActivityActionType.RESTORED, "User restored by admin " + actorId);
+        log.info("user_restored userId={} email={}", saved.getId(), saved.getEmail());
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO block(Long actorId, Long id) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+        
+        User user = findForMutation(id);
+        if (user.getStatus() == UserStatus.BLOCKED) {
+            throw new BusinessException("User is already blocked");
+        }
+        if (user.getRole() == UserRole.ADMIN) {
+            long adminCount = userRepository.countByRoleAndDeletedFalse(UserRole.ADMIN);
+            if (adminCount <= 1) {
+                throw new BusinessException("Cannot block last ADMIN");
+            }
+        }
+
+        UserStatus previous = user.getStatus();
+        user.setStatus(UserStatus.BLOCKED);
+        User saved = userRepository.save(user);
+        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Status changed from " + previous + " to " + saved.getStatus() + " by admin " + actorId);
+        log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO suspend(Long actorId, Long id) {
+        User actor = loadActor(actorId);
+        // Admin or the assigned Agent can suspend a user
+        User user = findForMutation(id);
+        if (actor.getRole() != UserRole.ADMIN && !Objects.equals(user.getAssignedAgent(), actor)) {
+             throw new ForbiddenException("Only admins or assigned agents can suspend users");
+        }
+
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            throw new BusinessException("User is already suspended");
+        }
+        UserStatus previous = user.getStatus();
+        user.setStatus(UserStatus.SUSPENDED);
+        User saved = userRepository.save(user);
+        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Status changed from " + previous + " to " + saved.getStatus() + " by actor " + actorId);
+        log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO activate(Long actorId, Long id) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+        
+        User user = findForMutation(id);
+
+        if (user.getStatus() == UserStatus.BLOCKED) {
+            throw new BusinessException("Blocked user cannot be activated directly; set INACTIVE first");
+        }
+        if (user.getStatus() == UserStatus.SUSPENDED && !user.isEmailVerified()) {
+            throw new BusinessException("Cannot activate suspended user without verification");
+        }
+
+        UserStatus previous = user.getStatus();
+        user.setStatus(UserStatus.ACTIVE);
+        User saved = userRepository.save(user);
+        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Status changed from " + previous + " to " + saved.getStatus() + " by admin " + actorId);
+        log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO deactivate(Long actorId, Long id) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+
+        User user = findForMutation(id);
+        if (user.getStatus() == UserStatus.INACTIVE) {
+            return userMapper.toResponse(user);
+        }
+        UserStatus previous = user.getStatus();
+        user.setStatus(UserStatus.INACTIVE);
+        User saved = userRepository.save(user);
+        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Status changed from " + previous + " to " + saved.getStatus() + " by admin " + actorId);
+        log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO changeRole(Long actorId, Long id, UserRole role) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+        
+        User user = findForMutation(id);
+
+        if (role == UserRole.ADMIN && user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException("Only ACTIVE users can be assigned ADMIN role");
+        }
+
+        if (user.getRole() == UserRole.ADMIN && role != UserRole.ADMIN) {
+            long adminCount = userRepository.countByRoleAndDeletedFalse(UserRole.ADMIN);
+            if (adminCount <= 1) {
+                throw new BusinessException("Cannot downgrade last ADMIN");
+            }
+        }
+
+        UserRole previous = user.getRole();
+        user.setRole(role);
+        User saved = userRepository.save(user);
+        recordActivity(saved.getId(), UserActivityActionType.ROLE_CHANGED, "Role changed from " + previous + " to " + saved.getRole() + " by admin " + actorId);
+        log.info("user_role_changed userId={} from={} to={}", saved.getId(), previous, saved.getRole());
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO assignClientToAgent(Long actorId, Long agentId, Long clientId) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+        
+        User agent = loadActor(agentId);
+        validateRole(agent, UserRole.AGENT);
+        
+        User client = loadActor(clientId);
+        validateRole(client, UserRole.CLIENT);
+        
+        client.setAssignedAgent(agent);
+        User saved = userRepository.save(client);
+        
+        recordActivity(clientId, UserActivityActionType.CLIENT_HANDLED, "Client assigned to agent " + agent.getFirstName() + " " + agent.getLastName());
+        recordActivity(agentId, UserActivityActionType.CLIENT_HANDLED, "Handled client " + client.getFirstName() + " " + client.getLastName());
+        
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO unassignClient(Long actorId, Long clientId) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+        
+        User client = loadActor(clientId);
+        validateRole(client, UserRole.CLIENT);
+        
+        User agent = client.getAssignedAgent();
+        if (agent != null) {
+            client.setAssignedAgent(null);
+            User saved = userRepository.save(client);
+            
+            recordActivity(clientId, UserActivityActionType.CLIENT_HANDLED, "Client unassigned from agent " + agent.getId());
+            recordActivity(agent.getId(), UserActivityActionType.CLIENT_HANDLED, "Client " + clientId + " unassigned");
+            
+            return userMapper.toResponse(saved);
+        }
+        return userMapper.toResponse(client);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public AdminStatsDTO adminStats(Long actorId) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
 
-        long totalUsers = userRepository.countByDeletedFalse();
-        long totalClients = userRepository.countByRoleAndDeletedFalse(UserRole.CLIENT);
-        long totalAgents = userRepository.countByRoleAndDeletedFalse(UserRole.AGENT);
-        long activeUsers = userRepository.countByStatusAndDeletedFalse(UserStatus.ACTIVE);
-        long blockedUsers = userRepository.countByStatusAndDeletedFalse(UserStatus.BLOCKED);
-        long suspendedUsers = userRepository.countByStatusAndDeletedFalse(UserStatus.SUSPENDED);
+        long totalUser = userRepository.countByDeletedFalse();
+        long totalClient = userRepository.countByRoleAndDeletedFalse(UserRole.CLIENT);
+        long totalAgent = userRepository.countByRoleAndDeletedFalse(UserRole.AGENT);
+        long activeUser = userRepository.countByStatusAndDeletedFalse(UserStatus.ACTIVE);
+        long blockedUser = userRepository.countByStatusAndDeletedFalse(UserStatus.BLOCKED);
+        long suspendedUser = userRepository.countByStatusAndDeletedFalse(UserStatus.SUSPENDED);
         long last24hRegistrations = userRepository.countByCreatedAtAfterAndDeletedFalse(Instant.now().minus(24, ChronoUnit.HOURS));
 
         Map<UserRole, Long> distribution = new EnumMap<>(UserRole.class);
@@ -99,17 +396,17 @@ public class UserServiceImpl implements UserService {
         }
 
         double health = 0.0;
-        if (totalUsers > 0) {
-            health = (activeUsers * 100.0) / totalUsers;
+        if (totalUser > 0) {
+            health = (activeUser * 100.0) / totalUser;
         }
 
         AdminStatsDTO dto = new AdminStatsDTO();
-        dto.setTotalUsers(totalUsers);
-        dto.setTotalClients(totalClients);
-        dto.setTotalAgents(totalAgents);
-        dto.setActiveUsers(activeUsers);
-        dto.setBlockedUsers(blockedUsers);
-        dto.setSuspendedUsers(suspendedUsers);
+        dto.setTotalUser(totalUser);
+        dto.setTotalClient(totalClient);
+        dto.setTotalAgent(totalAgent);
+        dto.setActiveUser(activeUser);
+        dto.setBlockedUser(blockedUser);
+        dto.setSuspendedUser(suspendedUser);
         dto.setLast24hRegistrations(last24hRegistrations);
         dto.setRoleDistribution(distribution);
         dto.setSystemHealthIndex(health);
@@ -118,7 +415,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<UserResponseDTO> adminAgents(Long actorId, Pageable pageable) {
+    public Page<UserResponseDTO> adminAgent(Long actorId, Pageable pageable) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
         return userRepository.findAllByRoleAndDeletedFalse(UserRole.AGENT, pageable).map(userMapper::toResponse);
@@ -126,7 +423,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<UserResponseDTO> adminClients(Long actorId, Pageable pageable) {
+    public Page<UserResponseDTO> adminClient(Long actorId, Pageable pageable) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
         return userRepository.findAllByRoleAndDeletedFalse(UserRole.CLIENT, pageable).map(userMapper::toResponse);
@@ -134,26 +431,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserActivityResponseDTO> adminAudit(Long actorId, Long userId) {
+    public Page<UserActivityResponseDTO> adminAudit(Long actorId, Long userId, Pageable pageable) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
         User target = loadActor(userId);
         validateNotDeleted(target);
-        return mapActivities(userActivityRepository.findByUserIdOrderByTimestampAsc(userId));
+        return userActivityRepository.findByUserIdOrderByTimestampAsc(userId, pageable).map(this::mapActivity);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserActivityResponseDTO> adminActivitiesByRole(Long actorId, UserRole role, Pageable pageable) {
+    public Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, UserRole role, Pageable pageable) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
 
         Set<Long> ids = new HashSet<>();
-        userRepository.findAllByRoleAndDeletedFalse(role, pageable).forEach(u -> ids.add(u.getId()));
+        userRepository.findAllByRoleAndDeletedFalse(role, Pageable.unpaged()).forEach(u -> ids.add(u.getId()));
         if (ids.isEmpty()) {
-            return List.of();
+            return Page.empty();
         }
-        return mapActivities(userActivityRepository.findByUserIdInOrderByTimestampAsc(ids));
+        return userActivityRepository.findByUserIdInOrderByTimestampAsc(ids, pageable).map(this::mapActivity);
     }
 
     @Override
@@ -197,10 +494,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserActivityResponseDTO> agentActivities(Long agentId) {
+    public Page<UserActivityResponseDTO> agentActivity(Long agentId, Pageable pageable) {
         User agent = loadActor(agentId);
         validateRole(agent, UserRole.AGENT);
-        return mapActivities(userActivityRepository.findByUserIdOrderByTimestampAsc(agentId));
+        return userActivityRepository.findByUserIdOrderByTimestampAsc(agentId, pageable).map(this::mapActivity);
     }
 
     @Override
@@ -218,10 +515,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserActivityResponseDTO> clientActivity(Long clientId) {
+    public Page<UserActivityResponseDTO> clientActivity(Long clientId, Pageable pageable) {
         User client = loadActor(clientId);
         validateRole(client, UserRole.CLIENT);
-        return mapActivities(userActivityRepository.findByUserIdOrderByTimestampAsc(clientId));
+        return userActivityRepository.findByUserIdOrderByTimestampAsc(clientId, pageable).map(this::mapActivity);
     }
 
     @Override
@@ -238,6 +535,10 @@ public class UserServiceImpl implements UserService {
         }
         if (hasEverBeenSuspended(acts)) {
             score -= 20;
+        }
+
+        if (kycDocumentRepository.existsByUserIdAndStatus(clientId, com.kredia.enums.KycStatus.APPROVED)) {
+            score += 20;
         }
 
         score += (acts.size() * 2);
@@ -291,203 +592,6 @@ public class UserServiceImpl implements UserService {
         return dto;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public UserResponseDTO getById(Long id) {
-        Long requiredId = Objects.requireNonNull(id, "id");
-        User user = userRepository.findByIdAndDeletedFalse(requiredId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + requiredId));
-        return userMapper.toResponse(user);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<UserResponseDTO> search(
-            Optional<String> email,
-            Optional<UserStatus> status,
-            Optional<UserRole> role,
-            Optional<Instant> createdFrom,
-            Optional<Instant> createdTo,
-            Pageable pageable
-    ) {
-        Specification<User> spec = UserSpecifications.notDeleted();
-
-        if (email != null && email.isPresent()) {
-            spec = spec.and(UserSpecifications.emailEquals(email.get()));
-        }
-        if (status != null && status.isPresent()) {
-            spec = spec.and(UserSpecifications.statusEquals(status.get()));
-        }
-        if (role != null && role.isPresent()) {
-            spec = spec.and(UserSpecifications.roleEquals(role.get()));
-        }
-        if (createdFrom != null && createdFrom.isPresent()) {
-            spec = spec.and(UserSpecifications.createdAtFrom(createdFrom.get()));
-        }
-        if (createdTo != null && createdTo.isPresent()) {
-            spec = spec.and(UserSpecifications.createdAtTo(createdTo.get()));
-        }
-
-        return userRepository.findAll(spec, pageable).map(userMapper::toResponse);
-    }
-
-    @Override
-    @Transactional
-    public UserResponseDTO update(Long id, UserRequestDTO payload) {
-        Long requiredId = Objects.requireNonNull(id, "id");
-        Objects.requireNonNull(payload, "payload");
-
-        User existing = findForMutation(requiredId);
-
-        if (userRepository.existsByEmailAndDeletedFalseAndIdNot(payload.getEmail(), requiredId)) {
-            throw new BusinessException("Email already exists");
-        }
-        if (userRepository.existsByPhoneNumberAndDeletedFalseAndIdNot(payload.getPhoneNumber(), requiredId)) {
-            throw new BusinessException("Phone number already exists");
-        }
-
-        userMapper.copyUpdatableFields(payload, existing);
-        return userMapper.toResponse(userRepository.save(existing));
-    }
-
-    @Override
-    @Transactional
-    public void delete(Long id) {
-        Long requiredId = Objects.requireNonNull(id, "id");
-
-        User existing = findForMutation(requiredId);
-
-        if (existing.getRole() == UserRole.ADMIN) {
-            long adminCount = userRepository.countByRoleAndDeletedFalse(UserRole.ADMIN);
-            if (adminCount <= 1) {
-                throw new BusinessException("Cannot delete last ADMIN");
-            }
-        }
-
-        existing.setDeleted(true);
-        userRepository.save(existing);
-
-        recordActivity(existing.getId(), UserActivityActionType.DELETED, "User soft deleted");
-        log.info("user_soft_deleted userId={} email={}", existing.getId(), existing.getEmail());
-    }
-
-    @Override
-    @Transactional
-    public UserResponseDTO restore(Long id) {
-        Long requiredId = Objects.requireNonNull(id, "id");
-        User existing = userRepository.findById(requiredId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + requiredId));
-
-        if (!existing.isDeleted()) {
-            return userMapper.toResponse(existing);
-        }
-
-        existing.setDeleted(false);
-        User saved = userRepository.save(existing);
-        recordActivity(saved.getId(), UserActivityActionType.RESTORED, "User restored");
-        log.info("user_restored userId={} email={}", saved.getId(), saved.getEmail());
-        return userMapper.toResponse(saved);
-    }
-
-    @Override
-    @Transactional
-    public UserResponseDTO block(Long id) {
-        User user = findForMutation(Objects.requireNonNull(id, "id"));
-        if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new BusinessException("User is already blocked");
-        }
-        if (user.getRole() == UserRole.ADMIN) {
-            long adminCount = userRepository.countByRoleAndDeletedFalse(UserRole.ADMIN);
-            if (adminCount <= 1) {
-                throw new BusinessException("Cannot block last ADMIN");
-            }
-        }
-
-        UserStatus previous = user.getStatus();
-        user.setStatus(UserStatus.BLOCKED);
-        User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Status changed from " + previous + " to " + saved.getStatus());
-        log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
-        return userMapper.toResponse(saved);
-    }
-
-    @Override
-    @Transactional
-    public UserResponseDTO suspend(Long id) {
-        User user = findForMutation(Objects.requireNonNull(id, "id"));
-        if (user.getStatus() == UserStatus.SUSPENDED) {
-            throw new BusinessException("User is already suspended");
-        }
-        UserStatus previous = user.getStatus();
-        user.setStatus(UserStatus.SUSPENDED);
-        User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Status changed from " + previous + " to " + saved.getStatus());
-        log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
-        return userMapper.toResponse(saved);
-    }
-
-    @Override
-    @Transactional
-    public UserResponseDTO activate(Long id) {
-        User user = findForMutation(Objects.requireNonNull(id, "id"));
-
-        if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new BusinessException("Blocked user cannot be activated directly; set INACTIVE first");
-        }
-        if (user.getStatus() == UserStatus.SUSPENDED && !user.isEmailVerified()) {
-            throw new BusinessException("Cannot activate suspended user without verification");
-        }
-
-        UserStatus previous = user.getStatus();
-        user.setStatus(UserStatus.ACTIVE);
-        User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Status changed from " + previous + " to " + saved.getStatus());
-        log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
-        return userMapper.toResponse(saved);
-    }
-
-    @Override
-    @Transactional
-    public UserResponseDTO deactivate(Long id) {
-        User user = findForMutation(Objects.requireNonNull(id, "id"));
-        if (user.getStatus() == UserStatus.INACTIVE) {
-            return userMapper.toResponse(user);
-        }
-        UserStatus previous = user.getStatus();
-        user.setStatus(UserStatus.INACTIVE);
-        User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Status changed from " + previous + " to " + saved.getStatus());
-        log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
-        return userMapper.toResponse(saved);
-    }
-
-    @Override
-    @Transactional
-    public UserResponseDTO changeRole(Long id, UserRole role) {
-        Long requiredId = Objects.requireNonNull(id, "id");
-        UserRole requiredRole = Objects.requireNonNull(role, "role");
-
-        User user = findForMutation(requiredId);
-
-        if (requiredRole == UserRole.ADMIN && user.getStatus() != UserStatus.ACTIVE) {
-            throw new BusinessException("Only ACTIVE users can be assigned ADMIN role");
-        }
-
-        if (user.getRole() == UserRole.ADMIN && requiredRole != UserRole.ADMIN) {
-            long adminCount = userRepository.countByRoleAndDeletedFalse(UserRole.ADMIN);
-            if (adminCount <= 1) {
-                throw new BusinessException("Cannot downgrade last ADMIN");
-            }
-        }
-
-        UserRole previous = user.getRole();
-        user.setRole(requiredRole);
-        User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.ROLE_CHANGED, "Role changed from " + previous + " to " + saved.getRole());
-        log.info("user_role_changed userId={} from={} to={}", saved.getId(), previous, saved.getRole());
-        return userMapper.toResponse(saved);
-    }
-
     private User findForMutation(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
@@ -525,19 +629,45 @@ public class UserServiceImpl implements UserService {
             throw new ForbiddenException("Access denied");
         }
     }
+    
+    private void validateAccess(User actor, User target) {
+        if (actor.getRole() == UserRole.ADMIN) {
+             return;
+        }
+        if (actor.getRole() == UserRole.AGENT) {
+             if (target.getRole() == UserRole.CLIENT && Objects.equals(target.getAssignedAgent(), actor)) {
+                  return;
+             }
+             if (Objects.equals(actor, target)) {
+                  return;
+             }
+             throw new ForbiddenException("Agents can only access their assigned clients or their own profile");
+        }
+        if (actor.getRole() == UserRole.CLIENT) {
+             if (!Objects.equals(actor, target)) {
+                  throw new ForbiddenException("Clients can only access their own profile");
+             }
+             return;
+        }
+        throw new ForbiddenException("Access denied");
+    }
 
     private List<UserActivityResponseDTO> mapActivities(List<UserActivity> activities) {
         List<UserActivityResponseDTO> out = new ArrayList<>();
         for (UserActivity a : activities) {
-            UserActivityResponseDTO dto = new UserActivityResponseDTO();
-            dto.setId(a.getId());
-            dto.setUserId(a.getUserId());
-            dto.setActionType(a.getActionType());
-            dto.setDescription(a.getDescription());
-            dto.setTimestamp(a.getTimestamp());
-            out.add(dto);
+            out.add(mapActivity(a));
         }
         return out;
+    }
+
+    private UserActivityResponseDTO mapActivity(UserActivity a) {
+        UserActivityResponseDTO dto = new UserActivityResponseDTO();
+        dto.setId(a.getId());
+        dto.setUserId(a.getUserId());
+        dto.setActionType(a.getActionType());
+        dto.setDescription(a.getDescription());
+        dto.setTimestamp(a.getTimestamp());
+        return dto;
     }
 
     private boolean hasEverBeenSuspended(List<UserActivity> activities) {

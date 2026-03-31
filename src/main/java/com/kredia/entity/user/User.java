@@ -8,15 +8,16 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(
-        name = "users",
+        name = "\"user\"",
         indexes = {
-                @Index(name = "idx_users_email", columnList = "email"),
-                @Index(name = "idx_users_status", columnList = "status"),
-                @Index(name = "idx_users_role", columnList = "role"),
-                @Index(name = "idx_users_created_at", columnList = "created_at")
+                @Index(name = "idx_user_email", columnList = "email"),
+                @Index(name = "idx_user_status", columnList = "status"),
+                @Index(name = "idx_user_role", columnList = "role"),
+                @Index(name = "idx_user_created_at", columnList = "created_at")
         }
 )
 @EntityListeners(AuditingEntityListener.class)
@@ -56,6 +57,22 @@ public class User {
     @Column(nullable = false)
     private boolean emailVerified = false;
 
+    @Column(name = "password_hash")
+    private String passwordHash;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "address")
+    private String address;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gender")
+    private Gender gender;
+
+    @Column(name = "verification_token")
+    private String verificationToken;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -71,6 +88,10 @@ public class User {
     @LastModifiedBy
     @Column
     private String updatedBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_agent_id")
+    private User assignedAgent;
 
     public User() {}
 
@@ -118,4 +139,22 @@ public class User {
 
     public String getUpdatedBy() { return updatedBy; }
     public void setUpdatedBy(String updatedBy) { this.updatedBy = updatedBy; }
+
+    public User getAssignedAgent() { return assignedAgent; }
+    public void setAssignedAgent(User assignedAgent) { this.assignedAgent = assignedAgent; }
+
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+
+    public Gender getGender() { return gender; }
+    public void setGender(Gender gender) { this.gender = gender; }
+
+    public String getVerificationToken() { return verificationToken; }
+    public void setVerificationToken(String verificationToken) { this.verificationToken = verificationToken; }
 }

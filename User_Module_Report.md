@@ -1,512 +1,200 @@
-# **User Module Report (Kredia)**
+# Rapport Technique Complet : Module "User" (Backend & DB)
 
-## **Sommaire**
+## 1. Introduction
 
-1. **Introduction**
-2. **Architecture globale**
-3. **Fonctionnalités principales**
-4. **Fonctionnalités multi-role**
-5. **Endpoints REST**
-6. **Tests et validation**
-7. **Notes supplémentaires**
-8. **Conclusion**
+Ce rapport présente une analyse exhaustive et strictement technique de la gestion des utilisateurs (`user`) au sein du backend du projet Kredia. Ce document détaille l'architecture en couches (Controllers, Services, Repositories), l'implémentation de la logique métier, la sécurisation des endpoints, le suivi des journaux d'audit (UserActivity), les structures de données en base, ainsi que toutes les opérations CRUD et fonctionnelles liées au domaine `user`. Le rapport exclut volontairement toute partie frontend.
 
 ---
 
-## **1) Introduction**
+## 2. Architecture Globale
 
-### **Objectif du module User**
+Le module `user` est bâti sur une architecture classique Spring Boot (MVC) stricte et orientée domaine :
 
-Le module **User** centralise toute la gestion des utilisateurs du projet Kredia.
-
-Il couvre :
-
-- **Création et gestion** d’un utilisateur (CRUD)
-- **Gestion d’état** (status) avec règles métiers strictes
-- **Gestion de rôle** (RBAC) pour **ADMIN**, **AGENT**, **CLIENT**
-- **Traçabilité** et **audit readiness** via **UserActivity** + auditing JPA
-- **Robustesse** via optimistic locking, validation, gestion d’erreurs uniforme
-
-### **Rôle dans le projet global**
-
-Le module joue le rôle de **référentiel d’identité** et de **source d’autorité** pour les actions et tableaux de bord liés aux utilisateurs.
-
-Il fournit aussi une base “banque-grade” pour :
-
-- calculer des **KPIs** (ADMIN)
-- suivre la **performance** (AGENT)
-- simuler **risque** et **éligibilité** (CLIENT)
+- **Entities (`com.kredia.entity.user`) :** Entités JPA représentant le modèle de données : `User` (avec Soft-Delete, Optimistic Locking, et Auditing JPA) et `UserActivity` (journal d'événements), associées aux énumérations `UserRole`, `UserStatus` et `UserActivityActionType`.
+- **Repositories (`com.kredia.repository.user`) :** Interfaces Spring Data JPA (`UserRepository`, `UserActivityRepository`) incluant des spécifications dynamiques (`UserSpecifications`) pour la recherche avancée.
+- **DTOs (`com.kredia.dto.user`) :** Modèles d'échange de données (Request et Response) permettant le découplage, munis d'annotations de validation (`@NotBlank`, `@Email`, etc.). `ApiResponse` emballe mondialement ces DTOs.
+- **Services (`com.kredia.service.user` & `impl.user`) :** `UserService` (interface) et `UserServiceImpl`. L'implémentation gère **intégralement** la logique métier transversale (contrôle RBAC en service, invariants, génération de scores et traçabilité d'audit).
+- **Controllers (`com.kredia.controller.user`) :** `UserController`. Expose les API REST sous `/api/user`. Délègue à 100% l'exécution de la logique au `UserService`.
+- **Exceptions & Config :** Interception centralisée (`GlobalExceptionHandler`) traduisant les `BusinessException`, `ResourceNotFoundException`, et `ForbiddenException` en structures JSON standards. Validation globale avec l'annotation `@Valid`.
 
 ---
 
-## **2) Architecture globale**
+## 3. Analyse Détaillée par Fonctionnalité
 
-Le module suit une architecture en couches (controller/service/repository) avec DTOs, mapping, exceptions et configuration.
+Cette section détaille chaque méthode du cycle de vie du "user". 
 
-### **controller/**
+### 3.1. Create User
+- **Nom :** Création d'Utilisateur
+- **Type :** CRUD (Create)
+- **Description :** Enregistre un nouvel utilisateur en base en vérifiant l'absence de doublons (email/téléphone) et en forçant par défaut l'état "en attente" avec le rôle "client".
+- **Endpoint API :** `POST /api/user`
+  - **Paramètres (Body) :** `UserRequestDTO` (email, firstName, lastName, phoneNumber)
+  - **Réponse :** HTTP 201 Created -> `ApiResponse<UserResponseDTO>`
+- **Calculs/Transformations :**
+  - Mappe le DTO vers l'entité `User`.
+  - Force explicitement : `status = PENDING_VERIFICATION`, `role = CLIENT`, `deleted = false`, `emailVerified = false`, `id = null`.
+- **Règles métier :**
+  - Validation DTO (email valide, pas vide, max caractères).
+  - Unicité vérifiée en base (`existsByEmailAndDeletedFalse`, `existsByPhoneNumberAndDeletedFalse`). 
+- **DB/Relations :** Insertion dans `users`. Insertion simultanée dans `user_activities`.
+- **Cas Spéciaux :** Lève `BusinessException` (400) si l'email ou le téléphone existent déjà parmi les utilisateurs non supprimés.
+- **Logs/Audit :** Enregistre un `UserActivity` de type `CREATED` et ajoute un log SLF4J (`user_created userId=...`).
 
-- **UserController** (`src/main/java/com/kredia/controller/UserController.java`)
-  - Expose les endpoints REST.
-  - Reste volontairement “thin” : délègue toute logique métier au service.
-  - Retourne les succès via `ApiResponse<T>`.
+### 3.2. Search Users
+- **Nom :** Recherche Pagée et Filtrée
+- **Type :** CRUD (Read)
+- **Description :** Permet la récupération d'une liste paginée d'utilisateurs avec des filtres optionnels, en ne renvoyant que les utilisateurs non soft-deleted.
+- **Endpoint API :** `GET /api/user`
+  - **Paramètres :** `email`, `status`, `role`, `createdFrom`, `createdTo`, `page`, `size`
+  - **Réponse :** HTTP 200 OK -> `ApiResponse<Page<UserResponseDTO>>`
+- **Calculs/Transformations :** Construction dynamique de critères JPA via `UserSpecifications`.
+- **Règles métier :** Exclut toujours les utilisateurs marqués comme supprimés (`deleted = true`).
+- **DB/Relations :** Jointure non requise, simple requête SQL avec clause `WHERE` dynamique.
 
-### **service/ + service/impl/**
+### 3.3. Get User By ID
+- **Nom :** Lecture d'un Utilisateur
+- **Type :** CRUD (Read)
+- **Description :** Retourne un utilisateur précis basé sur son ID, erreur si introuvable ou supprimé.
+- **Endpoint API :** `GET /api/user/{id}`
+  - **Réponse :** HTTP 200 OK -> `ApiResponse<UserResponseDTO>`
+- **Règles métier :** Vérifie que l'entité n'est pas "deleted" via le repository (`findByIdAndDeletedFalse`).
+- **Cas Spéciaux :** Lève `ResourceNotFoundException` (404) si l'utilisateur n'existe pas ou est soft-deleted.
 
-- **UserService** (`src/main/java/com/kredia/service/UserService.java`)
-  - Contrat du domaine User.
-  - Définit le CRUD, la gestion status/roles, et les méthodes multi-role.
+### 3.4. Update User
+- **Nom :** Mise à Jour Utilisateur
+- **Type :** CRUD (Update)
+- **Description :** Modifie les informations personnelles d'un utilisateur existant et non supprimé.
+- **Endpoint API :** `PUT /api/user/{id}`
+  - **Body :** `UserRequestDTO`
+  - **Réponse :** HTTP 200 OK -> `ApiResponse<UserResponseDTO>`
+- **Calculs/Transformations :** Copie manuelle via mapper (`copyUpdatableFields`) des champs mutables. Augmentation incrémentale du `@Version`.
+- **Règles métier :**
+  - L'utilisateur cible doit exister et `deleted == false`.
+  - Vérification de l'unicité de l'email et du téléphone par rapport aux *autres* utilisateurs (`existsBy...AndDeletedFalseAndIdNot`).
+- **DB/Relations :** Met à jour la table `users`. Modifie `updated_at` et `@Version` automatiquement.
+- **Cas Spéciaux :** Possibilité de Conflit de Concurrence. Si deux mises à jour s'effectuent simultanément, génère `ObjectOptimisticLockingFailureException` (409 Conflict).
 
-- **UserServiceImpl** (`src/main/java/com/kredia/service/impl/UserServiceImpl.java`)
-  - Implémentation complète.
-  - Applique les **business rules**, enregistre les **UserActivity** et effectue les calculs (KPIs, risques, performance).
-  - Applique la **RBAC au niveau service** via des validations internes.
+### 3.5. Delete User (Soft Delete)
+- **Nom :** Suppression Utilisateur
+- **Type :** CRUD (Delete / Opération Métier)
+- **Description :** Archive (soft-delete) un utilisateur plutôt que de le supprimer physiquement de la base.
+- **Endpoint API :** `DELETE /api/user/{id}`
+  - **Réponse :** HTTP 200 OK -> `ApiResponse<Void>`
+- **Règles métier :**
+  - Règle de sécurité ultime : **Impossible de supprimer le dernier et unique ADMIN** du système.
+  - Passe `deleted` à `true`.
+- **Cas Spéciaux :** Utilisateur devient invisible pour la majorité des requêtes `findBy...AndDeletedFalse`.
+- **Logs/Audit :** Création d'un `UserActivity` `DELETED` ("User soft deleted"). Log SLF4J enregistré.
 
-### **repository/**
+### 3.6. Restore User
+- **Nom :** Restauration Utilisateur
+- **Type :** Opération Métier Spécifique
+- **Description :** Réactive un utilisateur précédemment soft-deleted.
+- **Endpoint API :** `PATCH /api/user/{id}/restore`
+  - **Réponse :** HTTP 200 OK -> `ApiResponse<UserResponseDTO>`
+- **Calculs/Transformations :** Renverse le flag `deleted` à `false`. 
+- **Logs/Audit :** Création `UserActivity` -> `RESTORED`.
 
-- **UserRepository** (`src/main/java/com/kredia/repository/UserRepository.java`)
-  - Accès aux `User`.
-  - Fournit des méthodes de recherche/count pour filtres et KPIs (status/role, non supprimé, etc.).
+### 3.7. Gestion du Statut (Block, Suspend, Activate, Deactivate)
+- **Noms :** Changement de statut utilisateur.
+- **Endpoints :**
+  - `PATCH /api/user/{id}/block`
+  - `PATCH /api/user/{id}/suspend`
+  - `PATCH /api/user/{id}/activate`
+  - `PATCH /api/user/{id}/deactivate` (Statut INACTIVE)
+- **Description :** Ces actions pilotent le cycle de vie de l'état du compte.
+- **Réponse :** DTO mis à jour de l'utilisateur.
+- **Règles métier :**
+  - L'utilisateur ne doit pas être soft-deleted (`findForMutation`).
+  - **Block :** Impossible de bloquer un utilisateur déjà bloqué. Impossible de bloquer le dernier `ADMIN`.
+  - **Suspend :** Impossible de suspendre un utilisateur déjà suspendu.
+  - **Activate :** Impossible d'activer directement un profil `BLOCKED` (il faut d'abord passer par INACTIVE = "deactivate"). Impossible d'activer un utilisateur `SUSPENDED` si son email n'est pas vérifié (`!emailVerified`).
+- **Logs/Audit :** À chaque succès, une trace `STATUS_CHANGED` est actée dans `user_activities` (ex: "Status changed from PENDING_VERIFICATION to ACTIVE").
 
-- **UserActivityRepository** (`src/main/java/com/kredia/repository/UserActivityRepository.java`)
-  - Accès aux `UserActivity`.
-  - Permet de récupérer l’historique ordonné par timestamp pour un utilisateur (ou un set d’utilisateurs).
+### 3.8. Change User Role
+- **Nom :** Changement de rôle
+- **Type :** Opération Métier Spécifique
+- **Endpoint API :** `PATCH /api/user/{id}/role`
+  - **Body :** `UserRoleChangeRequestDTO` (role)
+- **Règles métier :** 
+  - Si assignation du rôle `ADMIN`, le statut *doit* être exactement `ACTIVE`.
+  - Règle de survie : Impossible de rétrograder le dernier `ADMIN`.
+- **Logs/Audit :** `ROLE_CHANGED` inséré dans l'audit.
 
-### **entity/**
+### 3.9. Statistiques ADMIN (Admin Stats)
+- **Nom :** Tableau de bord de l'Admin
+- **Type :** Opération Métier de lecture analytique
+- **Endpoint API :** `GET /api/user/admin/stats`
+  - **Header Requis :** `X-Actor-Id`
+  - **Réponse :** HTTP 200 OK -> `ApiResponse<AdminStatsDTO>`
+- **Calculs/Transformations :** 
+  - Agrégations en base : `countByDeletedFalse`, `countByRoleAndDeletedFalse`, `countByStatusAndDeletedFalse`.
+  - Agrégation temporelle : Inscriptions des dernières 24h via `countByCreatedAtAfterAndDeletedFalse`.
+  - Calcul du Health Index (Score de santé du système) : `(activeUsers / totalUsers) * 100`.
+- **Règles métier :** 
+  - Exige une autorisation RBAC. La méthode `loadActor` vérifie que `X-Actor-Id` appartient à un utilisateur non supprimé avec le rôle `ADMIN`. Si échec : `ForbiddenException` (403).
 
-- **User** (`src/main/java/com/kredia/entity/User.java`)
-  - Entité JPA principale : identité, status, role, soft-delete, auditing.
-  - Contient :
-    - `@Version` (optimistic locking)
-    - `deleted` (soft delete)
-    - `createdAt/updatedAt` + `createdBy/updatedBy` (auditing)
-    - index DB pour performance (email/status/role/created_at)
+### 3.10. Listes ADMIN & Activités
+- **Endpoints :** 
+  - `GET /api/user/admin/agents`
+  - `GET /api/user/admin/clients`
+  - `GET /api/user/admin/audit/{userId}` (Toutes les actions d'un uTilisateur)
+  - `GET /api/user/admin/activities?role=...` (Audit global par rôle)
+- **Règles métier :** Mêmes contraintes de vérification du rôle ADMIN sur le `X-Actor-Id`. Récupération des logs de `user_activities` triés par timestamp ascendant.
 
-- **UserActivity** (`src/main/java/com/kredia/entity/UserActivity.java`)
-  - Journal d’événements : `userId`, `actionType`, `description`, `timestamp`.
-  - Index DB : `user_id`, `timestamp`.
+### 3.11. Agent Performance & Dashboard
+- **Nom :** Suivi qualitatif de l'AGENT
+- **Endpoint API :** `GET /api/user/agent/{agentId}/performance` et `/dashboard`
+- **Calculs :**
+  - Scanne toutes les entrées log `UserActivity` d'un agent.
+  - Compte les `APPROVAL`, `REJECTION`, `CLIENT_HANDLED`.
+  - Score = `(approvals * 100) / (approvals + rejections)`.
+  - Calcul de Temps Moyen de Traitement : apparie chronologiquement les événements `PROCESSING_STARTED` et `PROCESSING_COMPLETED` pour un même agent et compile la moyenne en secondes.
+- **Règles métier :** Réservé au rôle `AGENT`. Si l'agent est `SUSPENDED`, renvoie des statistiques vides par défaut.
 
-- **UserActivityActionType** (`src/main/java/com/kredia/entity/UserActivityActionType.java`)
-  - Enum des événements métiers :
-    - `CREATED`, `STATUS_CHANGED`, `ROLE_CHANGED`, `DELETED`, `RESTORED`
-    - Plus des types “multi-role” : `APPROVAL`, `REJECTION`, `CLIENT_HANDLED`, `PROCESSING_STARTED`, `PROCESSING_COMPLETED`
-
-### **dto/**
-
-- **ApiResponse** (`src/main/java/com/kredia/dto/ApiResponse.java`)
-  - Wrapper standard des réponses de succès :
-    - `success`, `data`, `timestamp`
-
-- **UserRequestDTO** (`src/main/java/com/kredia/dto/UserRequestDTO.java`)
-  - Payload d’entrée (Create/Update)
-  - Validation via annotations (`@NotBlank`, `@Email`, `@Size`).
-
-- **UserResponseDTO** (`src/main/java/com/kredia/dto/UserResponseDTO.java`)
-  - Sortie : inclut données utilisateur + audit fields.
-
-- **UserRoleChangeRequestDTO** (`src/main/java/com/kredia/dto/UserRoleChangeRequestDTO.java`)
-  - Payload pour changer le rôle.
-
-- **UserActivityResponseDTO** (`src/main/java/com/kredia/dto/UserActivityResponseDTO.java`)
-  - Sortie représentant un événement `UserActivity`.
-
-- **AdminStatsDTO** (`src/main/java/com/kredia/dto/AdminStatsDTO.java`)
-  - KPIs admin : volumes (total, actifs, bloqués…), distribution des rôles, health index.
-
-- **AgentPerformanceDTO** (`src/main/java/com/kredia/dto/AgentPerformanceDTO.java`)
-  - Performance agent : approvals/rejections, score, traitement, temps moyen.
-
-- **ClientRiskScoreDTO** (`src/main/java/com/kredia/dto/ClientRiskScoreDTO.java`)
-  - Score de risque (0–100).
-
-- **ClientEligibilityDTO** (`src/main/java/com/kredia/dto/ClientEligibilityDTO.java`)
-  - Éligibilité booléenne + raison.
-
-### **mapper/**
-
-- **UserMapper** (`src/main/java/com/kredia/mapper/UserMapper.java`)
-  - Mapping :
-    - `UserRequestDTO` -> `User` (create)
-    - copie des champs modifiables (update)
-    - `User` -> `UserResponseDTO`
-
-### **exception/**
-
-- **BusinessException** (`src/main/java/com/kredia/exception/BusinessException.java`)
-  - Erreurs de règles métiers -> HTTP 400.
-
-- **ResourceNotFoundException** (`src/main/java/com/kredia/exception/ResourceNotFoundException.java`)
-  - Entité introuvable -> HTTP 404.
-
-- **ForbiddenException** (`src/main/java/com/kredia/exception/ForbiddenException.java`)
-  - Violations RBAC / accès interdit -> HTTP 403.
-
-- **ApiErrorResponse** (`src/main/java/com/kredia/exception/ApiErrorResponse.java`)
-  - Format JSON d’erreur : `timestamp/status/error/message/path`.
-
-- **GlobalExceptionHandler** (`src/main/java/com/kredia/exception/GlobalExceptionHandler.java`)
-  - Mapping global :
-    - 404 Not Found
-    - 400 Business / Validation / DataIntegrity
-    - 403 Forbidden
-    - 409 Concurrency (optimistic lock)
-    - 500 fallback
-
-### **config/**
-
-- **JpaAuditingConfig** (`src/main/java/com/kredia/config/JpaAuditingConfig.java`)
-  - Active JPA auditing (`@EnableJpaAuditing`).
-  - Fournit un `AuditorAware<String>` qui renvoie `SYSTEM` par défaut.
-
----
-
-## **3) Fonctionnalités principales**
-
-### **CRUD complet**
-
-- **Create** :
-  - `UserServiceImpl.create(...)` (`src/main/java/com/kredia/service/impl/UserServiceImpl.java`)
-  - Règles : email/phone uniques (non supprimés).
-  - Initialise :
-    - `status = PENDING_VERIFICATION`
-    - `role = CLIENT`
-    - `deleted = false`
-    - `emailVerified = false`
-  - Enregistre une activité : `CREATED`.
-
-- **Read** :
-  - `getById(id)` lit uniquement les users `deleted=false`.
-
-- **Update** :
-  - `update(id, payload)` interdit si user soft-deleted.
-  - Vérifie unicité email/phone (en excluant l’ID courant).
-
-- **Delete (soft)** :
-  - `delete(id)` met `deleted=true`.
-  - Interdit de supprimer le **dernier ADMIN**.
-  - Enregistre `DELETED`.
-
-- **Restore** :
-  - `restore(id)` remet `deleted=false`.
-  - Enregistre `RESTORED`.
-
-### **Gestion des rôles (RBAC)**
-
-- Rôles : `ADMIN`, `AGENT`, `CLIENT` (`src/main/java/com/kredia/entity/UserRole.java`).
-- La RBAC est appliquée au niveau **service**, via :
-  - `validateRole(actor, expectedRole)` (`UserServiceImpl`)
-  - `ForbiddenException` -> HTTP 403 (via `GlobalExceptionHandler`).
-
-### **Status management**
-
-- Status supportés (`src/main/java/com/kredia/entity/UserStatus.java`) :
-  - `ACTIVE`, `INACTIVE`, `BLOCKED`, `SUSPENDED`, `PENDING_VERIFICATION`
-
-### **Business rules clés**
-
-- **Protection du dernier ADMIN**
-  - Interdit :
-    - delete du dernier admin
-    - block du dernier admin
-    - downgrade (changeRole) du dernier admin
-
-- **Activation d’un BLOCKED**
-  - `activate()` refuse un user `BLOCKED`.
-  - Le flux attendu : `BLOCKED -> INACTIVE -> ACTIVE`.
-
-- **Interdiction de muter un utilisateur supprimé (soft delete)**
-  - Les mutations passent par `findForMutation()`.
-  - Si `deleted=true` => `BusinessException("Deleted user cannot be modified; restore first")`.
-
-### **Optimistic locking**
-
-- `@Version` dans `User` (`src/main/java/com/kredia/entity/User.java`).
-- En cas de mise à jour concurrente : `ObjectOptimisticLockingFailureException` -> HTTP 409.
-
-### **Auditing**
-
-- Champs dans `User` :
-  - `createdAt`, `updatedAt`, `createdBy`, `updatedBy`
-- Activé via `JpaAuditingConfig`.
-
-### **Logging**
-
-- `UserServiceImpl` utilise `SLF4J` (`LoggerFactory`) pour des logs structurés.
-
-### **UserActivity tracking**
-
-- Chaque action critique persiste une entrée `UserActivity`.
-
-### **Validation DTO**
-
-- `@Valid` dans `UserController`.
-- `UserRequestDTO` utilise des contraintes de validation.
-
-### **Pagination et filtres avancés**
-
-- Endpoint `GET /api/users` supporte :
-  - `email`, `status`, `role`, `createdFrom`, `createdTo` + `Pageable`.
-- La recherche s’appuie sur `UserSpecifications` (`src/main/java/com/kredia/repository/UserSpecifications.java`).
+### 3.12. Client Profil, Risque & Éligibilité
+- **Endpoints :**
+  - `GET /api/user/client/{clientId}/profile` (masque le n° de tél si SUSPENDED)
+  - `GET /api/user/client/{clientId}/activities`
+  - `GET /api/user/client/{clientId}/risk-score`
+  - `GET /api/user/client/{clientId}/eligibility`
+- **Calculs (ClientRiskScore) :**
+  - Score de base de **50**.
+  - Si le statut = `ACTIVE`, **+ 10**.
+  - Parcours des `user_activity` (si contient le texte "to SUSPENDED" dans l'historique de statut), pénalité **- 20**.
+  - Bonus **+ 2** points par activité enregistrée.
+  - Bonus "ancienneté" : **+ 1** point tous les 30 jours (via parsing de `CreatedAt`).
+  - Plafond à 30 si actuellement `SUSPENDED`. Score clamppé obligatoirement entre 0 et 100.
+- **Calculs (ClientEligibility) :**
+  - Refuse si le status n'est pas `ACTIVE` (renvoie raison).
+  - Refuse si le RiskScore calculé précédemment est < **60**.
+  - Si > 60 et actif, renvoie `{eligible: true, reason: "Eligible"}`.
 
 ---
 
-## **4) Fonctionnalités multi-role**
+## 4. DB et Relations entre Modèles
 
-### **Principe**
+### 4.1. Table `user`
+- Clé Primaire : `user_id`
+- Mappage des énumérations (`status` et `role`) en string varchar.
+- Optimistic Lock : Colonne `version`.
+- Auditing auto: `created_at` (non updatable), `updated_at`, `created_by`, `updated_by`.
+- Validation : `email` unique (`nullable=false`), `phone_number` unique. Flag `deleted` (`boolean`, défaut false).
+- **Index:** `idx_user_email`, `idx_user_status`, `idx_user_role`, `idx_user_created_at`. Optimisation totale pour les KPIs de l'ADMIN et des listes dynamiques.
 
-Le module propose des endpoints dédiés par rôle :
-
-- **ADMIN** : KPIs, audit, list agents/clients, activités par rôle
-- **AGENT** : dashboard/performance/activities
-- **CLIENT** : profile/activities/risk-score/eligibility
-
-### **Simulation RBAC via `X-Actor-Id`**
-
-Pour les endpoints `ADMIN`, le contrôleur exige un header :
-
-- `X-Actor-Id: <userId>`
-
-Le service charge cet acteur via `loadActor(actorId)` puis applique :
-
-- `validateRole(actor, ADMIN)`
-
-Si le rôle ne correspond pas :
-
-- `ForbiddenException("Access denied")` -> HTTP **403**
-
-### **ADMIN : KPIs + audit**
-
-- `adminStats(actorId)` :
-  - total users, actifs/bloqués/suspendus
-  - `last24hRegistrations`
-  - distribution des rôles
-  - `systemHealthIndex` = `% actifs`.
-
-- `adminAudit(actorId, userId)` : retourne l’historique complet d’un utilisateur.
-
-- `adminActivitiesByRole(actorId, role, pageable)` : agrège les activités des users d’un rôle.
-
-### **AGENT : dashboard/performance**
-
-- `agentPerformance(agentId)` :
-  - compte `APPROVAL`, `REJECTION`, `CLIENT_HANDLED`
-  - calcule `performanceScore = approvals / (approvals + rejections)`
-  - calcule un temps moyen de traitement en associant `PROCESSING_STARTED` -> `PROCESSING_COMPLETED`.
-
-### **CLIENT : risque + éligibilité**
-
-- `clientRiskScore(clientId)` : score déterministe (0–100) basé sur :
-  - status
-  - événements (dont “a déjà été suspendu” détecté via description)
-  - volume d’activités
-  - ancienneté (createdAt)
-
-- `clientEligibility(clientId)` :
-  - refuse si `BLOCKED` / `SUSPENDED` / non `ACTIVE`
-  - refuse si `riskScore < 60`
-  - sinon éligible.
+### 4.2. Table `user_activity`
+- Agit comme **Event Sourcing** léger pour l'Audit.
+- Colonne de rattachement (`FK` logique) : `user_id`. (Pas de FK relationnelle stricte via `@ManyToOne` dans le code Entity `UserActivity`, utilisation du type scalaire `Long userId` - architecture découplée évitant les surcharges de lazy-loading massif).
+- Champs : `action_type` (Enum varchar), `description` (varchar 500), `timestamp` (Instant).
+- **Index:** `idx_user_activity_user_id` et `idx_user_activity_timestamp`. Prêt pour les requêtes massives de performances agent/admin.
 
 ---
 
-## **5) Endpoints REST**
+## 5. Résumé des Cas Particuliers
 
-Base URL : `http://localhost:8086`
+1. **Le Soft Delete Universel :** Toute interaction standard CRUD via Controller masque nativement les records supprimés à l'EXCEPTION d'un flag pour la restauration et les restrictions d'unicité d'email et téléphone (l'email d'un compte supprimé *peut* être réutilisé sur une nouvelle création).
+2. **Protection Mutex (Optimistic Lock) :** Utilisation de l'annotation `@Version`. Aucun overwite accidentel de profil possible en environnement hyper-concurrentiel. L'erreur génère logiquement un HTTP 409 Conflict.
+3. **Le Rôle Multi-Casquette Intégré (`X-Actor-Id`) :** L'architecture simule un context d'identité via paramètre/header pour contourner la session lourde (pratique en architecture API gateway micro-service friendly). Sécurisant les endpoints complexes (`adminStats`, `agentDashboard`).
 
-### **CRUD + status + role (UserController)**
-
-- **POST** `/api/users`
-  - **Body**: `UserRequestDTO`
-  - **Desc**: créer un user (CLIENT, PENDING_VERIFICATION)
-
-- **GET** `/api/users`
-  - **Params**: `email`, `status`, `role`, `createdFrom`, `createdTo`, pagination
-  - **Desc**: recherche paginée avec filtres
-
-- **GET** `/api/users/{id}`
-  - **Desc**: récupérer un user (non supprimé)
-
-- **PUT** `/api/users/{id}`
-  - **Body**: `UserRequestDTO`
-  - **Desc**: mise à jour (si non supprimé)
-
-- **DELETE** `/api/users/{id}`
-  - **Desc**: soft delete (protège dernier ADMIN)
-
-- **PATCH** `/api/users/{id}/restore`
-  - **Desc**: restore
-
-- **PATCH** `/api/users/{id}/block`
-  - **Desc**: block (protège dernier ADMIN)
-
-- **PATCH** `/api/users/{id}/suspend`
-  - **Desc**: suspend
-
-- **PATCH** `/api/users/{id}/activate`
-  - **Desc**: activate (BLOCKED interdit; SUSPENDED exige verification)
-
-- **PATCH** `/api/users/{id}/deactivate`
-  - **Desc**: INACTIVE
-
-- **PATCH** `/api/users/{id}/role`
-  - **Body**: `UserRoleChangeRequestDTO`
-  - **Desc**: change role (ADMIN seulement si ACTIVE; dernier ADMIN protégé)
-
-### **ADMIN endpoints**
-
-- **GET** `/api/users/admin/stats`
-  - **Header**: `X-Actor-Id`
-  - **Desc**: KPIs admin (`AdminStatsDTO`)
-
-- **GET** `/api/users/admin/agents`
-  - **Header**: `X-Actor-Id`
-  - **Desc**: liste paginée des agents
-
-- **GET** `/api/users/admin/clients`
-  - **Header**: `X-Actor-Id`
-  - **Desc**: liste paginée des clients
-
-- **GET** `/api/users/admin/audit/{userId}`
-  - **Header**: `X-Actor-Id`
-  - **Desc**: audit d’un user
-
-- **GET** `/api/users/admin/activities?role=AGENT|CLIENT|ADMIN`
-  - **Header**: `X-Actor-Id`
-  - **Desc**: activités agrégées par rôle
-
-### **AGENT endpoints**
-
-- **GET** `/api/users/agent/{agentId}/dashboard`
-  - **Desc**: dashboard agent (`AgentPerformanceDTO`)
-
-- **GET** `/api/users/agent/{agentId}/performance`
-  - **Desc**: performance agent (`AgentPerformanceDTO`)
-
-- **GET** `/api/users/agent/{agentId}/activities`
-  - **Desc**: activités agent
-
-### **CLIENT endpoints**
-
-- **GET** `/api/users/client/{clientId}/profile`
-  - **Desc**: profil client (`UserResponseDTO`)
-
-- **GET** `/api/users/client/{clientId}/activities`
-  - **Desc**: activités client
-
-- **GET** `/api/users/client/{clientId}/risk-score`
-  - **Desc**: score de risque (`ClientRiskScoreDTO`)
-
-- **GET** `/api/users/client/{clientId}/eligibility`
-  - **Desc**: éligibilité (`ClientEligibilityDTO`)
-
-### **Exemples `curl`**
-
-Créer un user :
-
-```bash
-curl -X POST "http://localhost:8086/api/users" \
-  -H "Content-Type: application/json" \
-  -d '{"email":"client1@kredia.com","firstName":"Client","lastName":"One","phoneNumber":"0600000001"}'
-```
-
-Chercher avec pagination :
-
-```bash
-curl "http://localhost:8086/api/users?page=0&size=10&role=CLIENT"
-```
-
-Stats ADMIN (RBAC simulée via header) :
-
-```bash
-curl "http://localhost:8086/api/users/admin/stats" \
-  -H "X-Actor-Id: 1"
-```
-
-Audit d’un user :
-
-```bash
-curl "http://localhost:8086/api/users/admin/audit/2" \
-  -H "X-Actor-Id: 1"
-```
-
-Performance AGENT :
-
-```bash
-curl "http://localhost:8086/api/users/agent/10/performance"
-```
-
-Risk score CLIENT :
-
-```bash
-curl "http://localhost:8086/api/users/client/20/risk-score"
-```
-
----
-
-## **6) Tests et validation**
-
-### **Unit tests**
-
-- **UserServiceImplTest** (`src/test/java/com/kredia/service/impl/UserServiceImplTest.java`)
-  - Vérifie :
-    - delete dernier ADMIN interdit
-    - block dernier ADMIN interdit
-    - assignation ADMIN seulement si ACTIVE
-    - mutation d’un user soft-deleted interdite
-    - search utilise la spécification “not deleted”
-    - duplicate email rejeté
-
-### **Integration tests**
-
-- **UserFlowIntegrationTest** (`src/test/java/com/kredia/integration/UserFlowIntegrationTest.java`)
-  - Exécute un flow complet : création admin, activation, promotion ADMIN, création client, block, delete, restore.
-  - Vérifie la persistance des activités (`UserActivity`).
-
-### **Exception mapping**
-
-- **GlobalExceptionHandlerTest** (`src/test/java/com/kredia/exception/GlobalExceptionHandlerTest.java`)
-  - Vérifie le mapping 409 (optimistic locking).
-
-- **UserControllerOptimisticLockTest** (`src/test/java/com/kredia/controller/UserControllerOptimisticLockTest.java`)
-  - WebMvcTest : vérifie que `PUT /api/users/{id}` retourne 409 en cas de conflit.
-
-### **Commandes Maven**
-
-- `mvn test`
-- `mvn clean install`
-
----
-
-## **7) Notes supplémentaires**
-
-### **Port fixe**
-
-- Config : `server.port=8086` (`src/main/resources/application.properties`)
-
-### **Build Maven stable**
-
-- Projet Maven standard Spring Boot.
-
-### **Warnings JVM (non liés au code)**
-
-Il est possible d’observer des warnings du type `--enable-native-access` (Tomcat JNI) sur des JVM récentes.
-Ces warnings ne sont pas liés à la logique du module User.
-
-### **Structure homogène et production-ready**
-
-- Séparation des responsabilités (controller/service/repository)
-- Validation et erreurs uniformes
-- Audit et versioning
-- Soft-delete compatible “banque-grade”
-
----
-
-## **8) Conclusion**
-
-Le module **User** est structuré et prêt pour une intégration dans l’application :
-
-- logique métier complète et cohérente
-- RBAC appliquée au niveau service
-- auditability via `UserActivity` + auditing JPA
-- robustesse via optimistic locking
-- endpoints REST clairs + réponses standardisées
-
-**Prochaine étape recommandéeeeeeeee** : ajouter des tests dédiés aux endpoints multi-role (403 isolation + KPIs/performance/risque) pour finaliser la couverture.
+## 6. Conclusion
+Le module Backend User est un module "Core" extrêmement mature. Il fait preuve d'une robustesse "Banque-Grade" (Audit complet, verrouillage optimiste, contrôle granulaire des transitions d'états, aucune suppression physique), garantissant un suivi infalsifiable des indicateurs de performance des employés et de l’éligibilité des clients Kredia.

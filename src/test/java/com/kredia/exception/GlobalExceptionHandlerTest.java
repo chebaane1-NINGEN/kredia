@@ -14,7 +14,7 @@ class GlobalExceptionHandlerTest {
     void optimisticLock_shouldReturn409() {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
         HttpServletRequest req = mock(HttpServletRequest.class);
-        when(req.getRequestURI()).thenReturn("/api/users/1");
+        when(req.getRequestURI()).thenReturn("/api/user/1");
 
         ObjectOptimisticLockingFailureException ex = new ObjectOptimisticLockingFailureException("User", 1L);
         ResponseEntity<ApiErrorResponse> res = handler.handleOptimisticLock(ex, req);
@@ -23,6 +23,6 @@ class GlobalExceptionHandlerTest {
         ApiErrorResponse body = res.getBody();
         assertNotNull(body);
         assertEquals("Concurrency Error", body.getError());
-        assertEquals("/api/users/1", body.getPath());
+        assertEquals("/api/user/1", body.getPath());
     }
 }

@@ -1,0 +1,5 @@
+ALTER TABLE user ADD COLUMN password_hash VARCHAR(255);
+ALTER TABLE user ADD COLUMN date_of_birth DATE;
+ALTER TABLE user ADD COLUMN address VARCHAR(255);
+ALTER TABLE user ADD COLUMN gender VARCHAR(20);
+ALTER TABLE user ADD COLUMN verification_token VARCHAR(255);
