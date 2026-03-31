@@ -2,20 +2,32 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types/user.types';
-import { RoleSelector } from '../pages/RoleSelector';
+import { RoleSelector } from '../pages/Login';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import EmployeeDashboard from '../pages/employee/EmployeeDashboard';
 import ClientDashboard from '../pages/client/ClientDashboard';
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: UserRole[] }) => {
-  const { currentUser, isLoading } = useAuth();
+  const { currentUser, isLoading, authError } = useAuth();
 
-  if (isLoading) return <div className="loading-screen">Loading application...</div>;
+  if (isLoading) {
+    return (
+      <div className="loading-screen">
+        <div className="spinner"></div>
+        <p>Loading application...</p>
+        {authError && <p className="error-text">{authError}</p>}
+      </div>
+    );
+  }
 
-  if (!currentUser) return <Navigate to="/login" />;
+  if (!currentUser) return <Navigate to="/login" replace />;
 
   if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
-    return <Navigate to="/" />; // Redirect to default page if unauthorized
+    // Redirect to appropriate dashboard based on actual role
+    if (currentUser.role === UserRole.ADMIN) return <Navigate to="/admin" replace />;
+    if (currentUser.role === UserRole.AGENT || currentUser.role === UserRole.EMPLOYEE) return <Navigate to="/employee" replace />;
+    if (currentUser.role === UserRole.CLIENT) return <Navigate to="/client" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
@@ -28,6 +40,7 @@ const RoleRedirect = () => {
   
   switch (currentUser.role) {
     case UserRole.ADMIN: return <Navigate to="/admin" />;
+    case UserRole.AGENT:
     case UserRole.EMPLOYEE: return <Navigate to="/employee" />;
     case UserRole.CLIENT: return <Navigate to="/client" />;
     default: return <Navigate to="/login" />;

@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
+@SuppressWarnings("null")
 public class KycDocumentServiceImpl implements KycDocumentService {
 
     private final KycDocumentRepository kycDocumentRepository;

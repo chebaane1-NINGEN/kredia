@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@SuppressWarnings("null")
 public class EcheanceService {
 
     private static final Logger log = LoggerFactory.getLogger(EcheanceService.class);

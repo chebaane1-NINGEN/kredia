@@ -25,6 +25,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@SuppressWarnings("null")
 public class ReclamationServiceImpl implements ReclamationService {
 
     private final ReclamationRepository reclamationRepository;

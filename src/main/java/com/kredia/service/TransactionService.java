@@ -15,6 +15,7 @@ import java.util.Optional;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;

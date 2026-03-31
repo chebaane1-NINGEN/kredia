@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class MlRiskClient {
 
     @Value("${ml.risk.service.url}")

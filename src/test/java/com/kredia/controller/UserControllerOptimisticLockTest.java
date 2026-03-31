@@ -24,6 +24,7 @@ import com.kredia.entity.user.User;
 
 @WebMvcTest(controllers = UserController.class)
 @Import(GlobalExceptionHandler.class)
+@SuppressWarnings("all")
 class UserControllerOptimisticLockTest {
 
     @Autowired

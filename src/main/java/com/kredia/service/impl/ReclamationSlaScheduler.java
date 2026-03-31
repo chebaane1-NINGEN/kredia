@@ -16,6 +16,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class ReclamationSlaScheduler {
 
     private final ReclamationRepository reclamationRepository;

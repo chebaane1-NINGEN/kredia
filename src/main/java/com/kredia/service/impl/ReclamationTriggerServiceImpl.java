@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class ReclamationTriggerServiceImpl implements ReclamationTriggerService {
 
     private final NotificationRepository notificationRepository;

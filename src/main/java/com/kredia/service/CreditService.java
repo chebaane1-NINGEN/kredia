@@ -20,6 +20,7 @@ import java.util.Optional;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class CreditService {
 
     private static final int SCALE = 2;

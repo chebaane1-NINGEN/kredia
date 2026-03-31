@@ -20,6 +20,11 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI openAPI() {
-        return new OpenAPI().addServersItem(new Server().url("http://localhost:8086"));
+        return new OpenAPI()
+                .addServersItem(new Server().url("http://localhost:8086"))
+                .info(new io.swagger.v3.oas.models.info.Info()
+                        .title("Kredia API")
+                        .version("1.0.0")
+                        .description("Kredia Banking Platform API Documentation"));
     }
 }

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/order-execution")
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("null")
 public class OrderExecutionController {
 
     private final EmailService emailService;

@@ -16,6 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/investments")
+@SuppressWarnings("null")
 public class InvestmentController {
 
     private final InvestmentService investmentService;

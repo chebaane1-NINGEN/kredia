@@ -16,6 +16,7 @@ import java.util.Optional;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class TransactionAuditLogService {
 
     private final TransactionAuditLogRepository auditLogRepository;

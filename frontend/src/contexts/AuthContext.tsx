@@ -1,12 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserResponseDTO } from '../types/user.types';
 import { userApi } from '../api/userApi';
+
+const MAX_LOADING_TIME = 8000; // 8 seconds max loading time
 
 interface AuthContextType {
   currentUser: UserResponseDTO | null;
   isLoading: boolean;
+  authError: string | null;
   login: (userId: number) => Promise<void>;
   logout: () => void;
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -14,44 +18,109 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserResponseDTO | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Safety timeout - force loading to false after max time
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      if (isLoading) {
+        console.warn('[AuthContext] Safety timeout reached, forcing loading to false');
+        setIsLoading(false);
+        setAuthError('Loading timeout - backend may be unavailable');
+      }
+    }, MAX_LOADING_TIME);
+
+    return () => clearTimeout(safetyTimer);
+  }, [isLoading]);
 
   useEffect(() => {
-    const actorId = localStorage.getItem('kredia_actor_id');
-    if (actorId) {
-      // Fetch user profile on load to verify actor ID exists
-      userApi.getById(Number(actorId))
-        .then(user => setCurrentUser(user))
-        .catch(() => {
-          localStorage.removeItem('kredia_actor_id');
-          setCurrentUser(null);
-        })
-        .finally(() => setIsLoading(false));
-    } else {
+    const initAuth = async () => {
+      const actorId = localStorage.getItem('kredia_actor_id');
+      
+      if (!actorId) {
+        console.log('[AuthContext] No stored session, skipping auto-login');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('[AuthContext] Found stored session, verifying user ID:', actorId);
+      
+      try {
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Auth timeout')), 5000)
+        );
+        
+        const user = await Promise.race([
+          userApi.getById(Number(actorId)),
+          timeoutPromise
+        ]) as UserResponseDTO;
+        
+        console.log('[AuthContext] Session valid, user:', user.email);
+        setCurrentUser(user);
+        setAuthError(null);
+      } catch (err: any) {
+        console.error('[AuthContext] Session verification failed:', err.message || err);
+        localStorage.removeItem('kredia_actor_id');
+        setCurrentUser(null);
+        setAuthError(err.message || 'Session expired');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
+  }, []);
+
+  const login = useCallback(async (userId: number) => {
+    console.log('[AuthContext] Login attempt for ID:', userId);
+    setIsLoading(true);
+    setAuthError(null);
+    
+    try {
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Login timeout - backend not responding')), 5000)
+      );
+      
+      const user = await Promise.race([
+        userApi.getById(userId),
+        timeoutPromise
+      ]) as UserResponseDTO;
+      
+      console.log('[AuthContext] Login success:', user.email, 'Role:', user.role);
+      setCurrentUser(user);
+      localStorage.setItem('kredia_actor_id', String(userId));
+      setAuthError(null);
+    } catch (err: any) {
+      console.error('[AuthContext] Login failed:', err.message || err);
+      setAuthError(err.message || 'Login failed');
+      throw err;
+    } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const login = async (userId: number) => {
-    try {
-      setIsLoading(true);
-      const user = await userApi.getById(userId);
-      setCurrentUser(user);
-      localStorage.setItem('kredia_actor_id', String(userId));
-    } catch (err) {
-      console.error('Login failed', err);
-      throw new Error('User not found or API error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = () => {
+  const logout = useCallback(() => {
+    console.log('[AuthContext] Logout');
     localStorage.removeItem('kredia_actor_id');
     setCurrentUser(null);
-  };
+    setAuthError(null);
+  }, []);
+
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ 
+      currentUser, 
+      isLoading, 
+      authError,
+      login, 
+      logout,
+      clearAuthError 
+    }}>
       {children}
     </AuthContext.Provider>
   );

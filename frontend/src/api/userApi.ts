@@ -14,21 +14,50 @@ import {
 } from '../types/user.types';
 
 const api = axios.create({
-  baseURL: '/api/user',
-  timeout: 5000,
+  baseURL: 'http://localhost:8086/api/user',
+  timeout: 8000,
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Interceptor to inject the simulated auth header
-api.interceptors.request.use((config) => {
-  const actorId = localStorage.getItem('kredia_actor_id');
-  if (actorId && config.headers) {
-    config.headers['X-Actor-Id'] = actorId;
+// Request interceptor - add auth header
+api.interceptors.request.use(
+  (config) => {
+    const actorId = localStorage.getItem('kredia_actor_id');
+    if (actorId && config.headers) {
+      config.headers['X-Actor-Id'] = actorId;
+    }
+    console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error('[API] Request error:', error);
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
+// Response interceptor - handle errors globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('[API] Response error:', error.message);
+    
+    if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
+      return Promise.reject(new Error('Backend not reachable. Please ensure the server is running on port 8086.'));
+    }
+    
+    if (error.response?.status === 404) {
+      return Promise.reject(new Error('User not found.'));
+    }
+    
+    if (error.response?.status >= 500) {
+      return Promise.reject(new Error('Server error. Please try again later.'));
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 // Helper to extract data from the wrapper
 const extractData = <T>(response: { data: ApiResponse<T> }): T => response.data.data;

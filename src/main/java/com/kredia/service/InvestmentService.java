@@ -13,15 +13,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.lang.NonNull;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class InvestmentService {
 
     private final InvestmentAssetRepository assetRepository;
@@ -49,11 +53,13 @@ public class InvestmentService {
 
     // ==================== InvestmentAsset CRUD ====================
     
-    public InvestmentAsset createAsset(InvestmentAsset asset) {
+    public InvestmentAsset createAsset(@NonNull InvestmentAsset asset) {
+        Objects.requireNonNull(asset, "asset must not be null");
         return assetRepository.save(asset);
     }
 
-    public Optional<InvestmentAsset> getAssetById(Long id) {
+    public Optional<InvestmentAsset> getAssetById(@NonNull Long id) {
+        Objects.requireNonNull(id, "id must not be null");
         return assetRepository.findById(id);
     }
 
@@ -61,7 +67,9 @@ public class InvestmentService {
         return assetRepository.findAll();
     }
 
-    public InvestmentAsset updateAsset(Long id, InvestmentAsset assetDetails) {
+    public InvestmentAsset updateAsset(@NonNull Long id, @NonNull InvestmentAsset assetDetails) {
+        Objects.requireNonNull(id, "id must not be null");
+        Objects.requireNonNull(assetDetails, "assetDetails must not be null");
         InvestmentAsset asset = assetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asset not found with id " + id));
         
@@ -73,7 +81,8 @@ public class InvestmentService {
         return assetRepository.save(asset);
     }
 
-    public void deleteAsset(Long id) {
+    public void deleteAsset(@NonNull Long id) {
+        Objects.requireNonNull(id, "id must not be null");
         if (!assetRepository.existsById(id)) {
             throw new RuntimeException("Asset not found with id " + id);
         }

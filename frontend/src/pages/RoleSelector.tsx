@@ -18,13 +18,18 @@ export const RoleSelector: React.FC = () => {
       setIsLoading(true);
       setError('');
       await login(Number(userId));
-      
-      // We don't have the user object here directly unless we change the signature,
-      // but AuthContext handles setting currentUser. 
-      // The AppRouter will redirect based on the role on the next render.
       navigate('/'); 
-    } catch (err) {
-      setError('Simulated login failed. Check if User ID exists.');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      if (err.code === 'ERR_NETWORK') {
+        setError('Cannot connect to backend server. Please ensure Spring Boot is running on port 8086.');
+      } else if (err.response?.status === 404) {
+        setError(`User ID ${userId} not found in database.`);
+      } else if (err.response?.status === 500) {
+        setError('Backend server error. Please check server logs.');
+      } else {
+        setError(err.response?.data?.message || `Login failed: ${err.message}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -50,10 +55,15 @@ export const RoleSelector: React.FC = () => {
             />
           </div>
           
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>
+              <strong>Login Error:</strong><br/>
+              {error}
+            </div>
+          )}
           
           <button type="submit" className="btn btn-primary" disabled={isLoading || !userId}>
-            {isLoading ? 'Connecting...' : 'Login Simulation'}
+            {isLoading ? 'Connecting...' : 'Login'}
           </button>
         </form>
         
@@ -61,9 +71,12 @@ export const RoleSelector: React.FC = () => {
           <h4>Hint - Default Users:</h4>
           <ul>
             <li><strong>ID 1:</strong> Admin</li>
-            <li><strong>ID 2:</strong> Employee</li>
+            <li><strong>ID 2:</strong> Agent</li>
             <li><strong>ID 3:</strong> Client</li>
           </ul>
+          <p className="text-muted text-xs mt-4">
+            Make sure backend is running on port 8086
+          </p>
         </div>
       </div>
     </div>

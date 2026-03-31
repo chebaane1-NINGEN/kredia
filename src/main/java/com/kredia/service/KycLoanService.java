@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class KycLoanService {
 
     private static final Logger log = LoggerFactory.getLogger(KycLoanService.class);

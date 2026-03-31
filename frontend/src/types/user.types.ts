@@ -1,7 +1,8 @@
 export enum UserRole {
   ADMIN = 'ADMIN',
   CLIENT = 'CLIENT',
-  EMPLOYEE = 'EMPLOYEE',
+  AGENT = 'AGENT',
+  EMPLOYEE = 'EMPLOYEE'
 }
 
 export enum UserStatus {

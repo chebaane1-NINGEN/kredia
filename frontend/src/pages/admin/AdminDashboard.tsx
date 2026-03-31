@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import UsersList from './UsersList';
 import AdminStats from './AdminStats';
 import UserDetail from './UserDetail';
+import UserCreate from './UserCreate';
 import AuditLog from './AuditLog';
 import SecurityKyc from './SecurityKyc';
 import ReportingPerformance from './ReportingPerformance';
@@ -97,6 +98,7 @@ const AdminDashboard: React.FC = () => {
           <Routes>
             <Route path="/" element={<AdminStats />} />
             <Route path="/users" element={<UsersList />} />
+            <Route path="/users/new" element={<UserCreate />} />
             <Route path="/users/:id" element={<UserDetail />} />
             <Route path="/security" element={<SecurityKyc />} />
             <Route path="/audit" element={<AuditLog />} />

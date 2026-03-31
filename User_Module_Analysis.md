@@ -1,135 +1,146 @@
-# 🔍 Analyse Complète et Intégrale du Module "User" Kredia
+# Rapport d'Analyse Complète : Module User (Backend Kredia)
 
-Ce rapport présente une étude stricte et détaillée du module `User` actuel (Backend & Base de données). Il couvre l'exactitude des opérations CRUD, détaille les fonctionnalités par rôle, dresse un bilan exhaustif des manquements constatés et propose des axes d'amélioration précis.
-
----
-
-## 🏗️ 1. Analyse Détaillée des Opérations CRUD par Endpoint
-
-L'intégralité du module est exposée sous le chemin de base **`/api/user`**. Le module s'appuie fortement sur l'en-tête `X-Actor-Id` pour vérifier dynamiquement le contexte de l'appelant.
-
-### 🟢 1.1. Create (Création)
-- **Endpoint :** `POST /`
-- **Paramètres (Body) :** `UserRequestDTO` (email, firstName, lastName, phoneNumber).
-- **Réponse :** `UserResponseDTO` avec statut HTTP 201.
-- **Vérifications :**
-  - Validation du format des données (`@NotBlank`, `@Email`, `@Size`).
-  - Unicité vérifiée en base pour l'email et le numéro de téléphone (en ignorant les users "soft deleted").
-  - Le système force automatiquement le `status` à `PENDING_VERIFICATION`, le `role` à `CLIENT`, et `emailVerified` à `false`.
-- **Règles par acteur :** Tout le système semble pouvoir l'appeler (aucun `X-Actor-Id` exigé au niveau contrôleur pour la création pure). Attention, cela se rapproche d'une simple route d'inscription.
-- **Audit :** Génération d'un `UserActivity` (`CREATED`).
-
-### 🔵 1.2. Read (Lecture)
-Le read est divisé en plusieurs endpoints selon le contexte :
-
-#### Recherche (Filter & Pagination)
-- **Endpoint :** `GET /`
-- **Paramètres :** Header `X-Actor-Id`. Query (`email`, `status`, `role`, `createdFrom`, `createdTo`, `page`, `size`).
-- **Règles métier & Audit :**
-  - **Admin** : Peut tout chercher.
-  - **Agent** : Le résultat de la recherche est **restreint au niveau de la DB** (`UserSpecifications`) pour ne renvoyer que les clients assignés (`assignedAgentEquals`).
-  - **Client** : S'il essaie de chercher, un filtre strict est imposé pour qu'il ne trouve que... lui-même. S'il cherche l'email de quelqu'un d'autre, une liste vide est renvoyée.
-
-#### Get By ID
-- **Endpoint :** `GET /{id}`
-- **Règles métier :** La méthode `validateAccess(actor, target)` entre en jeu :
-  - L'Agent ne peut voir que l'ID de son client attribué ou son propre ID.
-  - Le Client ne peut requêter qu'avec son propre ID, sinon HTTP 403 Forbidden.
-
-### 🟡 1.3. Update (Modification)
-- **Endpoint :** `PUT /{id}`
-- **Paramètres (Body) :** `UserRequestDTO` complets (Nom, Prénom, Email, Téléphone).
-- **Règles métier :**
-  - Contrôle `validateAccess(actor, target)` : un Client peut s'auto-modifier, un Agent peut modifier son propre compte ou son client.
-  - Revérification de l'unicité des champs à l'update.
-  - Utilisation du verouillage optimiste (via le champ `@Version` de l'entité) pour bloquer les "concurrent updates" invisibles.
-- **Audit :** Génération d'un `UserActivity` (`STATUS_CHANGED` - attention à l'intitulé du log qui n'est pas "PROFILE_UPDATED" mais bien "Status changed", c'est une anomalie textuelle dans le code actuellement).
-
-### 🔴 1.4. Delete (Suppression - Soft Delete)
-- **Endpoint :** `DELETE /{id}`
-- **Règles métier :** 
-  - Exclusivement limité aux `ADMIN` (`validateRole(actor, UserRole.ADMIN)`).
-  - Bascule du flag `deleted = true`. Aucune suppression physique n'est opérée (sécurisé historiquement).
-  - Protection système : Interdiction de supprimer le dernier ADMIN de la plateforme.
-- **Audit :** Action `DELETED` dans `user_activity`.
+## 1. Introduction
+Ce rapport présente une analyse exhaustive du module **User** intégré au backend du projet **Kredia** (développé en Java/Spring Boot). Ce module central gère les identités (Client, Agent, Admin), les accès (RBAC), la sécurité, l'audit des actions, ainsi que des logiques métiers avancées telles que l'évaluation des risques (Risk Score), l'éligibilité, et les performances des agents (KPIs).
 
 ---
 
-## 🎭 2. Analyse Fonctionnelle Détaillée par Rôle
+## 2. Architecture du Module
+Le module User respecte l'architecture en N-tiers de Spring Boot. Voici l'explication de chaque package et des fichiers associés :
 
-### 👑 2.1. Rôle ADMIN
-L'Admin dispose de privilèges systèmes "Full-Access" :
-- **CRUD Total** : Lit, modifie, supprime et "restaure" tous les comptes (`PATCH /{id}/restore`).
-- **Cycle de vie du statut** : Peut `block()`, `suspend()`, `activate()`, ou `deactivate()` n'importe qui.
-- **Changement de Rôle** : `PATCH /{id}/role`. Peut promouvoir un utilisateur en ADMIN ou le rétrograder (avec protection du dernier ADMIN).
-- **Assignation (`POST /admin/assign`)** : Possède le pouvoir unique d'assigner un `Client` à un `Agent`.
-- **Analyse et Audit** :
-  - **Stats Globaux (`/admin/stats`)** : Obtenir un Health Index, et la distribution totale des utilisateurs.
-  - **Listings Purs** : `GET /admin/agent` et `GET /admin/client`.
-  - **Traçabilité** : Possède un accès de lecture direct aux journaux via `/admin/audit/{userId}` ou toutes les actions d'un groupe via `/admin/activity?role=X`.
+### 2.1 Les Entités (`com.kredia.entity.user.*`)
+* **`User.java`** : Représente la table utilisateur (`user`). Contient toutes les infos de base (id, email, mot de passe hashé, nom, prénom, téléphone), ainsi que le statut, le rôle, un jeton de vérification (`verificationToken`), la suppression logique (`deleted`) et la relation d'assignation (`assignedAgent`).
+* **`UserActivity.java`** : Représente l'historique d'audit (`user_activities`). Trace qui a fait quoi et quand (actionType, description).
+* **`KycDocument.java`** : Table pour sauvegarder les documents officiels des utilisateurs dans le cadre de la vérification d'identité (Know Your Customer).
 
-### 💼 2.2. Rôle AGENT / EMPLOYEE
-L'Agent travaille uniquement dans "son périmètre" opérationnel :
-- **Supervision des Clients** : L'Agent **ne voit que** les `Users` ayant pour `assigned_agent_id` sa propre ID.
-- **Opérations sur ses Clients** : Il peut modifier son client (`PUT`), et a un **droit très spécial : il peut Suspendre son client** (`PATCH /{id}/suspend` vérifie `Objects.equals(user.getAssignedAgent(), actor)`). Seul l'Admin ou son propre Agent peut suspendre un utilisateur.
-- **Son Espace "Dashboard"** :
-  - Mettre à jour son propre profil.
-  - Visualiser ses actions (`GET /agent/{agentId}/activity`).
-  - **Tableau de performance KPI** (`GET /agent/{agentId}/performance`) : Calcule automatiquement son % d'approbations/rejets de demandes, et mesure surtout le **temps de traitement moyen**.
+### 2.2 Les Énumérations (`com.kredia.enums.*` / `com.kredia.entity.user.*`)
+* **`UserRole`** : `ADMIN`, `AGENT`, `CLIENT`.
+* **`UserStatus`** : `PENDING_VERIFICATION`, `ACTIVE`, `INACTIVE`, `BLOCKED`, `SUSPENDED`.
+* **`UserActivityActionType`** : `CREATED`, `STATUS_CHANGED`, `ROLE_CHANGED`, `DELETED`, `APPROVAL`, `PROCESSING_COMPLETED`, etc. 
 
-### 👤 2.3. Rôle CLIENT
-Le Client est limité à l'Espace Personnel et Read-Only concernant le métier :
-- **Profil** : Affiche/Modifie soi-même (`GET /client/{clientId}/profile`, `PUT /{id}`). Son téléphone lui est masqué si son compte passe en `SUSPENDED`.
-- **Score de Risque (`/client/{clientId}/risk-score`)** : Calcule en temps réel son profil risque basé sur son ancienneté (+1/mois), son intégrité (+10 si ACTIVE), l'historique pénalisant (-20 s'il a déjà été suspendu), capé à 30 s'il est actuellement suspendu. Algorithme purement backend.
-- **Éligibilité (`/client/{clientId}/eligibility`)** : Exige d'être statué "ACTIVE" ET d'avoir un score de risque ≥ 60 pour être finançable.
-- Il peut voir son historique personnel (`activity`).
+### 2.3 Les DTOs (`com.kredia.dto.user.*`)
+Objets utilisés pour transporter l'information entre l'API et la logique métier sans exposer directement la base de données.
+* **`UserRequestDTO` & `UserResponseDTO`** : Pour la création et la lecture des infos.
+* **`ClientProfileUpdateDTO` & `AdminUserUpdateDTO`** : Pour encadrer strictement ce qu'un client ou un admin peut modifier dans les profils.
+* **DTOs Statistiques** : `AdminStatsDTO`, `AgentPerformanceDTO`, `ClientRiskScoreDTO`, `ClientEligibilityDTO`, `UserActivityResponseDTO`.
 
----
+### 2.4 Les Repositories (`com.kredia.repository.user.*`)
+* **`UserRepository`** : Interface Spring Data JPA permettant de communiquer avec la table `user`. Fournit des méthodes customisées comme `countByRoleAndDeletedFalse()`.
+* **`UserActivityRepository`** : Récupère les logs d'activités (ex: trouver l'historique d'un agent).
+* **`UserSpecifications`** : Gère la création de requêtes SQL dynamiques pour la recherche avancée (ex: filtres cumulés sur email, statut, date...).
 
-## 🚨 3. Vérification des Manquements Globaux (Code & DB)
+### 2.5 Les Services (`com.kredia.service.user.*` & `impl.*`)
+* **`UserServiceImpl`** : Contient **toute la logique métier**. C’est le cœur du module. Chaque méthode interroge, modifie et audite les utilisateurs en gardant le contrôle des règles (RBAC).
+* **`AuthServiceImpl`** : Service séparé du `UserService` pour tout ce qui concerne la connexion, l'inscription pure, le JWT et la vérification de l'email.
+* **`KycDocumentServiceImpl`** : Traite spécifiquement les uploads de fichiers KYC et la Validation / Rejet par les agents/admins.
 
-L'audit détaillé de l'architecture backend soulève **plusieurs failles fonctionnelles fondamentales** et manques :
-
-### ❌ Manquements Critiques (Absences)
-1. **L'Absence Totale de "Mot de passe" et d'Authentification** : 
-   L'entité `User` et le DTO `UserRequestDTO` ne possèdent ni champ `password`, ni configuration de hachage. Si le projet n'utilise pas un Keycloak externe pour l'Identity Access Management, le module n'est techniquement pas capable de "logguer" un utilisateur. Les routes register/login, forgot-password sont absentes.
-2. **L'Absence du Parcours KYC (Know Your Customer)** : 
-   Une entité `KycDocument` existe bien en base, reliée au `User`. Toutefois, **AUCUN ENDPOINT CRUD n'existe** dans le `UserController` ni dans le `UserService` pour qu'un Client upload ses documents, ou qu'un Agent/Admin les valide ! L'entité morte ne sert donc à rien pour l'instant et le processus KYC est purement théorique.
-3. **Le Profil DTO unique partagé est permissif** : 
-   On demande à un Client comme à un Admin d'utiliser `UserRequestDTO` pour faire un `PUT` sur le profil. Un client ne devrait pas pouvoir envoyer une requête contenant des métadonnées de statut s'il parvient à forger sa trame HTTP (le Mapper copie les champs).
-
-### ⚠️ Manquements Fonctionnels ou Incomplets
-1. **Dés-assignation d'Agent** : Un Admin peut assigner un client à un agent. Mais **il n'existe pas d'endpoint pour retirer un agent** ou transférer ce client dans un pool "non-assigné".
-2. **Audit & Base de donnée (`@CreatedBy`)** : 
-   Les champs d'auditing JPA (`createdBy`, `updatedBy`) configurés sur l'entité `User` resteront à `null` pour toujours si Spring Security/AuditorAware n'est pas configuré pour injecter le `X-Actor-Id` dans le SecurityContext global Spring.
-3. **Absence d'historisation de l'assignation** : Rien dans le projet ne permet de savoir "Qui était l'agent de ce client le mois dernier ?". Le seul moyen est de fouiller les chaînes de texte dans le `UserActivity`.
-4. **Pagination manquante sur les Activités** : L'endpoint client ou agent `.../activity` renvoie une `List<>` sans aucune pagination brute. Un ancien utilisateur fera crasher la mémoire de l'application s'il possède 10.000 logs d'activité.
-5. **Absence d'Email de vérification** : Un statut existant en base (`emailVerified = false`) est présent. Mais un endpoint magique du genre `POST /verify-email?token=xxx` manque à l'appel.
+### 2.6 Les Controllers (`com.kredia.controller.user.*`)
+* **`UserController`** : Expose toutes les requêtes HTTP (Endpoints RESTful) vers l'extérieur. Gère le payload JSON et renvoie un format standard de réponse `ApiResponse`.
+* **`AuthController`** : Expose les endpoints d'inscription et de login.
 
 ---
 
-## 💡 4. Propositions d'Amélioration et d'Enrichissement
+## 3. Fonctionnalités Principales
+Le module englobe bien plus qu'une simple gestion de table :
 
-Pour transformer ce module d'un bon CRUD applicatif vers une architecture "Fintech" totalement prête pour la production, voici le plan de remédiation :
+1. **CRUD Complet (+ Soft Delete)** : Création sécurisée, lecture autorisée par profilage, modification stricte, et suppression logique (`deleted = true`) permettant de garder l'historique sans rupture d'intégrité. 
+2. **Gestion fine des statuts** : Activation, Suspension, Blocage. Il y a des gardes-fous métiers (ex: on ne peut pas activer un profil SUSPENDED s'il n'a pas vérifié son email ; on ne peut pas débloquer directement un joueur BLOCKED).
+3. **Changement de Rôles** : L'Administration peut promouvoir ou rétrograder un compte tout en préservant le système (interdiction de supprimer le dernier profil `ADMIN`).
+4. **Assignation Client ↔ Agent** : Associe "physiquement" (clé étrangère `assignedAgent`) un Client à un employé (Agent). Cela donne un droit d'accès temporaire ou permanent à l'Agent sur le dossier du Client.
+5. **Audit Trail (Historique des actions)** : La fonction `recordActivity` (dans `UserServiceImpl`) écrit de manière invisible une ligne dans la table `UserActivity` de manière exhaustive. (ex: Un admin a restauré un compte, un agent a évalué un dossier).
+6. **Statistiques en Temps Réel** : Les tableaux de bord génèrent des "Snapshots" statistiques (Admin dashboard, Agent performance).
 
-### Priorité Haute (P0) - Sécurité & Flux Principal
-- **Implémenter le parcours d'Authentification :**
-  - **Correction :** Ajouter un champ `passwordHash` dans l'entité `User`.
-  - **Nouveaux Endpoints /auth :** `POST /api/auth/register`, `POST /api/auth/login` (génération JWT classique contenant l'ID du User comme Actor), `POST /api/auth/forgot-password`.
-- **Ressusciter l'Upload KYC :**
-  - **Correction :** Créer un `KycDocumentService` et un contrôleur `/api/user/kyc`. 
-  - **Endpoint Client :** `POST /api/user/kyc/upload` (multipart/form-data).
-  - **Endpoint Agent :** `PATCH /api/user/kyc/{docId}/verify` (Accepter / Rejeter). Ce flux viendra directement nourrir le score de KPI de l'agent.
+---
 
-### Priorité Moyenne (P1) - Robustesse & Business Logic
-- **Séparer les RequestDTO par rôle :**
-  - Créer un `ClientProfileUpdateDTO` (qui n'autorise QUE le changement de firstName/lastName/phoneNumber/adresse).
-  - Bloquer la mise à jour de l'Email côté client, et exiger une route `/api/user/change-email` avec vérification par OTP.
-- **Implémenter la Dés-assignation / Ré-assignation :**
-  - Créer l'endpoint Admin : `DELETE /admin/assign?clientId=123`.
-- **Ajouter la Pagination sur l'Audit :**
-  - Modifier le type de retour des listes d'activités : Mettre un argument `@PageableDefault Pageable` et retourner une `Page<UserActivityResponseDTO>`.
+## 4. Accès & Droits (RBAC)
+Le contrôle d'accès défini dans la méthode `validateAccess` et implosé dans chaque endpoint est intraitable :
 
-### Priorité Basse (P2) - Fintech-Grade Polish
-- **Enrichissement de l'Entité `User` :** Dans la banque, on ne peut pas accorder de crédit sans une **Date de Naissance**, ou une **Adresse postale**. Il faut ajouter ces colonnes au module (DTO -> Mapper -> Entity).
-- **Scheduled Job GDPR :** Ajouter un cronjob `@Scheduled` dans le Spring Boot qui vient purger les requêtes dans `UserActivity` de plus de X années, et qui efface "Physiquement" les utilisateurs dont la colonne `deleted` est à `true` depuis plus de 90 jours (Right to be forgotten/Droit à l'oubli).
+* **Admin** :
+  * Droit total sur le système pour voir les statistiques globales, tous les agents, tous les clients, et toute la piste d'audit.
+  * Seul lui peut assigner/désassigner les Agents, supprimer, restaurer, bloquer, activer ou suspendre (un agent peut aussi suspendre *ses* clients).
+  * Il est le seul à pouvoir promouvoir d'autres `ADMIN`.
+* **Agent (Employé)** :
+  * Ne peut voir et agir que sur son portefeuille (clients `assignedAgent == actor`).
+  * Peut visualiser ses propres indicateurs KPIs et statistiques (performance).
+  * Peut suspendre un client assigné en cas de dossier à risque, mais ne peut pas le détruire ni le bloquer définitivement.
+* **Client** :
+  * Accès restreint au "mode Mi-Miroir". Il ne peut voir que lui-même ou muter son propre profil.
+  * Il a accès à ses activités historiques, à son Risk Score et à son Éligibilité qu'il peut consulter en lecture seule.
+
+---
+
+## 5. APIs (Endpoints REST)
+
+Toutes les routes se trouvent sous le préfixe `/api/user` (excepté `/api/auth`). Le `X-Actor-Id` ou JWT est utilisé pour sécuriser l'appelant.
+
+### 5.1 Endpoints Globaux & Authentification
+* **POST** `/api/auth/register` : Crée un `CLIENT` status = `PENDING_VERIFICATION`.
+* **POST** `/api/auth/login` : Connecte l'utilisateur et renvoie le jeton d'authentification (Token JWT).
+* **POST** `/api/user` : Création de compte via le back-office.
+* **GET** `/api/user` : Recherche paginée / filtrée multifactorielle `(email, status, role, dates)`.
+* **GET** `/api/user/{id}` : Récupération des détails (restreint par RBAC).
+
+### 5.2 Actions de Mutabilité (Statut et Rôle)
+* **PUT** `/api/user/{id}/profile` (Pour Client), **PUT** `/api/user/{id}/admin` (Pour Admin).
+* **DELETE** `/api/user/{id}` : Suppression logique.
+* **PATCH** `/api/user/{id}/restore` / `block` / `activate` / `deactivate` / `suspend` / `role` : Endpoints dédiés à chaque transition pour maintenir une séparation des responsabilités saine dans les contrats.
+
+### 5.3 Administration des Employés
+* **POST** `/api/user/admin/assign?agentId=&clientId=` / **DELETE** : Gère l'affectation du portefeuille de clients.
+* **GET** `/api/user/admin/stats` : Dashboard Admin (System Health, Répartition, Enregistrements 24h).
+* **GET** `/api/user/admin/audit/{userId}` : Traçabilité totale des actions.
+
+### 5.4 Plateforme Agent & Client
+* **GET** `/api/user/agent/{id}/performance` : Retourne la vitesse et la pertinence du travailleur.
+* **GET** `/api/user/client/{id}/risk-score` : Evalue le client de 0 à 100.
+* **GET** `/api/user/client/{id}/eligibility` : Approuve de manière binaire un client.
+* **POST** `/api/user/kyc/upload` : Uploader des pièces (ID, Factures).
+
+---
+
+## 6. Logiques Métiers Avancées (Business Logic)
+
+L’intelligence logicielle de la fintech réside purement dans des méthodes du `UserServiceImpl`.
+
+### 6.1 Le Score de Risque (Risk Score)
+Méthode `clientRiskScore()`. Calcule et renvoie un nombre compris entre 0 (Risque Maximal) et 100 (Fiable à 100%).
+**Formule intégrée :**
+1. **Base (50 points)**
+2. Bonus d'activité système : Si l'état compte est `ACTIVE` **(+10 pts)**.
+3. Pénalité grave : Si le client a été `SUSPENDED` dans le passé selon la plateforme d'audit **(-20 pts)**.
+4. Validation externe (KYC) : S'il y a des documents avec le statut `APPROVED` dans `kyc_document` **(+20 pts)**.
+5. Bonus de stabilité : Les transactions/activités comptent (`actions.size() * 2`).
+6. Bonus de longévité : Age du compte en mois.
+*Exception : si le client est actuellement suspendu, le plafond est bridé à **30 points** maximum.*
+
+### 6.2 Éligibilité (Eligibility)
+Méthode booléenne `clientEligibility()`. C'est l'entonnoir d'octroi de crédits de Kredia.
+**Vérifications :**
+* `FALSE` : si BLOCKED.
+* `FALSE` : si SUSPENDED.
+* `FALSE` : si non `ACTIVE` (ie. en PENDING de vérification e-mail).
+* `FALSE` : si le `Risk Score` est inférieur strict à **60 pts**.
+* `TRUE` : Autrement.
+
+### 6.3 Performance de l'Agent
+Méthode `agentPerformance()`. Transforme un simple employé en un profil mesurable par sa productivité.
+1. Filtre uniquement les `APPROVAL` (approbations de doc/crédit) et `REJECTION` dans `UserActivity`.
+2. Score de performance = `(approbations / total d'actions) * 100`.
+3. Temps moyen de traitement (`computeAverageProcessingTimeSeconds`) = Temps qui s'écoule entre `PROCESSING_STARTED` et `PROCESSING_COMPLETED` sur les actions de ses clients.
+4. Comptes et Portefeuille = Nombre d'actions de type `CLIENT_HANDLED`.
+
+---
+
+## 7. KPIs (Indicateurs Clés de Performance)
+Le reporting extrait de précieuses métriques (via `AdminStatsDTO` et `AgentPerformanceDTO`) calculées à la volée directement sur la base en lisant la base `UserRepository` en Count() et les aggrégations :
+
+1. **System Health Index (Indice de santé global)** : `(Users Acts / Total Users) * 100`. Sert à identifier les bases de données remplies de "comptes fantômes" et inactifs VS les véritables utilisateurs engageants.
+2. **Last 24h Registrations** : Le monitoring du pic d'utilisation des jours précédents. Utile en marketing et pour l'évaluation des attaques Botnet.
+3. **Répartition Démographique (Role Distribution)** : Le Ratio Admin / Agent / Client permet à l'entreprise d'ajuster ses effectifs vis-à-vis du service client et de ses frais fixes en cas de sureffectif ou sous-effectif.
+4. **Agent Processing Time (Temps de réponse moyen)** : La métrique phare pour le contrôle qualité. Une seconde ou un jour pour repérer quel agent est à la traîne.
+5. **Score de Risque Client (Risk Score)** : Ce KPI est vendu ou internalisé dans les décisions de crédit ou d’assurance de ce service proptech/fintech.
+
+---
+
+## Conclusion
+Le module `User` est le squelette de l'application sécurisée **Kredia**. En liant étroitement Spring Data JPA pour les recherches et les aggrégations en base, les sécurités d'injection contextuelle d'acteur (RBAC : Qui demande quoi), et les logiques métiers spécifiques de l'Audit Log, ce grand pan architectural garantit un espace certifié entre employés et clients.

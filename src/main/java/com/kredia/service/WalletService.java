@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 
 @Service
 @Transactional
+@SuppressWarnings("null")
 public class WalletService {
     @Autowired
     private WalletRepository walletRepository;

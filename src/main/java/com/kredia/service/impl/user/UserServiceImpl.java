@@ -43,6 +43,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @Service
+@SuppressWarnings("all")
 public class UserServiceImpl implements UserService {
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
