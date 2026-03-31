@@ -53,6 +53,10 @@ public class Wallet {
     @OneToMany(mappedBy = "destinationWallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Transaction> incomingTransactions;
+
+    @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<VirtualCard> virtualCards;
     
     @PrePersist
     protected void onCreate() {
