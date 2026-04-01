@@ -11,7 +11,10 @@ const AgentActivities: React.FC = () => {
   const [filterType, setFilterType] = useState('ALL');
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
     userApi.getAgentActivities(currentUser.id)
       .then((data) => setLogs(data.length > 0 ? data : (MOCK_ACTIVITIES as unknown as UserActivityResponseDTO[])))
       .catch(() => setLogs(MOCK_ACTIVITIES as unknown as UserActivityResponseDTO[]))

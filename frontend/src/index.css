@@ -124,7 +124,7 @@ a {
 }
 
 .badge-admin { background: var(--primary-light); color: var(--primary); }
-.badge-employee { background: var(--warning-light); color: var(--warning-dark); }
+.badge-agent { background: var(--warning-light); color: var(--warning-dark); }
 .badge-client { background: var(--success-light); color: var(--success-dark); }
 
 .bg-active { background: var(--success-light); color: var(--success-dark); }
@@ -224,7 +224,7 @@ input::placeholder {
   margin-bottom: 0.5rem;
   box-shadow: 0 4px 10px rgba(67, 24, 255, 0.2);
 }
-.employee-avatar { background: var(--warning); }
+.employee-avatar, .agent-avatar { background: var(--warning); }
 .client-avatar { background: var(--success); }
 .user-info .name { font-weight: 700; font-size: 1rem; color: var(--text-main); }
 .user-info .badge { margin-top: 0.25rem; font-size: 0.65rem; }

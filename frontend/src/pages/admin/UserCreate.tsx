@@ -14,7 +14,7 @@ const UserCreate: React.FC = () => {
     lastName: '',
     phoneNumber: '',
     role: UserRole.CLIENT,
-    status: UserStatus.PENDING,
+    status: UserStatus.PENDING_VERIFICATION,
     isActive: false
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -174,7 +174,7 @@ const UserCreate: React.FC = () => {
                 >
                   <div className="text-2xl mb-2">
                     {role === UserRole.ADMIN && '👑'}
-                    {role === UserRole.EMPLOYEE && '👔'}
+                    {role === UserRole.AGENT && '👔'}
                     {role === UserRole.CLIENT && '👤'}
                   </div>
                   <div className="font-semibold text-sm">{role}</div>
@@ -183,7 +183,7 @@ const UserCreate: React.FC = () => {
             </div>
             <p className="text-muted text-sm mt-2">
               {formData.role === UserRole.ADMIN && 'Full system access and user management capabilities'}
-              {formData.role === UserRole.EMPLOYEE && 'Can manage assigned clients and process loans'}
+              {formData.role === UserRole.AGENT && 'Can manage assigned clients and process loans'}
               {formData.role === UserRole.CLIENT && 'Standard user with loan and investment access'}
             </p>
           </div>
@@ -197,7 +197,7 @@ const UserCreate: React.FC = () => {
               onChange={e => handleChange('status', e.target.value as UserStatus)}
               disabled={loading}
             >
-              <option value={UserStatus.PENDING}>PENDING - Awaiting verification</option>
+              <option value={UserStatus.PENDING_VERIFICATION}>PENDING - Awaiting verification</option>
               <option value={UserStatus.ACTIVE}>ACTIVE - Immediate access</option>
               <option value={UserStatus.INACTIVE}>INACTIVE - Manual activation required</option>
             </select>

@@ -16,7 +16,10 @@ const ClientProfile: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
     userApi.getClientProfile(currentUser.id)
       .then((data: UserResponseDTO) => {
         setProfile(data);

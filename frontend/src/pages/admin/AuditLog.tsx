@@ -20,18 +20,22 @@ const AuditLog: React.FC = () => {
     try {
       setLoading(true);
       // Fetch logs for all roles to provide a unified global view
-      const [adminLogs, employeeLogs, clientLogs] = await Promise.all([
-        userApi.getAdminActivitiesByRole(UserRole.ADMIN).catch(() => []),
-        userApi.getAdminActivitiesByRole(UserRole.EMPLOYEE).catch(() => []),
-        userApi.getAdminActivitiesByRole(UserRole.CLIENT).catch(() => [])
+      const [adminLogsResponse, agentLogsResponse, clientLogsResponse] = await Promise.all([
+        userApi.getAdminActivitiesByRole(UserRole.ADMIN).catch(() => ({ content: [] })),
+        userApi.getAdminActivitiesByRole(UserRole.AGENT).catch(() => ({ content: [] })),
+        userApi.getAdminActivitiesByRole(UserRole.CLIENT).catch(() => ({ content: [] }))
       ]);
+
+      const adminLogs = adminLogsResponse.content || [];
+      const agentLogs = agentLogsResponse.content || [];
+      const clientLogs = clientLogsResponse.content || [];
 
       // Tag logs with their role source
       const taggedAdminLogs = adminLogs.map(log => ({ ...log, roleSource: 'ADMIN' }));
-      const taggedEmployeeLogs = employeeLogs.map(log => ({ ...log, roleSource: 'EMPLOYEE' }));
+      const taggedAgentLogs = agentLogs.map(log => ({ ...log, roleSource: 'AGENT' }));
       const taggedClientLogs = clientLogs.map(log => ({ ...log, roleSource: 'CLIENT' }));
 
-      const mergedLogs = [...taggedAdminLogs, ...taggedEmployeeLogs, ...taggedClientLogs]
+      const mergedLogs = [...taggedAdminLogs, ...taggedAgentLogs, ...taggedClientLogs]
         // Sort by most recent first
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
@@ -74,7 +78,7 @@ const AuditLog: React.FC = () => {
   const getRoleBadge = (role?: string) => {
     switch(role) {
       case 'ADMIN': return <span className="badge badge-admin">ADMIN</span>;
-      case 'EMPLOYEE': return <span className="badge badge-employee">AGENT</span>;
+      case 'AGENT': return <span className="badge badge-agent">AGENT</span>;
       case 'CLIENT': return <span className="badge badge-client">CLIENT</span>;
       default: return <span className="badge bg-secondary">Unknown</span>;
     }
@@ -92,6 +96,9 @@ const AuditLog: React.FC = () => {
     }
     if (actionType.includes('BLOCK') || actionType.includes('SUSPEND')) {
       return <span className="badge bg-warning">{actionType}</span>;
+    }
+    if (actionType.includes('LOGIN') || actionType.includes('LOGOUT')) {
+      return <span className="badge bg-info">{actionType}</span>;
     }
     return <span className="badge bg-secondary">{actionType}</span>;
   };

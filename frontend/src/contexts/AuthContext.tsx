@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   authError: string | null;
   login: (userId: number) => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<void>;
   logout: () => void;
   clearAuthError: () => void;
 }
@@ -62,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (err: any) {
         console.error('[AuthContext] Session verification failed:', err.message || err);
         localStorage.removeItem('kredia_actor_id');
+        localStorage.removeItem('kredia_token');
         setCurrentUser(null);
         setAuthError(err.message || 'Session expired');
       } finally {
@@ -101,9 +103,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const loginWithEmail = useCallback(async (email: string, password: string) => {
+    console.log('[AuthContext] Login attempt with email:', email);
+    setIsLoading(true);
+    setAuthError(null);
+    
+    try {
+      // Get the JWT token
+      const authResponse = await userApi.login(email, password);
+      const token = authResponse.data.token;
+      localStorage.setItem('kredia_token', token);
+      
+      // Parse the token to get the user ID
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      const decodedToken = JSON.parse(jsonPayload);
+      const userId = Number(decodedToken.sub);
+      
+      // Fetch user profile
+      const user = await userApi.getById(userId, userId);
+      
+      console.log('[AuthContext] Login success:', user.email, 'Role:', user.role);
+      setCurrentUser(user);
+      localStorage.setItem('kredia_actor_id', String(userId));
+      setAuthError(null);
+    } catch (err: any) {
+      console.error('[AuthContext] Login failed:', err.message || err);
+      setAuthError(err.message || 'Login failed');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     console.log('[AuthContext] Logout');
     localStorage.removeItem('kredia_actor_id');
+    localStorage.removeItem('kredia_token');
     setCurrentUser(null);
     setAuthError(null);
   }, []);
@@ -113,14 +153,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ 
-      currentUser, 
-      isLoading, 
-      authError,
-      login, 
-      logout,
-      clearAuthError 
-    }}>
+      <AuthContext.Provider value={{ 
+        currentUser, 
+        isLoading, 
+        authError,
+        login, 
+        loginWithEmail,
+        logout,
+        clearAuthError 
+      }}>
       {children}
     </AuthContext.Provider>
   );

@@ -74,7 +74,7 @@ public interface UserService {
 
     Page<UserActivityResponseDTO> adminAudit(Long actorId, Long userId, Pageable pageable);
 
-    Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, UserRole role, Pageable pageable);
+    Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, Optional<UserRole> role, Pageable pageable);
 
     AgentPerformanceDTO agentDashboard(Long agentId);
 

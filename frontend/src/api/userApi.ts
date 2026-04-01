@@ -25,8 +25,13 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const actorId = localStorage.getItem('kredia_actor_id');
+    const token = localStorage.getItem('kredia_token');
+    
     if (actorId && config.headers) {
       config.headers['X-Actor-Id'] = actorId;
+    }
+    if (token && config.headers) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
     console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
     return config;
@@ -48,7 +53,7 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 404) {
-      return Promise.reject(new Error('User not found.'));
+      return Promise.reject(new Error('Resource not found (404).'));
     }
     
     if (error.response?.status >= 500) {
@@ -63,6 +68,10 @@ api.interceptors.response.use(
 const extractData = <T>(response: { data: ApiResponse<T> }): T => response.data.data;
 
 export const userApi = {
+  // ---- Auth Endpoints ----
+  login: (email: string, password: string) => 
+    axios.post('http://localhost:8086/api/auth/login', { email, password }).then(res => res.data),
+    
   // ---- CRUD ----
   create: (user: UserRequestDTO) => api.post<ApiResponse<UserResponseDTO>>('', user).then(extractData),
   
@@ -79,7 +88,8 @@ export const userApi = {
     headers: actorIdOverride ? { 'X-Actor-Id': String(actorIdOverride) } : undefined
   }).then(extractData),
   
-  update: (id: number, user: Partial<UserRequestDTO>) => api.put<ApiResponse<UserResponseDTO>>(`/${id}`, user).then(extractData),
+  update: (id: number, user: Partial<UserRequestDTO>) => api.put<ApiResponse<UserResponseDTO>>(`/${id}/admin`, user).then(extractData),
+  updateProfile: (id: number, user: any) => api.put<ApiResponse<UserResponseDTO>>(`/${id}/profile`, user).then(extractData),
   
   delete: (id: number) => api.delete<ApiResponse<void>>(`/${id}`).then(extractData),
 
@@ -95,18 +105,18 @@ export const userApi = {
   getAdminStats: () => api.get<ApiResponse<AdminStatsDTO>>('/admin/stats').then(extractData),
   getAdminAgents: (p?: { page?: number; size?: number }) => api.get<ApiResponse<Page<UserResponseDTO>>>('/admin/agents', { params: p }).then(extractData),
   getAdminClients: (p?: { page?: number; size?: number }) => api.get<ApiResponse<Page<UserResponseDTO>>>('/admin/clients', { params: p }).then(extractData),
-  getAdminAudit: (userId: number) => api.get<ApiResponse<UserActivityResponseDTO[]>>(`/admin/audit/${userId}`).then(extractData),
+  getAdminAudit: (userId: number) => api.get<ApiResponse<Page<UserActivityResponseDTO>>>(`/admin/audit/${userId}`).then(extractData),
   getAdminActivitiesByRole: (role: UserRole, p?: { page?: number; size?: number }) => 
-    api.get<ApiResponse<UserActivityResponseDTO[]>>('/admin/activities', { params: { role, ...p } }).then(extractData),
+    api.get<ApiResponse<Page<UserActivityResponseDTO>>>('/admin/activities', { params: { role, ...p } }).then(extractData),
 
   // ---- Employee Endpoints ----
   getAgentDashboard: (agentId: number) => api.get<ApiResponse<AgentPerformanceDTO>>(`/agent/${agentId}/dashboard`).then(extractData),
   getAgentPerformance: (agentId: number) => api.get<ApiResponse<AgentPerformanceDTO>>(`/agent/${agentId}/performance`).then(extractData),
-  getAgentActivities: (agentId: number) => api.get<ApiResponse<UserActivityResponseDTO[]>>(`/agent/${agentId}/activities`).then(extractData),
+  getAgentActivities: (agentId: number, p?: { page?: number; size?: number }) => api.get<ApiResponse<Page<UserActivityResponseDTO>>>(`/agent/${agentId}/activity`, { params: p }).then(extractData),
 
   // ---- Client Endpoints ----
   getClientProfile: (clientId: number) => api.get<ApiResponse<UserResponseDTO>>(`/client/${clientId}/profile`).then(extractData),
-  getClientActivities: (clientId: number) => api.get<ApiResponse<UserActivityResponseDTO[]>>(`/client/${clientId}/activities`).then(extractData),
+  getClientActivities: (clientId: number, p?: { page?: number; size?: number }) => api.get<ApiResponse<Page<UserActivityResponseDTO>>>(`/client/${clientId}/activity`, { params: p }).then(extractData),
   getClientRiskScore: (clientId: number) => api.get<ApiResponse<ClientRiskScoreDTO>>(`/client/${clientId}/risk-score`).then(extractData),
   getClientEligibility: (clientId: number) => api.get<ApiResponse<ClientEligibilityDTO>>(`/client/${clientId}/eligibility`).then(extractData),
 };

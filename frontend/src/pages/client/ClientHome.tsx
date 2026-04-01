@@ -13,7 +13,10 @@ const ClientHome: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
 
     const fetchAll = async () => {
       setLoading(true);
@@ -74,8 +77,8 @@ const ClientHome: React.FC = () => {
         {/* Credit Score Radial */}
         <div className="card flex flex-col items-center p-6">
           <h3 className="font-bold mb-4 self-start text-lg">My Credit Score</h3>
-          <div className="relative" style={{ height: '200px', width: '200px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="relative" style={{ minHeight: '200px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height={200}>
               <RadialBarChart innerRadius="75%" outerRadius="90%" data={scoreData} startAngle={90} endAngle={-270}>
                 <RadialBar background={{ fill: '#F4F7FE' }} dataKey="value" cornerRadius={10} />
               </RadialBarChart>

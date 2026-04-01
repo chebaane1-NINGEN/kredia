@@ -2,7 +2,8 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types/user.types';
-import { RoleSelector } from '../pages/Login';
+import Login from '../pages/Login';
+import Register from '../pages/Register';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AgentDashboard from '../pages/agent/AgentDashboard';
 import ClientDashboard from '../pages/client/ClientDashboard';
@@ -25,7 +26,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
   if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
     // Redirect to appropriate dashboard based on actual role
     if (currentUser.role === UserRole.ADMIN) return <Navigate to="/admin" replace />;
-    if (currentUser.role === UserRole.AGENT || currentUser.role === UserRole.EMPLOYEE) return <Navigate to="/agent" replace />;
+    if (currentUser.role === UserRole.AGENT) return <Navigate to="/agent" replace />;
     if (currentUser.role === UserRole.CLIENT) return <Navigate to="/client" replace />;
     return <Navigate to="/login" replace />;
   }
@@ -40,8 +41,7 @@ const RoleRedirect = () => {
   
   switch (currentUser.role) {
     case UserRole.ADMIN: return <Navigate to="/admin" />;
-    case UserRole.AGENT:
-    case UserRole.EMPLOYEE: return <Navigate to="/agent" />;
+    case UserRole.AGENT: return <Navigate to="/agent" />;
     case UserRole.CLIENT: return <Navigate to="/client" />;
     default: return <Navigate to="/login" />;
   }
@@ -50,7 +50,8 @@ const RoleRedirect = () => {
 export const AppRouter = () => {
   return (
     <Routes>
-      <Route path="/login" element={<RoleSelector />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/" element={<RoleRedirect />} />
       
       {/* Admin Routes */}
@@ -62,7 +63,7 @@ export const AppRouter = () => {
       
       {/* Agent Routes */}
       <Route path="/agent/*" element={
-        <ProtectedRoute allowedRoles={[UserRole.AGENT, UserRole.EMPLOYEE]}>
+        <ProtectedRoute allowedRoles={[UserRole.AGENT]}>
           <AgentDashboard />
         </ProtectedRoute>
       } />

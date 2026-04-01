@@ -10,7 +10,10 @@ const ClientActivities: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
     userApi.getClientActivities(currentUser.id)
       .then((data) => setLogs(data.length > 0 ? data : (MOCK_ACTIVITIES as unknown as UserActivityResponseDTO[])))
       .catch(() => setLogs(MOCK_ACTIVITIES as unknown as UserActivityResponseDTO[]))

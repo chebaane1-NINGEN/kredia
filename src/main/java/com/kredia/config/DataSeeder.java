@@ -9,12 +9,17 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Random;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * DataSeeder initializes test data for the User module.
@@ -28,179 +33,218 @@ public class DataSeeder {
 
     @Bean
     @Profile("!test")
-    CommandLineRunner initData(UserRepository userRepository,
-                                UserActivityRepository userActivityRepository,
-                                BCryptPasswordEncoder passwordEncoder) {
+    CommandLineRunner initData(DataSeederService seederService,
+                                SchemaFixer schemaFixer) {
         return args -> {
             try {
-                // Check if we already have data
-                if (userRepository.count() > 0) {
-                    log.info("Database already contains {} users, skipping data seeding", userRepository.count());
-                    return;
-                }
-
-                log.info("Starting data seeding...");
-                seedData(userRepository, userActivityRepository, passwordEncoder);
+                log.info("Checking database for initial data...");
+                schemaFixer.fixSchema();
+                seederService.runSeeding();
             } catch (Exception e) {
                 log.error("Error during data seeding: {}", e.getMessage(), e);
             }
         };
     }
 
-    @Transactional
-    private void seedData(UserRepository userRepository, 
-                         UserActivityRepository userActivityRepository,
-                         BCryptPasswordEncoder passwordEncoder) {
-        // Create Admin
-        User admin = createUser("Admin", "Kredia", "admin@kredia.com", "+21690000001",
-                UserRole.ADMIN, UserStatus.ACTIVE, passwordEncoder, null);
-        User savedAdmin = userRepository.save(admin);
-        log.info("Created Admin: {} (ID: {})", savedAdmin.getEmail(), savedAdmin.getId());
-        createUserActivities(savedAdmin.getId(), userActivityRepository, UserRole.ADMIN);
+    @Component
+    @RequiredArgsConstructor
+    static class DataSeederService {
+        private final UserRepository userRepository;
+        private final UserActivityRepository userActivityRepository;
+        private final PasswordEncoder passwordEncoder;
+        private final jakarta.persistence.EntityManager entityManager;
 
-        // Create Agents
-        User agent1 = createUser("Karim", "Ben Ali", "karim.agent@kredia.com", "+21690000002",
-                UserRole.AGENT, UserStatus.ACTIVE, passwordEncoder, null);
-        User savedAgent1 = userRepository.save(agent1);
-        log.info("Created Agent 1: {} (ID: {})", savedAgent1.getEmail(), savedAgent1.getId());
-        createUserActivities(savedAgent1.getId(), userActivityRepository, UserRole.AGENT);
-
-        User agent2 = createUser("Samira", "Trabelsi", "samira.agent@kredia.com", "+21690000003",
-                UserRole.AGENT, UserStatus.ACTIVE, passwordEncoder, null);
-        User savedAgent2 = userRepository.save(agent2);
-        log.info("Created Agent 2: {} (ID: {})", savedAgent2.getEmail(), savedAgent2.getId());
-        createUserActivities(savedAgent2.getId(), userActivityRepository, UserRole.AGENT);
-
-        // Create Clients
-        User client1 = createUser("Mohamed", "Hassan", "mohamed.client@email.com", "+21690000004",
-                UserRole.CLIENT, UserStatus.ACTIVE, passwordEncoder, savedAgent1);
-        User savedClient1 = userRepository.save(client1);
-        log.info("Created Client 1: {} (ID: {}) assigned to Agent {}", 
-                savedClient1.getEmail(), savedClient1.getId(), savedAgent1.getId());
-        createUserActivities(savedClient1.getId(), userActivityRepository, UserRole.CLIENT);
-
-        User client2 = createUser("Fatima", "Zahra", "fatima.client@email.com", "+21690000005",
-                UserRole.CLIENT, UserStatus.ACTIVE, passwordEncoder, savedAgent1);
-        User savedClient2 = userRepository.save(client2);
-        log.info("Created Client 2: {} (ID: {}) assigned to Agent {}", 
-                savedClient2.getEmail(), savedClient2.getId(), savedAgent1.getId());
-        createUserActivities(savedClient2.getId(), userActivityRepository, UserRole.CLIENT);
-
-        User client3 = createUser("Ahmed", "Bouazizi", "ahmed.client@email.com", "+21690000006",
-                UserRole.CLIENT, UserStatus.PENDING_VERIFICATION, passwordEncoder, savedAgent2);
-        User savedClient3 = userRepository.save(client3);
-        log.info("Created Client 3: {} (ID: {}) assigned to Agent {}", 
-                savedClient3.getEmail(), savedClient3.getId(), savedAgent2.getId());
-        createUserActivities(savedClient3.getId(), userActivityRepository, UserRole.CLIENT);
-
-        User client4 = createUser("Nadia", "Saidi", "nadia.client@email.com", "+21690000007",
-                UserRole.CLIENT, UserStatus.SUSPENDED, passwordEncoder, null);
-        User savedClient4 = userRepository.save(client4);
-        log.info("Created Client 4: {} (ID: {}) - SUSPENDED", savedClient4.getEmail(), savedClient4.getId());
-        createUserActivities(savedClient4.getId(), userActivityRepository, UserRole.CLIENT);
-
-        User client5 = createUser("Ali", "Gharbi", "ali.client@email.com", "+21690000008",
-                UserRole.CLIENT, UserStatus.BLOCKED, passwordEncoder, null);
-        User savedClient5 = userRepository.save(client5);
-        log.info("Created Client 5: {} (ID: {}) - BLOCKED", savedClient5.getEmail(), savedClient5.getId());
-        createUserActivities(savedClient5.getId(), userActivityRepository, UserRole.CLIENT);
-
-        log.info("Data seeding completed successfully!");
-        log.info("Summary: 1 Admin, 2 Agents, 5 Clients created");
-        log.info("Swagger UI available at: http://localhost:8086/swagger-ui/index.html");
-        log.info("Test user credentials:");
-        log.info("  Admin: admin@kredia.com / password");
-        log.info("  Agent: karim.agent@kredia.com / password");
-        log.info("  Client: mohamed.client@email.com / password");
-    }
-
-    private User createUser(String firstName, String lastName, String email, String phone,
-                            UserRole role, UserStatus status, BCryptPasswordEncoder encoder,
-                            User assignedAgent) {
-        User user = new User();
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
-        user.setEmail(email);
-        user.setPhoneNumber(phone);
-        user.setPasswordHash(encoder.encode("password"));
-        user.setRole(role);
-        user.setStatus(status);
-        user.setDeleted(false);
-        user.setEmailVerified(status == UserStatus.ACTIVE);
-        user.setDateOfBirth(LocalDate.of(1990, 5, 15));
-        user.setGender(Gender.MALE);
-        user.setAddress("Tunis, Tunisia");
-        user.setAssignedAgent(assignedAgent);
-        return user;
-    }
-
-    private void createUserActivities(Long userId, UserActivityRepository repo, UserRole role) {
-        Instant now = Instant.now();
-
-        // CREATED activity
-        UserActivity created = new UserActivity();
-        created.setUserId(userId);
-        created.setActionType(UserActivityActionType.CREATED);
-        created.setDescription("User account created during data seeding");
-        created.setTimestamp(now.minus(30, ChronoUnit.DAYS));
-        repo.save(created);
-
-        // STATUS_CHANGED activity
-        UserActivity statusChanged = new UserActivity();
-        statusChanged.setUserId(userId);
-        statusChanged.setActionType(UserActivityActionType.STATUS_CHANGED);
-        statusChanged.setDescription("Status changed to ACTIVE by system");
-        statusChanged.setTimestamp(now.minus(29, ChronoUnit.DAYS));
-        repo.save(statusChanged);
-
-        if (role == UserRole.AGENT) {
-            // Agent-specific activities
-            UserActivity approval = new UserActivity();
-            approval.setUserId(userId);
-            approval.setActionType(UserActivityActionType.APPROVAL);
-            approval.setDescription("Approved loan application #1234");
-            approval.setTimestamp(now.minus(10, ChronoUnit.DAYS));
-            repo.save(approval);
-
-            UserActivity clientHandled = new UserActivity();
-            clientHandled.setUserId(userId);
-            clientHandled.setActionType(UserActivityActionType.CLIENT_HANDLED);
-            clientHandled.setDescription("Handled client request");
-            clientHandled.setTimestamp(now.minus(5, ChronoUnit.DAYS));
-            repo.save(clientHandled);
-
-            // Processing times
-            UserActivity processingStart = new UserActivity();
-            processingStart.setUserId(userId);
-            processingStart.setActionType(UserActivityActionType.PROCESSING_STARTED);
-            processingStart.setDescription("Started processing application #1234");
-            processingStart.setTimestamp(now.minus(12, ChronoUnit.DAYS));
-            repo.save(processingStart);
-
-            UserActivity processingComplete = new UserActivity();
-            processingComplete.setUserId(userId);
-            processingComplete.setActionType(UserActivityActionType.PROCESSING_COMPLETED);
-            processingComplete.setDescription("Completed processing application #1234");
-            processingComplete.setTimestamp(now.minus(11, ChronoUnit.DAYS).minus(30, ChronoUnit.MINUTES));
-            repo.save(processingComplete);
+        @Transactional
+        public void runSeeding() {
+            // Force re-seeding to ensure 50+ users and realistic data
+            log.info("Starting professional data seeding (50+ users)...");
+            
+            // Disable FK checks to clear data properly
+            entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
+            try {
+                entityManager.createNativeQuery("DELETE FROM user_activity").executeUpdate();
+                entityManager.createNativeQuery("DELETE FROM user").executeUpdate();
+            } finally {
+                entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
+            }
+            
+            seedData(userRepository, userActivityRepository, passwordEncoder, entityManager);
         }
 
-        if (role == UserRole.CLIENT) {
-            // Client-specific activities
-            UserActivity profileUpdate = new UserActivity();
-            profileUpdate.setUserId(userId);
-            profileUpdate.setActionType(UserActivityActionType.STATUS_CHANGED);
-            profileUpdate.setDescription("Client updated profile information");
-            profileUpdate.setTimestamp(now.minus(7, ChronoUnit.DAYS));
-            repo.save(profileUpdate);
+        @Transactional
+        protected void seedData(UserRepository userRepository, 
+                             UserActivityRepository userActivityRepository,
+                             PasswordEncoder passwordEncoder,
+                             jakarta.persistence.EntityManager entityManager) {
+            // Create Admin
+            User admin = createUser("Admin", "System", "admin@kredia.com", "+21690000001",
+                    UserRole.ADMIN, UserStatus.ACTIVE, passwordEncoder, null);
+            User savedAdmin = userRepository.save(admin);
+            updateCreatedAt(savedAdmin.getId(), 180, entityManager);
+            log.info("Created Admin: {} (ID: {})", savedAdmin.getEmail(), savedAdmin.getId());
+            createUserActivities(savedAdmin.getId(), userActivityRepository, UserRole.ADMIN, 180);
+
+            // Create Primary Agent for testing
+            User testAgent = createUser("Test", "Agent", "agent1@kredia.com", "+21691000000",
+                    UserRole.AGENT, UserStatus.ACTIVE, passwordEncoder, null);
+            User savedTestAgent = userRepository.save(testAgent);
+            updateCreatedAt(savedTestAgent.getId(), 160, entityManager);
+            log.info("Created Test Agent: {} (ID: {})", savedTestAgent.getEmail(), savedTestAgent.getId());
+            createUserActivities(savedTestAgent.getId(), userActivityRepository, UserRole.AGENT, 160);
+
+            // Create Primary Client for testing
+            User testClient = createUser("Test", "Client", "client1@kredia.com", "+21620000000",
+                    UserRole.CLIENT, UserStatus.ACTIVE, passwordEncoder, savedTestAgent);
+            User savedTestClient = userRepository.save(testClient);
+            updateCreatedAt(savedTestClient.getId(), 170, entityManager);
+            log.info("Created Test Client: {} (ID: {})", savedTestClient.getEmail(), savedTestClient.getId());
+            createUserActivities(savedTestClient.getId(), userActivityRepository, UserRole.CLIENT, 170);
+
+            // Create more Agents
+            String[] agentFirstNames = {"Karim", "Samira", "Mehdi", "Ines", "Hassen"};
+            String[] agentLastNames = {"Ben Ali", "Trabelsi", "Gharbi", "Bouzid", "Sassi"};
+            List<User> agents = new ArrayList<>();
+            agents.add(savedTestAgent);
+            
+            for (int i = 0; i < 5; i++) {
+                String fName = agentFirstNames[i];
+                String lName = agentLastNames[i];
+                String email = fName.toLowerCase() + "." + lName.toLowerCase().replace(" ", "") + "@kredia.com";
+                String phone = "+2169100000" + (i + 1);
+                
+                User agent = createUser(fName, lName, email, phone, UserRole.AGENT, UserStatus.ACTIVE, passwordEncoder, null);
+                User savedAgent = userRepository.save(agent);
+                updateCreatedAt(savedAgent.getId(), 150 - (i * 10), entityManager);
+                log.info("Created Agent: {} (ID: {})", savedAgent.getEmail(), savedAgent.getId());
+                createUserActivities(savedAgent.getId(), userActivityRepository, UserRole.AGENT, 150 - (i * 10));
+                agents.add(savedAgent);
+            }
+
+            // Create Clients
+            String[] firstNames = {"Mohamed", "Fatima", "Ahmed", "Nadia", "Ali", "Youssef", "Amina", "Omar", "Sara", "Hedi", "Leila", "Mourad", "Salma", "Amir", "Imen", "Sami", "Mariem", "Tarek", "Rym", "Walid", "Sana", "Khaled", "Hiba", "Riadh", "Nour", "Mehdi", "Ines", "Hassen", "Asma", "Bilel", "Dorra", "Nizar", "Mouna", "Sofiene", "Najwa", "Kamel", "Wafa", "Adel", "Amal", "Nabil", "Zied", "Sonia", "Fares", "Nourane", "Bassem", "Maysa", "Anis", "Olfa", "Raouf", "Ghada"};
+            String[] lastNames = {"Hassan", "Zahra", "Bouazizi", "Saidi", "Gharbi", "Trabelsi", "Ben Ali", "Ayari", "Hammami", "Jelassi", "Drissi", "Cherif", "Zribi", "Mabrouk", "Amri", "Baccouche", "Karray", "Abid", "Triki", "Chaabane", "Mzoughi", "Ghannouchi", "Belaid", "Sellami", "Mansour", "Khmiri", "Bouzid", "Sassi", "Toumi", "Jarraya", "Belhadj", "Masmoudi", "Mnif", "Feki", "Louati", "Ghorbel", "Ellouze", "Hachicha", "Daoud", "Rekik"};
+            
+            Random random = new Random();
+            
+            for (int i = 0; i < 50; i++) {
+                String fName = firstNames[random.nextInt(firstNames.length)];
+                String lName = lastNames[random.nextInt(lastNames.length)];
+                String email = fName.toLowerCase() + "." + lName.toLowerCase().replace(" ", "") + (i + 1) + "@email.com";
+                String phone = "+216" + (20000000 + i);
+                
+                UserStatus status;
+                int statusRand = random.nextInt(10);
+                if (statusRand < 6) status = UserStatus.ACTIVE;
+                else if (statusRand < 8) status = UserStatus.INACTIVE;
+                else if (statusRand < 9) status = UserStatus.SUSPENDED;
+                else status = UserStatus.BLOCKED;
+
+                User assignedAgent = agents.get(random.nextInt(agents.size()));
+                
+                User client = createUser(fName, lName, email, phone, UserRole.CLIENT, status, passwordEncoder, assignedAgent);
+                User savedClient = userRepository.save(client);
+                
+                // Random creation date over the last 6 months
+                int daysAgo = random.nextInt(180);
+                updateCreatedAt(savedClient.getId(), daysAgo, entityManager);
+                
+                createUserActivities(savedClient.getId(), userActivityRepository, UserRole.CLIENT, daysAgo);
+            }
+
+            log.info("Data seeding completed successfully! Created 1 Admin, 5 Agents, 50 Clients.");
         }
 
-        // Recent activity for all users
-        UserActivity recentActivity = new UserActivity();
-        recentActivity.setUserId(userId);
-        recentActivity.setActionType(UserActivityActionType.STATUS_CHANGED);
-        recentActivity.setDescription("Recent user activity recorded");
-        recentActivity.setTimestamp(now.minus(1, ChronoUnit.HOURS));
-        repo.save(recentActivity);
+        private void updateCreatedAt(Long userId, int daysAgo, jakarta.persistence.EntityManager em) {
+            Instant past = Instant.now().minus(daysAgo, ChronoUnit.DAYS);
+            em.createNativeQuery("UPDATE `user` SET created_at = :ts WHERE user_id = :id")
+              .setParameter("ts", past)
+              .setParameter("id", userId)
+              .executeUpdate();
+        }
+
+        private User createUser(String firstName, String lastName, String email, String phone,
+                                UserRole role, UserStatus status, PasswordEncoder encoder,
+                                User assignedAgent) {
+            User user = new User();
+            user.setFirstName(firstName);
+            user.setLastName(lastName);
+            user.setEmail(email);
+            user.setPhoneNumber(phone);
+            user.setPasswordHash(encoder.encode("password"));
+            user.setRole(role);
+            user.setStatus(status);
+            user.setDeleted(false);
+            user.setEmailVerified(status == UserStatus.ACTIVE);
+            user.setDateOfBirth(LocalDate.of(1985 + new Random().nextInt(20), 1 + new Random().nextInt(11), 1 + new Random().nextInt(27)));
+            user.setGender(new Random().nextBoolean() ? Gender.MALE : Gender.FEMALE);
+            user.setAddress(new Random().nextInt(100) + " Avenue Habib Bourguiba, Tunis");
+            user.setAssignedAgent(assignedAgent);
+            return user;
+        }
+
+        private void createUserActivities(Long userId, UserActivityRepository repo, UserRole role, long daysAgoOffset) {
+            Instant now = Instant.now().minus(daysAgoOffset, ChronoUnit.DAYS);
+            Random random = new Random();
+
+            // CREATED activity
+            UserActivity created = new UserActivity();
+            created.setUserId(userId);
+            created.setActionType(UserActivityActionType.CREATED);
+            created.setDescription("Account created via registration");
+            created.setTimestamp(now);
+            repo.save(created);
+
+            // LOGIN activity (simulated recent logins)
+            for (int i = 0; i < 3 + random.nextInt(10); i++) {
+                UserActivity login = new UserActivity();
+                login.setUserId(userId);
+                login.setActionType(UserActivityActionType.LOGIN);
+                login.setDescription("User logged in successfully");
+                login.setTimestamp(now.plus(random.nextInt(Math.max(1, (int)daysAgoOffset)), ChronoUnit.DAYS));
+                repo.save(login);
+            }
+
+            if (role == UserRole.AGENT) {
+                // Agent activities
+                for (int i = 0; i < 5 + random.nextInt(15); i++) {
+                    UserActivity action = new UserActivity();
+                    action.setUserId(userId);
+                    action.setActionType(random.nextBoolean() ? UserActivityActionType.APPROVAL : UserActivityActionType.CLIENT_HANDLED);
+                    action.setDescription(action.getActionType() == UserActivityActionType.APPROVAL ? "Approved application #" + (1000 + i) : "Handled client query");
+                    action.setTimestamp(now.plus(random.nextInt(Math.max(1, (int)daysAgoOffset)), ChronoUnit.DAYS));
+                    repo.save(action);
+                }
+            }
+
+            if (role == UserRole.CLIENT) {
+                // Client activities
+                for (int i = 0; i < 2 + random.nextInt(5); i++) {
+                    UserActivity action = new UserActivity();
+                    action.setUserId(userId);
+                    action.setActionType(UserActivityActionType.STATUS_CHANGED);
+                    action.setDescription("Client updated profile information");
+                    action.setTimestamp(now.plus(random.nextInt(Math.max(1, (int)daysAgoOffset)), ChronoUnit.DAYS));
+                    repo.save(action);
+                }
+            }
+        }
+    }
+
+    @Component
+    static class SchemaFixer {
+        @jakarta.persistence.PersistenceContext
+        private jakarta.persistence.EntityManager entityManager;
+
+        @org.springframework.transaction.annotation.Transactional
+        public void fixSchema() {
+            try {
+                entityManager.createNativeQuery("ALTER TABLE `user` MODIFY COLUMN `phone` VARCHAR(20) NULL").executeUpdate();
+                entityManager.createNativeQuery("ALTER TABLE `user` MODIFY COLUMN `phone_number` VARCHAR(20) NULL").executeUpdate();
+                // Ensure action_type can hold our enum values
+                entityManager.createNativeQuery("ALTER TABLE `user_activity` MODIFY COLUMN `action_type` VARCHAR(50) NOT NULL").executeUpdate();
+            } catch (Exception e) {
+                // Ignore errors if columns don't exist
+            }
+        }
     }
 }

@@ -129,7 +129,7 @@ const UsersList: React.FC = () => {
           <select value={role} onChange={e => { setRole(e.target.value as UserRole | ''); }}>
             <option value="">All Roles</option>
             <option value="ADMIN">Admin</option>
-            <option value="EMPLOYEE">Employee</option>
+            <option value="AGENT">Agent</option>
             <option value="CLIENT">Client</option>
           </select>
           <select value={status} onChange={e => { setStatus(e.target.value as UserStatus | ''); }}>
@@ -204,7 +204,7 @@ const UsersList: React.FC = () => {
                     <td className="text-muted text-xs">#{user.id}</td>
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: user.role === 'ADMIN' ? '#4318FF' : user.role === 'EMPLOYEE' ? '#FFCE20' : '#05CD99' }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: user.role === UserRole.ADMIN ? '#4318FF' : user.role === UserRole.AGENT ? '#FFCE20' : '#05CD99' }}>
                           {user.firstName[0]}{user.lastName[0]}
                         </div>
                         <div>
@@ -214,7 +214,7 @@ const UsersList: React.FC = () => {
                       </div>
                     </td>
                     <td className="text-sm text-muted">{user.email}</td>
-                    <td><span className={`badge badge-${user.role.toLowerCase()}`}>{user.role}</span></td>
+                    <td><span className={`badge badge-${user.role.toLowerCase() === 'agent' ? 'agent' : user.role.toLowerCase()}`}>{user.role}</span></td>
                     <td>
                       <span className={`badge bg-${user.status.toLowerCase()}`}>
                         {user.isDeleted ? 'DELETED' : user.status}

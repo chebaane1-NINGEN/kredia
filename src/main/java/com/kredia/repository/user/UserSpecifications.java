@@ -17,7 +17,7 @@ public final class UserSpecifications {
     }
 
     public static Specification<User> emailEquals(String email) {
-        return (root, query, cb) -> cb.equal(cb.lower(root.get("email")), email.toLowerCase());
+        return (root, query, cb) -> cb.like(cb.lower(root.get("email")), "%" + email.toLowerCase() + "%");
     }
 
     public static Specification<User> statusEquals(UserStatus status) {

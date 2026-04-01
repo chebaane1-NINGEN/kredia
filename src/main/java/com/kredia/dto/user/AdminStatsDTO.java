@@ -3,6 +3,7 @@ package com.kredia.dto.user;
 import com.kredia.entity.user.UserRole;
 
 import java.util.Map;
+import java.util.List;
 
 public class AdminStatsDTO {
 
@@ -15,8 +16,16 @@ public class AdminStatsDTO {
     private long last24hRegistrations;
     private Map<UserRole, Long> roleDistribution;
     private double systemHealthIndex;
+    private Map<String, Long> registrationEvolution;
+    private List<UserActivityResponseDTO> recentActivities;
 
     public AdminStatsDTO() {}
+
+    public Map<String, Long> getRegistrationEvolution() { return registrationEvolution; }
+    public void setRegistrationEvolution(Map<String, Long> registrationEvolution) { this.registrationEvolution = registrationEvolution; }
+
+    public List<UserActivityResponseDTO> getRecentActivities() { return recentActivities; }
+    public void setRecentActivities(List<UserActivityResponseDTO> recentActivities) { this.recentActivities = recentActivities; }
 
     public long getTotalUser() { return totalUser; }
     public void setTotalUser(long totalUser) { this.totalUser = totalUser; }

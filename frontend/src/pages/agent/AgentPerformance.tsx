@@ -14,7 +14,10 @@ const AgentPerformance: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
 
     const fetchAll = async () => {
       setLoading(true);
@@ -129,26 +132,30 @@ const AgentPerformance: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="card lg:col-span-2 p-6">
           <h3 className="font-bold mb-4">Monthly Processing Volume</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={monthlyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E0E5F2" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#A3AED0', fontSize: 12 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#A3AED0', fontSize: 12 }} />
-              <RechartsTip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }} />
-              <Bar dataKey="loans" name="Loans" fill="#4318FF" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="clients" name="Clients" fill="#05CD99" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div style={{ minHeight: '300px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={monthlyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E0E5F2" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#A3AED0', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#A3AED0', fontSize: 12 }} />
+                <RechartsTip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }} />
+                <Bar dataKey="loans" name="Loans" fill="#4318FF" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="clients" name="Clients" fill="#05CD99" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="card flex flex-col items-center justify-center p-6">
           <h3 className="font-bold mb-2 self-start">Client Satisfaction</h3>
           <p className="text-muted text-sm self-start mb-4">Based on {stats.totalClientsManaged} clients</p>
-          <ResponsiveContainer width="100%" height={180}>
-            <RadialBarChart innerRadius="70%" outerRadius="90%" data={satisfactionData} startAngle={90} endAngle={-270}>
-              <RadialBar background={{ fill: '#F4F7FE' }} dataKey="value" cornerRadius={10} />
-            </RadialBarChart>
-          </ResponsiveContainer>
+          <div style={{ minHeight: '180px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height={180}>
+              <RadialBarChart innerRadius="70%" outerRadius="90%" data={satisfactionData} startAngle={90} endAngle={-270}>
+                <RadialBar background={{ fill: '#F4F7FE' }} dataKey="value" cornerRadius={10} />
+              </RadialBarChart>
+            </ResponsiveContainer>
+          </div>
           <div className="text-center -mt-16">
             <div className="text-3xl font-bold text-primary">{typeof stats.clientSatisfactionScore === 'number' ? stats.clientSatisfactionScore.toFixed(1) : '-'}</div>
             <div className="text-sm text-muted">out of 5.0</div>

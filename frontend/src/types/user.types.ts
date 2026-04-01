@@ -1,12 +1,11 @@
 export enum UserRole {
   ADMIN = 'ADMIN',
   CLIENT = 'CLIENT',
-  AGENT = 'AGENT',
-  EMPLOYEE = 'EMPLOYEE'
+  AGENT = 'AGENT'
 }
 
 export enum UserStatus {
-  PENDING = 'PENDING',
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
   BLOCKED = 'BLOCKED',
@@ -42,15 +41,17 @@ export interface UserRequestDTO {
 }
 
 export interface AdminStatsDTO {
-  totalUsers: number;
-  totalActive: number;
-  totalClients: number;
-  totalEmployees: number;
-  totalAdmins: number;
-  newUsersThisMonth: number;
-  systemHealthScore: number;
-  totalAudits: number;
-  suspiciousActivitiesCount: number;
+  totalUser: number;
+  totalClient: number;
+  totalAgent: number;
+  activeUser: number;
+  blockedUser: number;
+  suspendedUser: number;
+  last24hRegistrations: number;
+  roleDistribution: Record<UserRole, number>;
+  systemHealthIndex: number;
+  registrationEvolution: Record<string, number>;
+  recentActivities: UserActivityResponseDTO[];
 }
 
 export interface UserActivityResponseDTO {

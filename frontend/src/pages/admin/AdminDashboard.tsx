@@ -1,23 +1,55 @@
-import React from 'react';
-import { Routes, Route, NavLink, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, NavLink, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  Users, 
+  ShieldAlert, 
+  Settings, 
+  LogOut, 
+  Search,
+  Bell,
+  Menu,
+  X,
+  FileText,
+  Activity,
+  History
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import UsersList from './UsersList';
-import AdminStats from './AdminStats';
-import UserDetail from './UserDetail';
 import UserCreate from './UserCreate';
-import AuditLog from './AuditLog';
-import SecurityKyc from './SecurityKyc';
-import ReportingPerformance from './ReportingPerformance';
+import UserDetail from './UserDetail';
+import AdminStats from './AdminStats';
 import AdminMessages from './AdminMessages';
+import SecurityKyc from './SecurityKyc';
+import AuditLog from './AuditLog';
+import ReportingPerformance from './ReportingPerformance';
+import UserProfile from './UserProfile';
 
 const AdminDashboard: React.FC = () => {
   const { currentUser, logout } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const navItems = [
+    { path: '/admin/stats', icon: <LayoutDashboard size={20} />, label: 'Stats Overview' },
+    { path: '/admin/users', icon: <Users size={20} />, label: 'User Management' },
+    { path: '/admin/kyc', icon: <ShieldAlert size={20} />, label: 'KYC Verification' },
+    { path: '/admin/audit', icon: <History size={20} />, label: 'System Audit Logs' },
+    { path: '/admin/reports', icon: <Activity size={20} />, label: 'Reporting & Performance' },
+    { path: '/admin/messages', icon: <Bell size={20} />, label: 'Platform Messages' },
+    { path: '/admin/settings', icon: <Settings size={20} />, label: 'Admin Settings' },
+  ];
 
   return (
     <div className="dashboard-container">
@@ -28,15 +60,15 @@ const AdminDashboard: React.FC = () => {
           </h2>
         </div>
         
-        <div className="user-profile-sm">
-          <div className="avatar">
-            {currentUser?.firstName?.[0] || 'A'}{currentUser?.lastName?.[0] || 'U'}
+          <div className="user-profile-sm cursor-pointer" onClick={() => navigate('/admin/profile')}>
+            <div className="avatar">
+              {currentUser?.firstName?.[0] || 'A'}{currentUser?.lastName?.[0] || 'U'}
+            </div>
+            <div className="user-info">
+              <p className="name">Hello, {currentUser?.firstName || 'Admin'}</p>
+              <p className="badge badge-admin">{currentUser?.email || 'admin@kredia.com'}</p>
+            </div>
           </div>
-          <div className="user-info">
-            <p className="name">Hello, {currentUser?.firstName || 'Admin'}</p>
-            <p className="badge badge-admin">{currentUser?.email || 'admin@kredia.com'}</p>
-          </div>
-        </div>
 
         <nav className="sidebar-nav">
           <NavLink to="/admin" end className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
@@ -104,6 +136,7 @@ const AdminDashboard: React.FC = () => {
             <Route path="/audit" element={<AuditLog />} />
             <Route path="/reports" element={<ReportingPerformance />} />
             <Route path="/messages" element={<AdminMessages />} />
+            <Route path="/profile" element={<UserProfile />} />
           </Routes>
         </div>
       </main>

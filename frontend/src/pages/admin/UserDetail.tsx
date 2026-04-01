@@ -28,17 +28,20 @@ const UserDetail: React.FC = () => {
   }>({ isOpen: false, actionType: 'block' });
 
   const fetchData = async () => {
-    if (!id) return;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [userData, logsData, statsData] = await Promise.all([
         userApi.getById(Number(id)),
-        userApi.getAdminAudit(Number(id)).catch(() => []),
+        userApi.getAdminAudit(Number(id)).catch(() => ({ content: [] })),
         userApi.getAdminStats().catch(() => null)
       ]);
       setUser(userData);
       setNewRole(userData.role);
-      setAuditLogs(logsData || []);
+      setAuditLogs((logsData as any).content || []);
       setSystemStats(statsData);
     } catch (err) {
       setError('Failed to load user details');
@@ -55,7 +58,8 @@ const UserDetail: React.FC = () => {
   const getBusinessRuleWarning = (action: string): string | null => {
     if (!user || !systemStats) return null;
     
-    const isLastAdmin = systemStats.totalAdmins <= 1 && user.role === UserRole.ADMIN;
+    const adminCount = (systemStats.roleDistribution as any)?.[UserRole.ADMIN] || 0;
+    const isLastAdmin = adminCount <= 1 && user.role === UserRole.ADMIN;
     
     switch (action) {
       case 'delete':
@@ -281,7 +285,7 @@ const UserDetail: React.FC = () => {
                       disabled={user.isDeleted || (isLastAdmin && role !== UserRole.ADMIN)}
                     >
                       {role === UserRole.ADMIN && '👑 '}
-                      {role === UserRole.EMPLOYEE && '👔 '}
+                      {role === UserRole.AGENT && '👔 '}
                       {role === UserRole.CLIENT && '👤 '}
                       {role}
                     </button>

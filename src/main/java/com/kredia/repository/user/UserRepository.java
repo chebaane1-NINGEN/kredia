@@ -31,11 +31,16 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     long countByRoleAndDeletedFalse(UserRole role);
 
+    long countByRoleAndDeletedFalseAndStatus(UserRole role, UserStatus status);
+
     long countByStatusAndDeletedFalse(UserStatus status);
 
     long countByDeletedFalse();
 
     long countByCreatedAtAfterAndDeletedFalse(Instant createdAt);
+
+    @org.springframework.data.jpa.repository.Query(value = "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count FROM user WHERE deleted = false GROUP BY month ORDER BY month DESC LIMIT 6", nativeQuery = true)
+    java.util.List<Object[]> countRegistrationsByMonth();
 
     Page<User> findAllByRoleAndDeletedFalse(UserRole role, Pageable pageable);
 

@@ -10,5 +10,7 @@ public enum UserActivityActionType {
     REJECTION,
     CLIENT_HANDLED,
     PROCESSING_STARTED,
-    PROCESSING_COMPLETED
+    PROCESSING_COMPLETED,
+    LOGIN,
+    LOGOUT
 }

@@ -19,4 +19,6 @@ public interface UserActivityRepository extends JpaRepository<UserActivity, Long
     List<UserActivity> findByUserIdInOrderByTimestampAsc(Set<Long> userIds);
 
     Page<UserActivity> findByUserIdInOrderByTimestampAsc(Set<Long> userIds, Pageable pageable);
+
+    List<UserActivity> findTop10ByOrderByTimestampDesc();
 }

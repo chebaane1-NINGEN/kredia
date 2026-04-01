@@ -74,10 +74,10 @@ public class UserServiceImpl implements UserService {
 
         User entity = userMapper.toEntityForCreate(user);
         entity.setId(null);
-        entity.setStatus(UserStatus.PENDING_VERIFICATION);
-        entity.setRole(UserRole.CLIENT);
+        if (entity.getStatus() == null) entity.setStatus(UserStatus.PENDING_VERIFICATION);
+        if (entity.getRole() == null) entity.setRole(UserRole.CLIENT);
         entity.setDeleted(false);
-        entity.setEmailVerified(false);
+        entity.setEmailVerified(entity.getStatus() == UserStatus.ACTIVE);
 
         User saved = userRepository.save(entity);
         recordActivity(saved.getId(), UserActivityActionType.CREATED, "User created");
@@ -120,7 +120,7 @@ public class UserServiceImpl implements UserService {
             spec = spec.and(UserSpecifications.emailEquals(actor.getEmail()));
         }
 
-        if (email != null && email.isPresent()) {
+        if (email != null && email.isPresent() && !email.get().isBlank()) {
             spec = spec.and(UserSpecifications.emailEquals(email.get()));
         }
         if (status != null && status.isPresent()) {
@@ -187,16 +187,16 @@ public class UserServiceImpl implements UserService {
         User target = findForMutation(id);
 
         if (target.getRole() == UserRole.ADMIN) {
-            long adminCount = userRepository.countByRoleAndDeletedFalse(UserRole.ADMIN);
-            if (adminCount <= 1) {
-                throw new BusinessException("Cannot delete last ADMIN");
+            long activeAdminCount = userRepository.countByRoleAndDeletedFalseAndStatus(UserRole.ADMIN, UserStatus.ACTIVE);
+            if (activeAdminCount <= 1 && target.getStatus() == UserStatus.ACTIVE) {
+                throw new BusinessException("Cannot delete the last active administrator");
             }
         }
 
         target.setDeleted(true);
         userRepository.save(target);
 
-        recordActivity(target.getId(), UserActivityActionType.DELETED, "User soft deleted by admin " + actorId);
+        recordActivity(target.getId(), UserActivityActionType.DELETED, "User soft-deleted by admin " + actor.getEmail());
         log.info("user_soft_deleted userId={} email={}", target.getId(), target.getEmail());
     }
 
@@ -230,17 +230,17 @@ public class UserServiceImpl implements UserService {
         if (user.getStatus() == UserStatus.BLOCKED) {
             throw new BusinessException("User is already blocked");
         }
-        if (user.getRole() == UserRole.ADMIN) {
-            long adminCount = userRepository.countByRoleAndDeletedFalse(UserRole.ADMIN);
-            if (adminCount <= 1) {
-                throw new BusinessException("Cannot block last ADMIN");
+        if (user.getRole() == UserRole.ADMIN && user.getStatus() == UserStatus.ACTIVE) {
+            long activeAdminCount = userRepository.countByRoleAndDeletedFalseAndStatus(UserRole.ADMIN, UserStatus.ACTIVE);
+            if (activeAdminCount <= 1) {
+                throw new BusinessException("Cannot block the last active administrator");
             }
         }
 
         UserStatus previous = user.getStatus();
         user.setStatus(UserStatus.BLOCKED);
         User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Status changed from " + previous + " to " + saved.getStatus() + " by admin " + actorId);
+        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "User blocked by admin " + actor.getEmail());
         log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
         return userMapper.toResponse(saved);
     }
@@ -320,16 +320,17 @@ public class UserServiceImpl implements UserService {
         }
 
         if (user.getRole() == UserRole.ADMIN && role != UserRole.ADMIN) {
-            long adminCount = userRepository.countByRoleAndDeletedFalse(UserRole.ADMIN);
-            if (adminCount <= 1) {
-                throw new BusinessException("Cannot downgrade last ADMIN");
+            long activeAdminCount = userRepository.countByRoleAndDeletedFalseAndStatus(UserRole.ADMIN, UserStatus.ACTIVE);
+            if (activeAdminCount <= 1 && user.getStatus() == UserStatus.ACTIVE) {
+                throw new BusinessException("Cannot downgrade the last active administrator");
             }
         }
 
         UserRole previous = user.getRole();
         user.setRole(role);
         User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.ROLE_CHANGED, "Role changed from " + previous + " to " + saved.getRole() + " by admin " + actorId);
+        recordActivity(saved.getId(), UserActivityActionType.ROLE_CHANGED, 
+            String.format("Role changed from %s to %s by admin %s", previous, role, actor.getEmail()));
         log.info("user_role_changed userId={} from={} to={}", saved.getId(), previous, saved.getRole());
         return userMapper.toResponse(saved);
     }
@@ -411,6 +412,22 @@ public class UserServiceImpl implements UserService {
         dto.setLast24hRegistrations(last24hRegistrations);
         dto.setRoleDistribution(distribution);
         dto.setSystemHealthIndex(health);
+
+        // Populate registration evolution
+        Map<String, Long> evolution = new java.util.LinkedHashMap<>();
+        List<Object[]> evolutionData = userRepository.countRegistrationsByMonth();
+        for (Object[] row : evolutionData) {
+            evolution.put((String) row[0], ((Number) row[1]).longValue());
+        }
+        dto.setRegistrationEvolution(evolution);
+
+        // Populate recent activities
+        List<UserActivityResponseDTO> recentActivities = userActivityRepository.findTop10ByOrderByTimestampDesc()
+                .stream()
+                .map(this::mapActivity)
+                .toList();
+        dto.setRecentActivities(recentActivities);
+
         return dto;
     }
 
@@ -442,12 +459,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, UserRole role, Pageable pageable) {
+    public Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, Optional<UserRole> role, Pageable pageable) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
 
+        if (role == null || role.isEmpty()) {
+            return userActivityRepository.findAll(pageable).map(this::mapActivity);
+        }
+
         Set<Long> ids = new HashSet<>();
-        userRepository.findAllByRoleAndDeletedFalse(role, Pageable.unpaged()).forEach(u -> ids.add(u.getId()));
+        userRepository.findAllByRoleAndDeletedFalse(role.get(), Pageable.unpaged()).forEach(u -> ids.add(u.getId()));
         if (ids.isEmpty()) {
             return Page.empty();
         }
