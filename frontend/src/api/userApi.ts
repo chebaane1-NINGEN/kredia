@@ -10,7 +10,8 @@ import {
   ClientRiskScoreDTO,
   ClientEligibilityDTO,
   UserRole,
-  UserStatus
+  UserStatus,
+  AuthResponseDTO
 } from '../types/user.types';
 
 const api = axios.create({
@@ -48,8 +49,11 @@ api.interceptors.response.use(
   (error) => {
     console.error('[API] Response error:', error.message);
     
+    // Handle timeout and network errors
     if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
-      return Promise.reject(new Error('Backend not reachable. Please ensure the server is running on port 8086.'));
+      const msg = 'Backend not reachable. Please ensure the server is running on port 8086.';
+      console.warn('[QA-ROBUSTNESS] Network error detected:', msg);
+      return Promise.reject(new Error(msg));
     }
     
     if (error.response?.status === 404) {
@@ -58,6 +62,11 @@ api.interceptors.response.use(
     
     if (error.response?.status >= 500) {
       return Promise.reject(new Error('Server error. Please try again later.'));
+    }
+    
+    // Handle business errors (400, etc.)
+    if (error.response?.data?.message) {
+      return Promise.reject(new Error(error.response.data.message));
     }
     
     return Promise.reject(error);
@@ -70,7 +79,10 @@ const extractData = <T>(response: { data: ApiResponse<T> }): T => response.data.
 export const userApi = {
   // ---- Auth Endpoints ----
   login: (email: string, password: string) => 
-    axios.post('http://localhost:8086/api/auth/login', { email, password }).then(res => res.data),
+    axios.post<ApiResponse<AuthResponseDTO>>('http://localhost:8086/api/auth/login', { email, password }).then(res => res.data.data),
+    
+  register: (user: any) =>
+    axios.post<ApiResponse<UserResponseDTO>>('http://localhost:8086/api/auth/register', user).then(res => res.data.data),
     
   // ---- CRUD ----
   create: (user: UserRequestDTO) => api.post<ApiResponse<UserResponseDTO>>('', user).then(extractData),
@@ -105,8 +117,8 @@ export const userApi = {
   getAdminStats: () => api.get<ApiResponse<AdminStatsDTO>>('/admin/stats').then(extractData),
   getAdminAgents: (p?: { page?: number; size?: number }) => api.get<ApiResponse<Page<UserResponseDTO>>>('/admin/agents', { params: p }).then(extractData),
   getAdminClients: (p?: { page?: number; size?: number }) => api.get<ApiResponse<Page<UserResponseDTO>>>('/admin/clients', { params: p }).then(extractData),
-  getAdminAudit: (userId: number) => api.get<ApiResponse<Page<UserActivityResponseDTO>>>(`/admin/audit/${userId}`).then(extractData),
-  getAdminActivitiesByRole: (role: UserRole, p?: { page?: number; size?: number }) => 
+  getAdminAudit: (userId: number, p?: { page?: number; size?: number }) => api.get<ApiResponse<Page<UserActivityResponseDTO>>>(`/admin/audit/${userId}`, { params: p }).then(extractData),
+  getAdminActivitiesByRole: (role?: UserRole, p?: { page?: number; size?: number }) => 
     api.get<ApiResponse<Page<UserActivityResponseDTO>>>('/admin/activities', { params: { role, ...p } }).then(extractData),
 
   // ---- Employee Endpoints ----

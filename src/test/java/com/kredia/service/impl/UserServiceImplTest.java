@@ -21,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,12 +43,15 @@ class UserServiceImplTest {
     @Mock
     private KycDocumentRepository kycDocumentRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     private UserServiceImpl userService;
 
     @BeforeEach
     void setUp() {
         UserMapper realMapper = new UserMapper();
-        userService = new UserServiceImpl(userRepository, realMapper, userActivityRepository, kycDocumentRepository);
+        userService = new UserServiceImpl(userRepository, realMapper, userActivityRepository, kycDocumentRepository, passwordEncoder);
     }
 
     @Test

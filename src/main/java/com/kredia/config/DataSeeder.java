@@ -62,8 +62,18 @@ public class DataSeeder {
             // Disable FK checks to clear data properly
             entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
             try {
+                // Clear user activities first due to FK
                 entityManager.createNativeQuery("DELETE FROM user_activity").executeUpdate();
+                // Clear users
                 entityManager.createNativeQuery("DELETE FROM user").executeUpdate();
+                
+                // Reset IDs if possible (optional, but good for clean state)
+                try {
+                    entityManager.createNativeQuery("ALTER TABLE user AUTO_INCREMENT = 1").executeUpdate();
+                    entityManager.createNativeQuery("ALTER TABLE user_activity AUTO_INCREMENT = 1").executeUpdate();
+                } catch (Exception e) {
+                    log.warn("Could not reset auto-increment: {}", e.getMessage());
+                }
             } finally {
                 entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
             }
@@ -93,7 +103,7 @@ public class DataSeeder {
             createUserActivities(savedTestAgent.getId(), userActivityRepository, UserRole.AGENT, 160);
 
             // Create Primary Client for testing
-            User testClient = createUser("Test", "Client", "client1@kredia.com", "+21620000000",
+            User testClient = createUser("Test", "Client", "client1@email.com", "+21620000000",
                     UserRole.CLIENT, UserStatus.ACTIVE, passwordEncoder, savedTestAgent);
             User savedTestClient = userRepository.save(testClient);
             updateCreatedAt(savedTestClient.getId(), 170, entityManager);
@@ -126,15 +136,15 @@ public class DataSeeder {
             
             Random random = new Random();
             
-            for (int i = 0; i < 50; i++) {
+            for (int i = 0; i < 60; i++) {
                 String fName = firstNames[random.nextInt(firstNames.length)];
                 String lName = lastNames[random.nextInt(lastNames.length)];
                 String email = fName.toLowerCase() + "." + lName.toLowerCase().replace(" ", "") + (i + 1) + "@email.com";
-                String phone = "+216" + (20000000 + i);
+                String phone = "+216" + (20000001 + i); // Start from 20000001 to avoid conflict with testClient
                 
                 UserStatus status;
                 int statusRand = random.nextInt(10);
-                if (statusRand < 6) status = UserStatus.ACTIVE;
+                if (statusRand < 7) status = UserStatus.ACTIVE;
                 else if (statusRand < 8) status = UserStatus.INACTIVE;
                 else if (statusRand < 9) status = UserStatus.SUSPENDED;
                 else status = UserStatus.BLOCKED;
@@ -151,7 +161,7 @@ public class DataSeeder {
                 createUserActivities(savedClient.getId(), userActivityRepository, UserRole.CLIENT, daysAgo);
             }
 
-            log.info("Data seeding completed successfully! Created 1 Admin, 5 Agents, 50 Clients.");
+            log.info("Data seeding completed successfully! Created 1 Admin, 5 Agents, 60 Clients.");
         }
 
         private void updateCreatedAt(Long userId, int daysAgo, jakarta.persistence.EntityManager em) {

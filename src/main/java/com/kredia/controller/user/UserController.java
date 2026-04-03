@@ -194,15 +194,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.adminClient(actorId, pageable)));
     }
 
-    @GetMapping("/admin/audit/{userId}")
-    public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> adminAudit(
-            @RequestHeader("X-Actor-Id") Long actorId,
-            @PathVariable("userId") Long userId,
-            @PageableDefault Pageable pageable
-    ) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.adminAudit(actorId, userId, pageable)));
-    }
-
     @GetMapping("/admin/activities")
     public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> adminActivityByRole(
             @RequestHeader("X-Actor-Id") Long actorId,
@@ -210,6 +201,15 @@ public class UserController {
             @PageableDefault Pageable pageable
     ) {
         return ResponseEntity.ok(ApiResponse.ok(userService.adminActivityByRole(actorId, Optional.ofNullable(role), pageable)));
+    }
+
+    @GetMapping("/admin/audit/{userId}")
+    public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> adminAudit(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("userId") Long userId,
+            @PageableDefault Pageable pageable
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.adminAudit(actorId, userId, pageable)));
     }
 
     @GetMapping("/agent/{agentId}/dashboard")

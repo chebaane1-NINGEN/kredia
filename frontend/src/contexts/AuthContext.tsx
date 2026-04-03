@@ -10,6 +10,7 @@ interface AuthContextType {
   authError: string | null;
   login: (userId: number) => Promise<void>;
   loginWithEmail: (email: string, password: string) => Promise<void>;
+  register: (formData: any) => Promise<void>;
   logout: () => void;
   clearAuthError: () => void;
 }
@@ -37,9 +38,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initAuth = async () => {
       const actorId = localStorage.getItem('kredia_actor_id');
+      const token = localStorage.getItem('kredia_token');
       
-      if (!actorId) {
-        console.log('[AuthContext] No stored session, skipping auto-login');
+      if (!actorId || !token) {
+        console.log('[AuthContext] No stored session or token, skipping auto-login');
         setIsLoading(false);
         return;
       }
@@ -47,15 +49,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[AuthContext] Found stored session, verifying user ID:', actorId);
       
       try {
-        // Add timeout to prevent hanging
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth timeout')), 5000)
-        );
-        
-        const user = await Promise.race([
-          userApi.getById(Number(actorId), Number(actorId)),
-          timeoutPromise
-        ]) as UserResponseDTO;
+        // Fetch user profile - token will be added by interceptor
+        const user = await userApi.getById(Number(actorId), Number(actorId));
         
         console.log('[AuthContext] Session valid, user:', user.email);
         setCurrentUser(user);
@@ -111,7 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Get the JWT token
       const authResponse = await userApi.login(email, password);
-      const token = authResponse.data.token;
+      const token = authResponse.token; // Access token directly from data
       localStorage.setItem('kredia_token', token);
       
       // Parse the token to get the user ID
@@ -140,6 +135,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const register = useCallback(async (formData: any) => {
+    console.log('[AuthContext] Register attempt:', formData.email);
+    setIsLoading(true);
+    setAuthError(null);
+    try {
+      await userApi.register(formData);
+      console.log('[AuthContext] Register success');
+    } catch (err: any) {
+      console.error('[AuthContext] Register failed:', err.message || err);
+      setAuthError(err.message || 'Registration failed');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     console.log('[AuthContext] Logout');
     localStorage.removeItem('kredia_actor_id');
@@ -159,6 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authError,
         login, 
         loginWithEmail,
+        register,
         logout,
         clearAuthError 
       }}>

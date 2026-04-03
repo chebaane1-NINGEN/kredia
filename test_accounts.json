@@ -1,0 +1,142 @@
+{
+  "test_accounts": {
+    "admins": [
+      {
+        "fullName": "Jean-Marc Dubois",
+        "email": "jean-marc.dubois@kredia-admin.com",
+        "password": "Test1234",
+        "role": "ADMIN"
+      },
+      {
+        "fullName": "Marie Laurent",
+        "email": "marie.laurent@kredia-admin.com", 
+        "password": "Test1234",
+        "role": "ADMIN"
+      },
+      {
+        "fullName": "Pierre Bernard",
+        "email": "pierre.bernard@kredia-admin.com",
+        "password": "Test1234", 
+        "role": "ADMIN"
+      },
+      {
+        "fullName": "Sophie Martin",
+        "email": "sophie.martin@kredia-admin.com",
+        "password": "Test1234",
+        "role": "ADMIN"
+      },
+      {
+        "fullName": "Thomas Petit",
+        "email": "thomas.petit@kredia-admin.com",
+        "password": "Test1234",
+        "role": "ADMIN"
+      }
+    ],
+    "agents": [
+      {
+        "fullName": "Isabelle Rodriguez",
+        "email": "isabelle.rodriguez@kredia-agent.com",
+        "password": "Test1234",
+        "role": "AGENT"
+      },
+      {
+        "fullName": "Nicolas Chen",
+        "email": "nicolas.chen@kredia-agent.com",
+        "password": "Test1234",
+        "role": "AGENT"
+      },
+      {
+        "fullName": "Camille Silva",
+        "email": "camille.silva@kredia-agent.com",
+        "password": "Test1234",
+        "role": "AGENT"
+      },
+      {
+        "fullName": "François Kumar",
+        "email": "francois.kumar@kredia-agent.com",
+        "password": "Test1234",
+        "role": "AGENT"
+      },
+      {
+        "fullName": "Élodie Wang",
+        "email": "elodie.wang@kredia-agent.com",
+        "password": "Test1234",
+        "role": "AGENT"
+      }
+    ],
+    "clients": [
+      {
+        "fullName": "Alexandre Tremblay",
+        "email": "alexandre.tremblay@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      },
+      {
+        "fullName": "Julie Gauthier",
+        "email": "julie.gauthier@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      },
+      {
+        "fullName": "Michel Robert",
+        "email": "michel.robert@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      },
+      {
+        "fullName": "Louise Bouchard",
+        "email": "louise.bouchard@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      },
+      {
+        "fullName": "Philippe Morin",
+        "email": "philippe.morin@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      },
+      {
+        "fullName": "Anne Lévesque",
+        "email": "anne.levesque@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      },
+      {
+        "fullName": "David Gagnon",
+        "email": "david.gagnon@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      },
+      {
+        "fullName": "Marie-Claude Roy",
+        "email": "marie-claude.roy@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      },
+      {
+        "fullName": "Stéphane Bélanger",
+        "email": "stephane.belanger@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      },
+      {
+        "fullName": "Catherine Lambert",
+        "email": "catherine.lambert@kredia-client.com",
+        "password": "Test1234",
+        "role": "CLIENT"
+      }
+    ]
+  },
+  "summary": {
+    "total_accounts": 20,
+    "admins": 5,
+    "agents": 5,
+    "clients": 10,
+    "default_password": "Test1234",
+    "email_domains": {
+      "admin": "kredia-admin.com",
+      "agent": "kredia-agent.com", 
+      "client": "kredia-client.com"
+    }
+  }
+}

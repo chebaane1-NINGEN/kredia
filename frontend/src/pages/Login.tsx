@@ -1,290 +1,333 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
-import { Loader2, Apple } from 'lucide-react';
+import { UserRole } from '../types/user.types';
+import { 
+  Mail, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  ArrowRight, 
+  ChevronLeft,
+  Loader2,
+  AlertCircle,
+  ShieldCheck,
+  Zap,
+  Globe,
+  TrendingUp,
+  Wallet,
+  CheckCircle2
+} from 'lucide-react';
+import { validateEmail, validatePassword, getAuthErrorMessage, FormErrors } from '../utils/validation';
 
 const Login: React.FC = () => {
-  const { loginWithEmail, authError, clearAuthError } = useAuth();
+  const { loginWithEmail, authError, clearAuthError, currentUser } = useAuth();
   const navigate = useNavigate();
   
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false
+  });
 
-  // Display auth context errors
-  React.useEffect(() => {
+  useEffect(() => {
+    if (currentUser) {
+      const path = currentUser.role === UserRole.ADMIN ? '/admin' : currentUser.role === UserRole.AGENT ? '/agent' : '/client';
+      navigate(path);
+    }
+  }, [currentUser, navigate]);
+
+  useEffect(() => {
     if (authError) {
-      setError(authError);
+      setErrors({ general: getAuthErrorMessage(authError, 'login') });
     }
   }, [authError]);
+
+  // Real-time validation
+  const validateField = (field: 'email' | 'password', value: string) => {
+    let error = '';
+    
+    if (field === 'email') {
+      const emailValidation = validateEmail(value);
+      error = emailValidation.error || '';
+    } else if (field === 'password') {
+      const passwordValidation = validatePassword(value);
+      error = passwordValidation.error || '';
+    }
+
+    setErrors(prev => ({ ...prev, [field]: error }));
+    return !error;
+  };
+
+  const handleInputChange = (field: 'email' | 'password') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear general error when user starts typing
+    if (errors.general) {
+      setErrors(prev => ({ ...prev, general: undefined }));
+    }
+
+    // Validate in real-time if field has been touched
+    if (touched[field]) {
+      validateField(field, value);
+    }
+  };
+
+  const handleBlur = (field: 'email' | 'password') => () => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    validateField(field, formData[field]);
+  };
+
+  const isFormValid = () => {
+    const emailValid = validateEmail(formData.email).isValid;
+    const passwordValid = validatePassword(formData.password).isValid;
+    return emailValid && passwordValid && !isLoading;
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     clearAuthError();
     
-    if (!email || !password) {
-      setError('Please enter both email and password');
+    // Mark all fields as touched
+    setTouched({ email: true, password: true });
+    
+    // Validate all fields
+    const emailValid = validateField('email', formData.email);
+    const passwordValid = validateField('password', formData.password);
+    
+    if (!emailValid || !passwordValid) {
       return;
     }
 
     try {
       setIsLoading(true);
-      setError('');
-      await loginWithEmail(email, password);
-      navigate('/');
+      setErrors({});
+      await loginWithEmail(formData.email, formData.password);
     } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setErrors({ general: getAuthErrorMessage(err, 'login') });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-white font-sans overflow-hidden">
-      {/* Left Side: Illustration & Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#1E56FF] p-12 flex-col justify-between relative overflow-hidden">
-        {/* Modern abstract shapes */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400 rounded-full blur-[120px] opacity-40 animate-pulse"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-600 rounded-full blur-[150px] opacity-30"></div>
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row overflow-hidden font-sans">
+      {/* Left Side - Visual/Marketing */}
+      <div className="hidden lg:flex lg:w-[45%] bg-slate-900 p-12 xl:p-16 flex-col justify-between relative overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[40%] bg-indigo-600/20 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[-5%] left-[-5%] w-[50%] h-[30%] bg-green-500/10 blur-[100px] rounded-full"></div>
         
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 p-8 opacity-20">
-          <div className="grid grid-cols-3 gap-2">
-            {[...Array(12)].map((_, i) => (
-              <div key={i} className="w-1.5 h-1.5 bg-white rounded-full"></div>
-            ))}
+        <Link to="/" className="flex items-center gap-3 text-white relative z-10 group w-fit">
+          <div className="w-10 h-10 glass rounded-xl flex items-center justify-center group-hover:bg-white/10 transition-all">
+            <ChevronLeft size={20} />
           </div>
-        </div>
+          <span className="font-bold text-sm tracking-tight">Back to Kredia</span>
+        </Link>
 
-        <div>
-          <div className="flex items-center gap-2 mb-16">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <div className="w-4 h-4 bg-[#1E56FF] rounded-sm transform rotate-45"></div>
-            </div>
-            <span className="text-white text-2xl font-bold tracking-tight">Overpay.</span>
+        <div className="relative z-10 max-w-lg">
+          <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-900/20 mb-8">
+            <ShieldCheck size={28} />
           </div>
-
-          <div className="relative z-10">
-            {/* Mock Dashboard Card */}
-            <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-sm mb-12 transform rotate-2 hover:rotate-0 transition-transform duration-500">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <p className="text-gray-400 text-xs font-medium uppercase tracking-wider">Total Balance</p>
-                  <p className="text-3xl font-bold text-gray-900">$42,500.00</p>
-                </div>
-                <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
-                    <div className="w-6 h-6 bg-blue-500 rounded-full"></div>
-                </div>
-              </div>
-              
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
-                            <span className="text-blue-500 text-xs font-bold">S</span>
-                        </div>
-                        <span className="text-sm font-semibold text-gray-700">Stripe Deposit</span>
-                    </div>
-                    <span className="text-sm font-bold text-green-500">+$523.10</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center">
-                            <span className="text-blue-500 text-xs font-bold">F</span>
-                        </div>
-                        <span className="text-sm font-semibold text-gray-700">Facebook Ad</span>
-                    </div>
-                    <span className="text-sm font-bold text-gray-900">-$600.00</span>
-                </div>
-              </div>
-
-              <div className="p-3 bg-blue-500 rounded-2xl text-center">
-                <p className="text-xs font-bold text-white">View Details</p>
-              </div>
-            </div>
-
-            <div className="absolute -left-8 top-1/2 bg-white rounded-2xl p-4 shadow-xl transform -rotate-6 scale-90">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center">
-                        <span className="text-green-500 font-bold">✓</span>
-                    </div>
-                    <div>
-                        <p className="text-[10px] text-gray-400">Security Check</p>
-                        <p className="text-sm font-bold">Verified</p>
-                    </div>
-                </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative z-10">
-          <h1 className="text-white text-5xl font-bold mb-6 leading-tight">
-            Sign in to your account
+          <h1 className="text-4xl xl:text-5xl font-bold text-white mb-6 leading-tight tracking-tight">
+            Welcome back to <br />
+            <span className="text-gradient">Kredia</span>
           </h1>
-          <p className="text-blue-100 text-lg max-w-md mb-8">
-            Access your financial dashboard and manage your assets with ease. Secure, fast and reliable financial services at your fingertips.
+          <p className="text-slate-400 text-lg leading-relaxed mb-10">
+            Access your intelligent financial dashboard with real-time risk scoring and personalized insights.
           </p>
+
+          <div className="space-y-4">
+            <div className="flex items-start gap-4 p-4 rounded-2xl glass group hover:bg-white/10 transition-all cursor-default">
+              <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
+                <Zap size={20} />
+              </div>
+              <div>
+                <h4 className="text-white font-bold text-sm">Smart Risk Analysis</h4>
+                <p className="text-slate-500 text-xs mt-1">AI-powered financial insights updated in real-time.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 p-4 rounded-2xl glass group hover:bg-white/10 transition-all cursor-default">
+              <div className="p-2 bg-green-500/20 rounded-lg text-green-400">
+                <Globe size={20} />
+              </div>
+              <div>
+                <h4 className="text-white font-bold text-sm">Secure Access</h4>
+                <p className="text-slate-500 text-xs mt-1">Bank-level security protects your financial data.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="text-slate-500 text-xs font-bold tracking-widest uppercase">
+            Kredia © 2026
+          </div>
           <div className="flex gap-2">
-            <div className="w-8 h-1 bg-white rounded-full"></div>
-            <div className="w-2 h-1 bg-white/30 rounded-full"></div>
-            <div className="w-2 h-1 bg-white/30 rounded-full"></div>
+            <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
+            <div className="w-2 h-2 rounded-full bg-slate-700"></div>
+            <div className="w-2 h-2 rounded-full bg-slate-700"></div>
           </div>
         </div>
       </div>
 
-      {/* Right Side: Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[#F4F7FE]">
-        <div className="w-full max-w-md bg-white/70 backdrop-blur-xl p-10 rounded-[40px] shadow-2xl border border-white/50">
-          <div className="text-center mb-10">
-            <h2 className="text-4xl font-black text-[#2B3674] mb-3 tracking-tight">Welcome Back</h2>
-            <p className="text-[#A3AED0] font-medium">Enter your credentials to access your account</p>
+      {/* Right Side - Login Form */}
+      <div className="flex-1 flex items-center justify-center p-6 md:p-12 lg:p-20 bg-white overflow-y-auto custom-scrollbar">
+        <div className="w-full max-w-md py-8">
+          {/* Mobile Header */}
+          <div className="text-center md:text-left mb-10">
+            <div className="md:hidden flex items-center justify-center gap-2 mb-8">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold italic">K</div>
+              <span className="text-2xl font-bold tracking-tight text-slate-900 uppercase">KREDIA</span>
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 mb-3">Welcome Back</h2>
+            <p className="text-slate-500 font-medium">Sign in to your Kredia account</p>
           </div>
 
-          <div className="flex gap-4 mb-8">
-            <button className="flex-1 flex items-center justify-center gap-2 border border-[#E0E5F2] rounded-2xl py-3 px-4 bg-white hover:bg-gray-50 transition-colors shadow-sm">
-              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-              <span className="text-sm font-bold text-[#2B3674]">Google</span>
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-2 border border-[#E0E5F2] rounded-2xl py-3 px-4 bg-white hover:bg-gray-50 transition-colors shadow-sm">
-              <Apple size={20} className="text-black fill-black" />
-              <span className="text-sm font-bold text-[#2B3674]">Apple</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-4 mb-8">
-            <div className="flex-1 h-px bg-[#E0E5F2]"></div>
-            <span className="text-[#A3AED0] text-sm font-bold uppercase tracking-wider">Or with email</span>
-            <div className="flex-1 h-px bg-[#E0E5F2]"></div>
-          </div>
+          {/* General Error */}
+          {errors.general && (
+            <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex items-start gap-3 mb-8 animate-shake">
+              <AlertCircle className="text-rose-500 flex-shrink-0 mt-0.5" size={20} />
+              <p className="text-rose-600 text-sm font-bold">{errors.general}</p>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-6">
-            <div className="relative">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email Address"
-                className="w-full bg-[#F4F7FE] border-none rounded-2xl px-5 py-5 text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all placeholder:text-[#A3AED0] placeholder:font-medium"
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full bg-[#F4F7FE] border-none rounded-2xl px-5 py-5 text-[#2B3674] font-bold focus:ring-2 focus:ring-[#4318FF] transition-all placeholder:text-[#A3AED0] placeholder:font-medium"
-                required
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                className="absolute right-5 top-1/2 -translate-y-1/2 text-[#A3AED0] hover:text-[#2B3674]"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-
-            <div className="flex justify-between items-center py-2">
-                <div className="flex items-center gap-2">
-                    <input type="checkbox" id="remember" className="w-4 h-4 rounded border-[#E0E5F2] text-[#4318FF] focus:ring-[#4318FF]" />
-                    <label htmlFor="remember" className="text-sm text-[#A3AED0] font-bold">Remember me</label>
+            {/* Email Field */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 uppercase tracking-widest mb-2">
+                Email Address
+              </label>
+              <div className="relative group">
+                <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                  touched.email && errors.email ? 'text-rose-500' : 
+                  touched.email && !errors.email ? 'text-emerald-500' : 
+                  'text-slate-400 group-focus-within:text-indigo-600'
+                }`}>
+                  {touched.email && !errors.email ? <CheckCircle2 size={18} /> : <Mail size={18} />}
                 </div>
-                <button type="button" className="text-sm text-[#4318FF] font-bold hover:underline">Forgot Password?</button>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange('email')}
+                  onBlur={handleBlur('email')}
+                  className={`w-full pl-12 pr-4 py-3.5 rounded-xl border font-medium transition-all outline-none text-slate-900 ${
+                    touched.email && errors.email 
+                      ? 'border-rose-300 bg-rose-50 focus:border-rose-500' 
+                      : touched.email && !errors.email
+                      ? 'border-emerald-300 bg-emerald-50 focus:border-emerald-500'
+                      : 'border-slate-200 bg-slate-50 focus:border-indigo-600 focus:bg-white'
+                  }`}
+                  placeholder="john@example.com"
+                  autoComplete="email"
+                />
+              </div>
+              {touched.email && errors.email && (
+                <div className="flex items-center gap-2 mt-2 text-rose-500 text-sm animate-fade-in">
+                  <AlertCircle size={14} />
+                  {errors.email}
+                </div>
+              )}
             </div>
 
-            {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
+            {/* Password Field */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 uppercase tracking-widest mb-2">
+                Password
+              </label>
+              <div className="relative group">
+                <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                  touched.password && errors.password ? 'text-rose-500' : 
+                  touched.password && !errors.password ? 'text-emerald-500' : 
+                  'text-slate-400 group-focus-within:text-indigo-600'
+                }`}>
+                  {touched.password && !errors.password ? <CheckCircle2 size={18} /> : <Lock size={18} />}
+                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleInputChange('password')}
+                  onBlur={handleBlur('password')}
+                  className={`w-full pl-12 pr-12 py-3.5 rounded-xl border font-medium transition-all outline-none text-slate-900 ${
+                    touched.password && errors.password 
+                      ? 'border-rose-300 bg-rose-50 focus:border-rose-500' 
+                      : touched.password && !errors.password
+                      ? 'border-emerald-300 bg-emerald-50 focus:border-emerald-500'
+                      : 'border-slate-200 bg-slate-50 focus:border-indigo-600 focus:bg-white'
+                  }`}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {touched.password && errors.password && (
+                <div className="flex items-center gap-2 mt-2 text-rose-500 text-sm animate-fade-in">
+                  <AlertCircle size={14} />
+                  {errors.password}
+                </div>
+              )}
+            </div>
 
+            {/* Forgot Password Link */}
+            <div className="text-right">
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+              >
+                Forgot your password?
+              </Link>
+            </div>
+
+            {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full bg-[#4318FF] text-white font-bold py-5 rounded-2xl shadow-lg shadow-blue-200 hover:bg-[#3714d6] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              disabled={!isFormValid()}
+              className="btn-primary w-full py-4 text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {isLoading ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
-                  Signing in...
+                  Signing In...
                 </>
               ) : (
-                'Sign In'
+                <>
+                  Sign In to Kredia
+                  <ArrowRight size={20} />
+                </>
               )}
             </button>
           </form>
 
-          {/* Divider for Quick Access */}
-          <div className="flex items-center gap-4 my-8">
-            <div className="flex-1 h-px bg-[#E0E5F2]"></div>
-            <span className="text-[#A3AED0] text-sm font-bold uppercase tracking-wider">Quick Access</span>
-            <div className="flex-1 h-px bg-[#E0E5F2]"></div>
-          </div>
-
-          {/* Quick Login Buttons */}
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            <button
-              type="button"
-              className="bg-[#F4F7FE] hover:bg-[#E0E5F2] text-[#2B3674] font-bold py-3 rounded-2xl transition-all text-xs"
-              onClick={() => { setEmail('admin@kredia.com'); setPassword('password'); }}
-              disabled={isLoading}
-            >
-              Admin
-            </button>
-            <button
-              type="button"
-              className="bg-[#F4F7FE] hover:bg-[#E0E5F2] text-[#2B3674] font-bold py-3 rounded-2xl transition-all text-xs"
-              onClick={() => { setEmail('agent1@kredia.com'); setPassword('password'); }}
-              disabled={isLoading}
-            >
-              Agent
-            </button>
-            <button
-              type="button"
-              className="bg-[#F4F7FE] hover:bg-[#E0E5F2] text-[#2B3674] font-bold py-3 rounded-2xl transition-all text-xs"
-              onClick={() => { setEmail('client1@kredia.com'); setPassword('password'); }}
-              disabled={isLoading}
-            >
-              Client
-            </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-[#A3AED0] font-bold">
-              Don't have an account? <Link to="/register" className="text-[#4318FF] hover:underline">Sign Up</Link>
+          {/* Sign Up Link */}
+          <div className="mt-8 text-center">
+            <p className="text-slate-600 font-medium">
+              Don't have an account?{' '}
+              <Link 
+                to="/register" 
+                className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors"
+              >
+                Create Account
+              </Link>
             </p>
-          </div>
-
-          <div className="flex justify-between mt-16 text-[10px] text-[#A3AED0] font-bold uppercase tracking-widest">
-            <span className="cursor-pointer hover:text-[#2B3674]">Privacy Policy</span>
-            <span>Copyright 2026</span>
           </div>
         </div>
       </div>
     </div>
   );
 };
-
-// Internal Lucide-like Eye/EyeOff icons
-const Eye = ({ size = 20, className = "" }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-        <circle cx="12" cy="12" r="3" />
-    </svg>
-);
-
-const EyeOff = ({ size = 20, className = "" }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-        <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-        <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-        <line x1="2" y1="2" x2="22" y2="22" />
-    </svg>
-);
 
 export default Login;

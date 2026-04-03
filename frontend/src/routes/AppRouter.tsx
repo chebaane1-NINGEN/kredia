@@ -4,6 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../types/user.types';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import ForgotPassword from '../pages/ForgotPassword';
+import Home from '../pages/Home';
+import Contact from '../pages/Contact';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AgentDashboard from '../pages/agent/AgentDashboard';
 import ClientDashboard from '../pages/client/ClientDashboard';
@@ -50,9 +53,12 @@ const RoleRedirect = () => {
 export const AppRouter = () => {
   return (
     <Routes>
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/" element={<RoleRedirect />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/dashboard" element={<RoleRedirect />} />
       
       {/* Admin Routes */}
       <Route path="/admin/*" element={

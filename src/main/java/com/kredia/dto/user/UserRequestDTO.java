@@ -24,8 +24,13 @@ public class UserRequestDTO {
     @Size(max = 20, message = "phoneNumber must be at most 20 characters")
     private String phoneNumber;
 
+    private String password;
+
     private UserRole role;
     private UserStatus status;
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

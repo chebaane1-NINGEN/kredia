@@ -26,6 +26,7 @@ import com.kredia.service.user.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
@@ -52,12 +53,14 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final UserActivityRepository userActivityRepository;
     private final KycDocumentRepository kycDocumentRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, UserActivityRepository userActivityRepository, KycDocumentRepository kycDocumentRepository) {
+    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, UserActivityRepository userActivityRepository, KycDocumentRepository kycDocumentRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.userActivityRepository = userActivityRepository;
         this.kycDocumentRepository = kycDocumentRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -74,6 +77,12 @@ public class UserServiceImpl implements UserService {
 
         User entity = userMapper.toEntityForCreate(user);
         entity.setId(null);
+        if (user.getPassword() != null && !user.getPassword().isBlank()) {
+            entity.setPasswordHash(passwordEncoder.encode(user.getPassword()));
+        } else {
+            entity.setPasswordHash(passwordEncoder.encode("password")); // Default password
+        }
+        
         if (entity.getStatus() == null) entity.setStatus(UserStatus.PENDING_VERIFICATION);
         if (entity.getRole() == null) entity.setRole(UserRole.CLIENT);
         entity.setDeleted(false);
@@ -149,6 +158,16 @@ public class UserServiceImpl implements UserService {
 
         if (payload.getPhoneNumber() != null && userRepository.existsByPhoneNumberAndDeletedFalseAndIdNot(payload.getPhoneNumber(), id)) {
             throw new BusinessException("Phone number already exists");
+        }
+
+        if (payload.getNewPassword() != null && !payload.getNewPassword().isBlank()) {
+            if (payload.getCurrentPassword() == null || payload.getCurrentPassword().isBlank()) {
+                throw new BusinessException("Current password is required to change password");
+            }
+            if (!passwordEncoder.matches(payload.getCurrentPassword(), target.getPasswordHash())) {
+                throw new BusinessException("Current password does not match");
+            }
+            target.setPasswordHash(passwordEncoder.encode(payload.getNewPassword()));
         }
 
         userMapper.copyClientProfileFields(payload, target);
@@ -449,30 +468,24 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, Optional<UserRole> role, Pageable pageable) {
+        User actor = loadActor(actorId);
+        validateRole(actor, UserRole.ADMIN);
+        
+        if (role != null && role.isPresent()) {
+            return userActivityRepository.findAllByUserRoleOrderByTimestampDesc(role.get(), pageable).map(userMapper::toActivityResponse);
+        }
+        return userActivityRepository.findAllByOrderByTimestampDesc(pageable).map(userMapper::toActivityResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<UserActivityResponseDTO> adminAudit(Long actorId, Long userId, Pageable pageable) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
         User target = loadActor(userId);
         validateNotDeleted(target);
         return userActivityRepository.findByUserIdOrderByTimestampAsc(userId, pageable).map(this::mapActivity);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, Optional<UserRole> role, Pageable pageable) {
-        User actor = loadActor(actorId);
-        validateRole(actor, UserRole.ADMIN);
-
-        if (role == null || role.isEmpty()) {
-            return userActivityRepository.findAll(pageable).map(this::mapActivity);
-        }
-
-        Set<Long> ids = new HashSet<>();
-        userRepository.findAllByRoleAndDeletedFalse(role.get(), Pageable.unpaged()).forEach(u -> ids.add(u.getId()));
-        if (ids.isEmpty()) {
-            return Page.empty();
-        }
-        return userActivityRepository.findByUserIdInOrderByTimestampAsc(ids, pageable).map(this::mapActivity);
     }
 
     @Override

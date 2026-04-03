@@ -4,6 +4,7 @@ import com.kredia.dto.user.ClientProfileUpdateDTO;
 import com.kredia.dto.user.AdminUserUpdateDTO;
 import com.kredia.dto.user.UserRequestDTO;
 import com.kredia.dto.user.UserResponseDTO;
+import com.kredia.dto.user.UserActivityResponseDTO;
 import com.kredia.entity.user.User;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,7 @@ public class UserMapper {
         u.setFirstName(dto.getFirstName());
         u.setLastName(dto.getLastName());
         u.setPhoneNumber(dto.getPhoneNumber());
+        if (dto.getPassword() != null) u.setPasswordHash(dto.getPassword());
         if (dto.getRole() != null) u.setRole(dto.getRole());
         if (dto.getStatus() != null) u.setStatus(dto.getStatus());
         return u;
@@ -84,6 +86,17 @@ public class UserMapper {
             dto.setAssignedAgentName(user.getAssignedAgent().getFirstName() + " " + user.getAssignedAgent().getLastName());
         }
         
+        return dto;
+    }
+
+    public UserActivityResponseDTO toActivityResponse(com.kredia.entity.user.UserActivity activity) {
+        if (activity == null) return null;
+        UserActivityResponseDTO dto = new UserActivityResponseDTO();
+        dto.setId(activity.getId());
+        dto.setUserId(activity.getUserId());
+        dto.setActionType(activity.getActionType());
+        dto.setDescription(activity.getDescription());
+        dto.setTimestamp(activity.getTimestamp());
         return dto;
     }
 }

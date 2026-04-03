@@ -55,14 +55,14 @@ export interface AdminStatsDTO {
 }
 
 export interface UserActivityResponseDTO {
-  activityId: number;
+  id: number;
   userId: number;
   actorId?: number;
-  activityType: string;
+  actionType: string;
   description: string;
   ipAddress?: string;
   timestamp: string;
-  isSuspicious: boolean;
+  isSuspicious?: boolean;
 }
 
 export interface AgentPerformanceDTO {
@@ -110,4 +110,9 @@ export interface ApiResponse<T> {
   data: T;
   timestamp: string;
   error?: string;
+}
+
+export interface AuthResponseDTO {
+  token: string;
+  type: string;
 }
