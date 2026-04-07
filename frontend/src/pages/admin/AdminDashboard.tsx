@@ -1,22 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
-  Users, 
+  Menu, 
+  X, 
+  ChevronRight, 
+  User, 
   Settings, 
   LogOut, 
+  Bell, 
   Search,
-  Bell,
-  Menu,
-  X,
-  History,
+  UserPlus,
+  Activity,
   ShieldCheck,
-  TrendingUp,
   MessageSquare,
-  ChevronRight,
-  User,
   HelpCircle,
-  Activity
+  LayoutDashboard,
+  Users,
+  TrendingUp,
+  History
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import UsersList from './UsersList';
@@ -28,6 +29,7 @@ import SecurityKyc from './SecurityKyc';
 import AuditLog from './AuditLog';
 import ReportingPerformance from './ReportingPerformance';
 import UserProfile from './UserProfile';
+import PlatformSettings from './PlatformSettings';
 
 const AdminDashboard: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -52,6 +54,7 @@ const AdminDashboard: React.FC = () => {
     { to: '/admin/audit', icon: History, label: 'System Audit' },
     { to: '/admin/reports', icon: TrendingUp, label: 'Performance' },
     { to: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+    { to: '/admin/settings', icon: Settings, label: 'Platform' },
   ];
 
   return (
@@ -167,6 +170,26 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Quick Actions */}
+            <div className="hidden sm:flex items-center gap-2 mr-4">
+              <button 
+                onClick={() => navigate('/admin/users/new')}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-100"
+                title="Create New User"
+              >
+                <UserPlus size={16} />
+                <span className="hidden md:inline">New User</span>
+              </button>
+              <button 
+                onClick={() => navigate('/admin/audit')}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
+                title="View Audit Logs"
+              >
+                <Activity size={16} />
+                <span className="hidden md:inline">Audit</span>
+              </button>
+            </div>
+            
             <div className="hidden sm:flex items-center relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
               <input 
@@ -201,7 +224,8 @@ const AdminDashboard: React.FC = () => {
               <Route path="/security" element={<SecurityKyc />} />
               <Route path="/audit" element={<AuditLog />} />
               <Route path="/reports" element={<ReportingPerformance />} />
-              <Route path="/messages" element={<AdminStats />} />
+              <Route path="/messages" element={<AdminMessages />} />
+              <Route path="/settings" element={<PlatformSettings />} />
               <Route path="/profile" element={<UserProfile />} />
             </Routes>
           </div>

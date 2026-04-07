@@ -2,12 +2,46 @@ import React, { useEffect, useState } from 'react';
 import { AdminStatsDTO } from '../../types/user.types';
 import { userApi } from '../../api/userApi';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Users, UserCheck, Briefcase, CreditCard, Activity, Heart, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { Users, UserCheck, Briefcase, CreditCard, Activity, Heart, TrendingUp, ArrowUpRight, Download } from 'lucide-react';
 
 const AdminStats: React.FC = () => {
   const [stats, setStats] = useState<AdminStatsDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const handleExportReport = async () => {
+    if (!stats) return;
+    
+    try {
+      // Create CSV content
+      const csvContent = [
+        ['Métrique', 'Valeur', 'Description'],
+        ['Total Utilisateurs', stats.totalUser.toString(), 'Nombre total d\'utilisateurs'],
+        ['Utilisateurs Actifs', stats.activeUser.toString(), 'Utilisateurs avec statut ACTIF'],
+        ['Total Agents', stats.totalAgent.toString(), 'Nombre d\'agents dans le système'],
+        ['Total Clients', stats.totalClient.toString(), 'Nombre de clients dans le système'],
+        ['Taux d\'Activation', `${Math.round((stats.activeUser / stats.totalUser) * 100)}%`, 'Pourcentage d\'utilisateurs actifs'],
+        ['Santé Système', `${Math.round(stats.systemHealthIndex)}%`, 'Indice de santé global du système'],
+        ['Inscriptions 24h', stats.last24hRegistrations.toString(), 'Nouveaux utilisateurs dernières 24h'],
+        ['Admins', (stats.roleDistribution as any)?.ADMIN || 0, 'Nombre d\'administrateurs'],
+        ['Agents', (stats.roleDistribution as any)?.AGENT || 0, 'Nombre d\'agents'],
+        ['Clients', (stats.roleDistribution as any)?.CLIENT || 0, 'Nombre de clients']
+      ].map(row => row.join(',')).join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `kredia-admin-report-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
 
   useEffect(() => {
     userApi.getAdminStats()
@@ -45,11 +79,19 @@ const AdminStats: React.FC = () => {
         .sort((a, b) => a.month.localeCompare(b.month))
     : [{ month: 'Aucune donnée', users: 0 }];
 
-  const roleDistribution = [
+  const roleDistribution: Array<{name: string; value: number; color: string}> = [
     { name: 'Admins', value: (stats.roleDistribution as any)?.ADMIN || 0, color: '#4F46E5' },
     { name: 'Agents', value: (stats.roleDistribution as any)?.AGENT || 0, color: '#F59E0B' },
     { name: 'Clients', value: (stats.roleDistribution as any)?.CLIENT || 0, color: '#10B981' },
-  ].filter(r => r.value > 0);
+  ];
+
+  // Ensure we have valid data for charts
+  const safeEvolutionData = evolutionData.length > 0 ? evolutionData : [{ month: 'Jan', users: 0 }];
+  const safeRoleDistribution = roleDistribution.length > 0 ? roleDistribution : [
+    { name: 'Admins', value: 0, color: '#4F46E5' },
+    { name: 'Agents', value: 0, color: '#F59E0B' },
+    { name: 'Clients', value: 0, color: '#10B981' }
+  ];
 
   const statCards = [
     { 
@@ -104,8 +146,11 @@ const AdminStats: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900">Tableau de bord Admin</h1>
           <p className="text-slate-500 mt-1">Vue d'ensemble de la plateforme et métriques clés</p>
         </div>
-        <button className="btn-secondary text-sm">
-          <TrendingUp size={16} />
+        <button 
+          onClick={handleExportReport}
+          className="btn-secondary text-sm flex items-center gap-2"
+        >
+          <Download size={16} />
           Exporter le rapport
         </button>
       </div>
@@ -146,7 +191,7 @@ const AdminStats: React.FC = () => {
           </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={evolutionData}>
+              <AreaChart data={safeEvolutionData}>
                 <defs>
                   <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.3}/>
@@ -197,11 +242,11 @@ const AdminStats: React.FC = () => {
             </div>
           </div>
           <div className="h-[300px] flex items-center justify-center">
-            {roleDistribution.length > 0 ? (
+            {safeRoleDistribution.length > 0 && safeRoleDistribution.some((r: {value: number}) => r.value > 0) ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={roleDistribution}
+                    data={safeRoleDistribution}
                     cx="50%"
                     cy="50%"
                     innerRadius={70}
@@ -209,7 +254,7 @@ const AdminStats: React.FC = () => {
                     paddingAngle={4}
                     dataKey="value"
                   >
-                    {roleDistribution.map((entry, index) => (
+                    {safeRoleDistribution.map((entry: {color: string}, index: number) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -231,7 +276,12 @@ const AdminStats: React.FC = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-slate-400">Aucune donnée disponible</p>
+              <div className="text-center">
+                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="text-slate-200" size={32} />
+                </div>
+                <p className="text-slate-400">Aucune donnée disponible</p>
+              </div>
             )}
           </div>
         </div>

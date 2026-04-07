@@ -14,7 +14,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import com.kredia.repository.user.UserRepository;
 import com.kredia.entity.user.User;
-import com.kredia.enums.UserRole;
 
 import org.springframework.lang.NonNull;
 
@@ -61,7 +60,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 System.out.println("Actor ID from JWT: " + actorId);
                 
                 // Récupérer l'utilisateur depuis la base pour obtenir le rôle
-                User user = userRepository.findById(actorId).orElse(null);
+                User user = userRepository.findById(actorId != null ? actorId : 0L).orElse(null);
                 if (user != null) {
                     System.out.println("User found: " + user.getEmail());
                     System.out.println("User role: " + user.getRole().name());

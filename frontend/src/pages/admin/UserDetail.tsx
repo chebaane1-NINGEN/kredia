@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { UserResponseDTO, UserRole, UserActivityResponseDTO, AdminStatsDTO, UserStatus } from '../../types/user.types';
 import { userApi } from '../../api/userApi';
 import { useToast } from '../../contexts/ToastContext';
@@ -28,6 +28,9 @@ import {
 const UserDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isEditMode = searchParams.get('edit') === 'true';
+  
   const [user, setUser] = useState<UserResponseDTO | null>(null);
   const [auditLogs, setAuditLogs] = useState<UserActivityResponseDTO[]>([]);
   const [loading, setLoading] = useState(true);

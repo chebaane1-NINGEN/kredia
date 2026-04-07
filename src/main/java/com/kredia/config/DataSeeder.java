@@ -97,7 +97,7 @@ public class DataSeeder {
             // Create Additional Admins
             String[] adminEmails = {"admin2@kredia.com", "admin3@kredia.com", "admin4@kredia.com", "admin5@kredia.com"};
             for (int i = 0; i < adminEmails.length; i++) {
-                User additionalAdmin = createUser("Admin", "User" + (i + 2), adminEmails[i], "+2169000000" + (i + 2),
+                User additionalAdmin = createUser("Admin", "User" + (i + 2), adminEmails[i], "+2169000000" + (10 + i),
                         UserRole.ADMIN, UserStatus.ACTIVE, passwordEncoder, null, "Admin@123");
                 User savedAdditionalAdmin = userRepository.save(additionalAdmin);
                 updateCreatedAt(savedAdditionalAdmin.getId(), 180 - (i + 1), entityManager);
@@ -114,9 +114,9 @@ public class DataSeeder {
             createUserActivities(savedTestAgent.getId(), userActivityRepository, UserRole.AGENT, 160);
 
             // Create Additional Agents
-            String[] agentEmails = {"agent2@kredia.com", "agent3@kredia.com", "agent4@kredia.com", "agent5@kredia.com"};
+            String[] agentEmails = {"agent2@kredia.com", "agent3@kredia.com", "agent4@kredia.com", "agent5@kredia.com", "agent6@kredia.com"};
             for (int i = 0; i < agentEmails.length; i++) {
-                User additionalAgent = createUser("Agent", "User" + (i + 2), agentEmails[i], "+2169100000" + (i + 1),
+                User additionalAgent = createUser("Agent", "User" + (i + 2), agentEmails[i], "+2169100000" + (10 + i),
                         UserRole.AGENT, UserStatus.ACTIVE, passwordEncoder, null, "Agent@123");
                 User savedAdditionalAgent = userRepository.save(additionalAgent);
                 updateCreatedAt(savedAdditionalAgent.getId(), 160 - (i + 1), entityManager);
@@ -134,9 +134,9 @@ public class DataSeeder {
 
             // Create Additional Clients
             String[] clientEmails = {"client2@kredia.com", "client3@kredia.com", "client4@kredia.com", "client5@kredia.com", 
-                                    "client6@kredia.com", "client7@kredia.com", "client8@kredia.com", "client9@kredia.com", "client10@kredia.com"};
+                                    "client6@kredia.com", "client7@kredia.com", "client8@kredia.com", "client9@kredia.com", "client10@kredia.com", "client11@kredia.com"};
             for (int i = 0; i < clientEmails.length; i++) {
-                User additionalClient = createUser("Client", "User" + (i + 2), clientEmails[i], "+2162000000" + (i + 1),
+                User additionalClient = createUser("Client", "User" + (i + 2), clientEmails[i], "+2162000000" + (10 + i),
                         UserRole.CLIENT, UserStatus.ACTIVE, passwordEncoder, savedTestAgent, "Client@123");
                 User savedAdditionalClient = userRepository.save(additionalClient);
                 updateCreatedAt(savedAdditionalClient.getId(), 170 - (i + 1), entityManager);
@@ -197,7 +197,7 @@ public class DataSeeder {
                 createUserActivities(savedClient.getId(), userActivityRepository, UserRole.CLIENT, daysAgo);
             }
 
-            log.info("Data seeding completed successfully! Created 5 Admins, 5 Agents, 10 Clients (test accounts) + 5 Agents + 60 Clients (random) = 85 total users.");
+            log.info("Data seeding completed successfully! Created 5 Admins, 6 Agents, 11 Clients (test accounts) + 5 Agents + 60 Clients (random) = 87 total users.");
         }
 
         private void updateCreatedAt(Long userId, int daysAgo, jakarta.persistence.EntityManager em) {

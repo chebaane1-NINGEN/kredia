@@ -7,25 +7,8 @@ import Register from '../pages/Register';
 import ForgotPassword from '../pages/ForgotPassword';
 import Home from '../pages/Home';
 import Contact from '../pages/Contact';
-import AdminLayout from '../layouts/AdminLayout';
-import AgentLayout from '../layouts/AgentLayout';
-import AdminDashboardOverview from '../pages/admin/AdminDashboardOverview';
-import UsersManagement from '../pages/admin/UsersManagement';
-import UserCreate from '../pages/admin/UserCreate';
-import UserDetail from '../pages/admin/UserDetail';
-import Statistics from '../pages/admin/Statistics';
-import AuditLog from '../pages/admin/AuditLog';
-import PlatformSettings from '../pages/admin/PlatformSettings';
-import AdminMessages from '../pages/admin/AdminMessages';
-import SecurityKyc from '../pages/admin/SecurityKyc';
-import ReportingPerformance from '../pages/admin/ReportingPerformance';
-import UserProfile from '../pages/admin/UserProfile';
-import AgentDashboard from '../pages/agent/AgentDashboardNew';
-import AgentClients from '../pages/agent/AgentClientsNew';
-import AgentPerformance from '../pages/agent/AgentPerformanceNew';
-import AgentAudit from '../pages/agent/AgentAudit';
-import AgentProfile from '../pages/agent/AgentProfile';
-import AgentClientCreate from '../pages/agent/AgentClientCreate';
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import AgentDashboard from '../pages/agent/AgentDashboard';
 import ClientDashboard from '../pages/client/ClientDashboard';
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: UserRole[] }) => {
@@ -77,45 +60,19 @@ export const AppRouter = () => {
       <Route path="/contact" element={<Contact />} />
       <Route path="/dashboard" element={<RoleRedirect />} />
       
-      {/* Admin Routes - NOUVEAU DESIGN */}
-      <Route path="/admin" element={
+      {/* Admin Routes */}
+      <Route path="/admin/*" element={
         <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-          <AdminLayout />
+          <AdminDashboard />
         </ProtectedRoute>
-      }>
-        <Route index element={<Statistics />} />
-        <Route path="users" element={<UsersManagement />} />
-        <Route path="users/new" element={<UserCreate />} />
-        <Route path="users/:id" element={<UserDetail />} />
-        <Route path="audit" element={<AuditLog />} />
-        <Route path="settings" element={<PlatformSettings />} />
-        <Route path="messages" element={<AdminMessages />} />
-        <Route path="security" element={<SecurityKyc />} />
-        <Route path="reports" element={<ReportingPerformance />} />
-      </Route>
-      
-      {/* Profile Route - Accessible for all authenticated users */}
-      <Route path="/profile" element={
-        <ProtectedRoute>
-          <AdminLayout />
-        </ProtectedRoute>
-      }>
-        <Route index element={<UserProfile />} />
-      </Route>
+      } />
       
       {/* Agent Routes */}
-      <Route path="/agent" element={
+      <Route path="/agent/*" element={
         <ProtectedRoute allowedRoles={[UserRole.AGENT]}>
-          <AgentLayout />
+          <AgentDashboard />
         </ProtectedRoute>
-      }>
-        <Route index element={<AgentDashboard />} />
-        <Route path="clients" element={<AgentClients />} />
-        <Route path="clients/new" element={<AgentClientCreate />} />
-        <Route path="performance" element={<AgentPerformance />} />
-        <Route path="audit" element={<AgentAudit />} />
-        <Route path="profile" element={<AgentProfile />} />
-      </Route>
+      } />
       
       {/* Client Routes */}
       <Route path="/client/*" element={

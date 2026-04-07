@@ -48,6 +48,35 @@ const AuditLog: React.FC = () => {
     fetchAllLogs();
   }, []);
 
+  const handleExportCSV = () => {
+    try {
+      // Create CSV content
+      const csvContent = [
+        ['Type Action', 'Description', 'IP Adresse', 'Suspicious', 'Timestamp'],
+        ...filteredLogs.map(log => [
+          log.actionType || '',
+          log.description || '',
+          log.ipAddress || '',
+          log.isSuspicious ? 'Oui' : 'Non',
+          new Date(log.timestamp).toLocaleString('fr-FR')
+        ])
+      ].map(row => row.join(',')).join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `kredia-audit-log-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
+
   const uniqueActions = Array.from(new Set(allLogs.map(l => l.actionType))).filter(Boolean).sort();
 
   const filteredLogs = allLogs.filter(log => {
@@ -98,7 +127,10 @@ const AuditLog: React.FC = () => {
             {loading ? <Loader2 size={18} className="animate-spin" /> : <RotateCcw size={18} />}
             <span>Refresh</span>
           </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-100">
+          <button 
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-indigo-100"
+          >
             <Download size={18} />
             <span>Export CSV</span>
           </button>
