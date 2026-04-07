@@ -36,6 +36,11 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>2.2.0</version> <!-- Use latest -->
+            </dependency>
+            <dependency>
                 <groupId>com.google.cloud</groupId>
                 <artifactId>libraries-bom</artifactId>
                 <version>26.48.0</version>

@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -36,6 +37,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<?> handleConstraint(ConstraintViolationException ex) {
         return ResponseEntity.badRequest().body(error(ex.getMessage(), 400));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<?> handleMissingPart(MissingServletRequestPartException ex) {
+        return ResponseEntity.badRequest().body(error("Missing multipart part: " + ex.getRequestPartName(), 400));
     }
 
     @ExceptionHandler(Exception.class)

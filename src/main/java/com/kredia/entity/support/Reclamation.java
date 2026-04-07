@@ -4,6 +4,7 @@ import com.kredia.enums.Priority;
 import com.kredia.enums.ReclamationCategory;
 import com.kredia.enums.ReclamationRiskLevel;
 import com.kredia.enums.ReclamationStatus;
+import com.kredia.persistence.ReclamationRiskLevelConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -66,8 +67,8 @@ public class Reclamation {
     @Column(name = "risk_score")
     private Double riskScore;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "risk_level", nullable = false)
+    @Convert(converter = ReclamationRiskLevelConverter.class)
     private ReclamationRiskLevel riskLevel;
 
     @Column(name = "created_at", nullable = false, updatable = false)
