@@ -1,6 +1,13 @@
 package com.kredia.service;
 
 import com.kredia.enums.RiskLevel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -14,6 +21,8 @@ import java.util.Optional;
 @Service
 public class YahooMarketDataService {
 
+    private static final Logger logger = LoggerFactory.getLogger(YahooMarketDataService.class);
+
     private final RestTemplate restTemplate;
 
     public YahooMarketDataService(RestTemplate restTemplate) {
@@ -25,22 +34,44 @@ public class YahooMarketDataService {
         try {
             String normalizedSymbol = symbol == null ? "" : symbol.trim().toUpperCase();
             if (normalizedSymbol.isBlank()) {
+                logger.debug("Yahoo evaluateAsset ignoré: symbole vide");
                 return Optional.empty();
             }
 
             String url = "https://query1.finance.yahoo.com/v8/finance/chart/" + normalizedSymbol + "?interval=1d&range=6mo";
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            headers.set("Accept", "application/json");
+
+                ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+
+            Map<String, Object> response = responseEntity.getBody();
             if (response == null) {
+                logger.debug("Yahoo evaluateAsset {}: réponse vide", normalizedSymbol);
                 return Optional.empty();
             }
 
             Map<String, Object> chart = (Map<String, Object>) response.get("chart");
             if (chart == null) {
+                logger.debug("Yahoo evaluateAsset {}: champ chart absent", normalizedSymbol);
+                return Optional.empty();
+            }
+
+            Object error = chart.get("error");
+            if (error != null) {
+                logger.debug("Yahoo evaluateAsset {}: chart.error={}", normalizedSymbol, error);
                 return Optional.empty();
             }
 
             List<Object> result = (List<Object>) chart.get("result");
             if (result == null || result.isEmpty()) {
+                logger.debug("Yahoo evaluateAsset {}: result vide", normalizedSymbol);
                 return Optional.empty();
             }
 
@@ -49,16 +80,19 @@ public class YahooMarketDataService {
             Map<String, Object> meta = (Map<String, Object>) firstResult.get("meta");
             BigDecimal currentPrice = toBigDecimal(meta != null ? meta.get("regularMarketPrice") : null);
             if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                logger.debug("Yahoo evaluateAsset {}: regularMarketPrice invalide", normalizedSymbol);
                 return Optional.empty();
             }
 
             Map<String, Object> indicators = (Map<String, Object>) firstResult.get("indicators");
             if (indicators == null) {
+                logger.debug("Yahoo evaluateAsset {}: indicators absent", normalizedSymbol);
                 return Optional.empty();
             }
 
             List<Object> quoteList = (List<Object>) indicators.get("quote");
             if (quoteList == null || quoteList.isEmpty()) {
+                logger.debug("Yahoo evaluateAsset {}: quote vide", normalizedSymbol);
                 return Optional.empty();
             }
 
@@ -67,6 +101,7 @@ public class YahooMarketDataService {
             List<Double> volumes = toDoubleList((List<Object>) quote.get("volume"));
 
             if (closes.size() < 70) {
+                logger.debug("Yahoo evaluateAsset {}: historique insuffisant ({} closes)", normalizedSymbol, closes.size());
                 return Optional.empty();
             }
 
@@ -89,6 +124,7 @@ public class YahooMarketDataService {
                     derivedRiskLevel
             ));
         } catch (Exception e) {
+            logger.debug("Yahoo evaluateAsset {}: exception {}", symbol, e.getMessage());
             return Optional.empty();
         }
     }

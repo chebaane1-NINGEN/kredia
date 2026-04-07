@@ -187,7 +187,8 @@ public class InvestmentService {
         strategy.setUser(user);
 
         InvestmentStrategy savedStrategy = strategyRepository.save(strategy);
-        List<PortfolioPosition> createdPositions = bootstrapStrategy(savedStrategy);
+        BootstrapExecutionResult executionResult = bootstrapStrategy(savedStrategy);
+        List<PortfolioPosition> createdPositions = executionResult.createdPositions();
 
         List<StrategyCreatedPositionDTO> createdPositionDtos = createdPositions.stream()
             .map(position -> new StrategyCreatedPositionDTO(
@@ -199,7 +200,14 @@ public class InvestmentService {
             ))
             .collect(Collectors.toList());
 
-        return new StrategyCreationResponseDTO(savedStrategy, createdPositionDtos);
+        String message = buildStrategyExecutionMessage(
+            createdPositionDtos.size(),
+            executionResult.updatedPositionsCount(),
+            executionResult.createdOrdersCount(),
+            executionResult.debugHints()
+        );
+
+        return new StrategyCreationResponseDTO(savedStrategy, createdPositionDtos, message);
     }
 
     public Optional<InvestmentStrategy> getStrategyById(Long id) {
@@ -233,25 +241,45 @@ public class InvestmentService {
         return strategyRepository.save(strategy);
     }
 
-    private List<PortfolioPosition> bootstrapStrategy(InvestmentStrategy strategy) {
+    private BootstrapExecutionResult bootstrapStrategy(InvestmentStrategy strategy) {
         List<PortfolioPosition> createdPositions = new java.util.ArrayList<>();
+        List<String> debugHints = new java.util.ArrayList<>();
+        int updatedPositionsCount = 0;
+        int createdOrdersCount = 0;
+        int skippedInvalidPrice = 0;
+        int skippedInvalidQuantity = 0;
+        int skippedInvalidStopLoss = 0;
 
         if (strategy.getIsActive() == null || !strategy.getIsActive()) {
-            return createdPositions;
+            debugHints.add("Stratégie inactive (isActive=false).");
+            return new BootstrapExecutionResult(createdPositions, updatedPositionsCount, createdOrdersCount, debugHints);
         }
 
         BigDecimal maxBudget = strategy.getMaxBudget();
         if (maxBudget == null || maxBudget.compareTo(BigDecimal.ZERO) <= 0) {
-            return createdPositions;
+            debugHints.add("Budget invalide (maxBudget null ou <= 0).");
+            return new BootstrapExecutionResult(createdPositions, updatedPositionsCount, createdOrdersCount, debugHints);
+        }
+
+        if (!Boolean.TRUE.equals(strategy.getAutoCreatePositions())) {
+            debugHints.add("Création de positions désactivée (autoCreatePositions=false).");
+        }
+
+        if (parseUniverse(strategyUniverse).isEmpty()) {
+            debugHints.add("Univers des symboles vide (investment.strategy.universe).");
+            return new BootstrapExecutionResult(createdPositions, updatedPositionsCount, createdOrdersCount, debugHints);
         }
 
         int maxAssets = strategy.getMaxAssets() != null && strategy.getMaxAssets() > 0
                 ? strategy.getMaxAssets()
                 : 5;
 
-        List<YahooMarketDataService.EvaluatedAsset> selectedAssets = selectAssetsByRiskAndKpi(strategy, maxAssets);
+        AssetSelectionResult selectionResult = selectAssetsByRiskAndKpi(strategy, maxAssets);
+        List<YahooMarketDataService.EvaluatedAsset> selectedAssets = selectionResult.selectedAssets();
+        debugHints.addAll(selectionResult.debugHints());
         if (selectedAssets.isEmpty()) {
-            return createdPositions;
+            debugHints.add("Aucun actif Yahoo sélectionné pour le profil de risque " + strategy.getRiskProfile() + ".");
+            return new BootstrapExecutionResult(createdPositions, updatedPositionsCount, createdOrdersCount, debugHints);
         }
 
         BigDecimal allocationPerAsset = maxBudget
@@ -260,47 +288,122 @@ public class InvestmentService {
         for (YahooMarketDataService.EvaluatedAsset asset : selectedAssets) {
             BigDecimal currentPrice = asset.getCurrentPrice();
             if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                skippedInvalidPrice++;
                 continue;
             }
 
             BigDecimal quantity = allocationPerAsset.divide(currentPrice, 8, RoundingMode.HALF_UP);
             if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+                skippedInvalidQuantity++;
                 continue;
             }
 
             // KPI calculé pour la stratégie : seuil stop-loss estimé
             BigDecimal stopLossPrice = calculateStopLossPrice(currentPrice, strategy.getStopLossPct());
             if (stopLossPrice != null && stopLossPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                skippedInvalidStopLoss++;
                 continue;
             }
 
             if (Boolean.TRUE.equals(strategy.getAutoCreateOrders())) {
                 createAutoBuyOrder(strategy, asset.getSymbol(), quantity, currentPrice);
+                createdOrdersCount++;
             }
 
             if (Boolean.TRUE.equals(strategy.getAutoCreatePositions())) {
                 PositionMutationResult mutationResult = createOrUpdatePosition(strategy, asset.getSymbol(), quantity, currentPrice);
                 if (mutationResult.created()) {
                     createdPositions.add(mutationResult.position());
+                } else {
+                    updatedPositionsCount++;
                 }
             }
         }
 
-        return createdPositions;
+        if (createdPositions.isEmpty() && updatedPositionsCount == 0) {
+            if (skippedInvalidPrice > 0) {
+                debugHints.add("Actifs ignorés: prix courant invalide pour " + skippedInvalidPrice + " symbole(s). ");
+            }
+            if (skippedInvalidQuantity > 0) {
+                debugHints.add("Actifs ignorés: quantité calculée <= 0 pour " + skippedInvalidQuantity + " symbole(s). ");
+            }
+            if (skippedInvalidStopLoss > 0) {
+                debugHints.add("Actifs ignorés: stopLossPrice <= 0 pour " + skippedInvalidStopLoss + " symbole(s). ");
+            }
+        }
+
+        return new BootstrapExecutionResult(createdPositions, updatedPositionsCount, createdOrdersCount, debugHints);
     }
 
-    private List<YahooMarketDataService.EvaluatedAsset> selectAssetsByRiskAndKpi(InvestmentStrategy strategy, int maxAssets) {
-        List<RiskLevel> allowedRiskLevels = mapRiskProfileToRiskLevels(strategy.getRiskProfile());
+    private String buildStrategyExecutionMessage(int createdPositionsCount,
+                                                 int updatedPositionsCount,
+                                                 int createdOrdersCount,
+                                                 List<String> debugHints) {
+        String baseMessage;
+        if (createdPositionsCount > 0) {
+            baseMessage = createdPositionsCount + " position(s) créée(s) avec succès.";
+        } else if (updatedPositionsCount > 0) {
+            baseMessage = "Aucune nouvelle position créée. " + updatedPositionsCount + " position(s) existante(s) mise(s) à jour.";
+        } else {
+            baseMessage = "Aucune position créée lors de l'exécution de la stratégie.";
+        }
 
-        return parseUniverse(strategyUniverse).stream()
-                .map(yahooMarketDataService::evaluateAsset)
-                .flatMap(Optional::stream)
-                .filter(asset -> allowedRiskLevels.contains(asset.getRiskLevel()))
+        String orderPart = createdOrdersCount > 0
+                ? " Ordres créés: " + createdOrdersCount + "."
+                : "";
+
+        String hintsPart = (debugHints == null || debugHints.isEmpty())
+                ? ""
+                : " Détails: " + String.join(" ", debugHints);
+
+        return baseMessage + orderPart + hintsPart;
+    }
+
+    private AssetSelectionResult selectAssetsByRiskAndKpi(InvestmentStrategy strategy, int maxAssets) {
+        List<RiskLevel> allowedRiskLevels = mapRiskProfileToRiskLevels(strategy.getRiskProfile());
+        List<String> hints = new java.util.ArrayList<>();
+
+        List<YahooMarketDataService.EvaluatedAsset> eligibleAssets = new java.util.ArrayList<>();
+
+        for (String symbol : parseUniverse(strategyUniverse)) {
+            Optional<YahooMarketDataService.EvaluatedAsset> evaluatedAssetOpt = yahooMarketDataService.evaluateAsset(symbol);
+
+            if (evaluatedAssetOpt.isEmpty()) {
+                addHintLimited(hints, "Symbole ignoré: " + symbol + " (données Yahoo indisponibles).", 15);
+                continue;
+            }
+
+            YahooMarketDataService.EvaluatedAsset evaluatedAsset = evaluatedAssetOpt.get();
+            if (!allowedRiskLevels.contains(evaluatedAsset.getRiskLevel())) {
+                addHintLimited(
+                        hints,
+                        "Symbole ignoré: " + symbol + " (riskLevel=" + evaluatedAsset.getRiskLevel() + ", attendu=" + allowedRiskLevels + ").",
+                        15
+                );
+                continue;
+            }
+
+            eligibleAssets.add(evaluatedAsset);
+        }
+
+        List<YahooMarketDataService.EvaluatedAsset> selected = eligibleAssets.stream()
                 .map(asset -> Map.entry(asset, calculateAssetScore(strategy, asset)))
                 .sorted(Map.Entry.<YahooMarketDataService.EvaluatedAsset, BigDecimal>comparingByValue(Comparator.reverseOrder()))
                 .limit(maxAssets)
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
+
+        if (!selected.isEmpty()) {
+            addHintLimited(hints, "Actifs sélectionnés: " + selected.stream().map(YahooMarketDataService.EvaluatedAsset::getSymbol).collect(Collectors.joining(", ")) + ".", 16);
+        }
+
+        return new AssetSelectionResult(selected, hints);
+    }
+
+    private void addHintLimited(List<String> hints, String hint, int maxHints) {
+        if (hints.size() < maxHints) {
+            hints.add(hint);
+        }
     }
 
     private BigDecimal calculateAssetScore(InvestmentStrategy strategy, YahooMarketDataService.EvaluatedAsset asset) {
@@ -425,6 +528,20 @@ public class InvestmentService {
 
     private record PositionMutationResult(PortfolioPosition position, boolean created) {
     }
+
+        private record BootstrapExecutionResult(
+            List<PortfolioPosition> createdPositions,
+            int updatedPositionsCount,
+            int createdOrdersCount,
+            List<String> debugHints
+        ) {
+        }
+
+            private record AssetSelectionResult(
+                List<YahooMarketDataService.EvaluatedAsset> selectedAssets,
+                List<String> debugHints
+            ) {
+            }
 
     public void deleteStrategy(Long id) {
         if (!strategyRepository.existsById(id)) {

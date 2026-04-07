@@ -205,7 +205,21 @@ Créer une stratégie d'investissement.
       "avgPurchasePrice": 198.50000000,
       "createdAt": "2026-03-31T15:10:22"
     }
-  ]
+  ],
+  "message": "1 position(s) créée(s) avec succès."
+}
+```
+
+**Réponse possible si aucune position créée :**
+```json
+{
+  "strategy": {
+    "strategyId": 13,
+    "strategyName": "Stratégie test",
+    "isActive": true
+  },
+  "createdPositions": [],
+  "message": "Aucune position créée lors de l'exécution de la stratégie. Détails: Création de positions désactivée (autoCreatePositions=false)."
 }
 ```
 
@@ -272,7 +286,7 @@ Créer une position portefeuille (prix récupéré automatiquement via API de ma
 **Body:**
 ```json
 {
-  "userId": 1,
+  "userId": 3,
   "assetSymbol": "AAPL",
   "quantity": 3.5
 }

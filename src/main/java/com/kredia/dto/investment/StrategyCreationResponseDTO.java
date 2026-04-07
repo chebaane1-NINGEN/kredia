@@ -13,4 +13,5 @@ import java.util.List;
 public class StrategyCreationResponseDTO {
     private InvestmentStrategy strategy;
     private List<StrategyCreatedPositionDTO> createdPositions;
+    private String message;
 }
