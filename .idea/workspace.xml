@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="141fe12c-86e7-40ba-a962-f08bd8638d90" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_D:/pidev_infini/kredia" value="39IrfInowOueYvUzUW0XiT1hQkh" />
+    </persistenceIdMap>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Interface" />
+        <option value="Class" />
+        <option value="Enum" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/src/main/resources/application.properties" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHomeTypeForPersistence" value="WRAPPER" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="39IrfInowOueYvUzUW0XiT1hQkh" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Maven.kredia [clean].executor": "Run",
+    "Maven.kredia [compile].executor": "Run",
+    "Maven.kredia [install].executor": "Run",
+    "Maven.kredia [org.springframework.boot:spring-boot-maven-plugin:3.2.2:run].executor": "Run",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "Spring Boot.KrediaApplication.executor": "Run",
+    "git-widget-placeholder": "MohamedYoussef__Mellouli__Gestion__Credit",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/pidev_infini/kredia",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "reference.settingsdialog.IDE.editor.colors.Color Scheme Font",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\pidev_infini\kredia\src\main\resources\db\migration" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="KrediaApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="ALTERNATIVE_JRE_PATH" value="17 (2)" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.kredia.KrediaApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-b114ca120d71-intellij.indexing.shared.core-IU-242.21829.142" />
+        <option value="bundled-js-predefined-d6986cc7102b-7c0b70fcd90d-JavaScript-IU-242.21829.142" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="141fe12c-86e7-40ba-a962-f08bd8638d90" name="Changes" comment="" />
+      <created>1770394528025</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1770394528025</updated>
+      <workItem from="1770394529220" duration="1835000" />
+      <workItem from="1770396389391" duration="8851000" />
+      <workItem from="1770406780155" duration="867000" />
+      <workItem from="1770407667530" duration="1513000" />
+      <workItem from="1770409198907" duration="1881000" />
+      <workItem from="1770411109214" duration="1926000" />
+      <workItem from="1770484716618" duration="2906000" />
+      <workItem from="1770489319908" duration="713000" />
+      <workItem from="1770490047446" duration="9097000" />
+      <workItem from="1770558177435" duration="1081000" />
+      <workItem from="1770632067537" duration="2730000" />
+      <workItem from="1770671449542" duration="1867000" />
+      <workItem from="1770727016117" duration="4673000" />
+      <workItem from="1770797899879" duration="8000" />
+      <workItem from="1770798808130" duration="1319000" />
+      <workItem from="1770805021681" duration="1769000" />
+      <workItem from="1770895341232" duration="2783000" />
+      <workItem from="1770898306642" duration="5391000" />
+      <workItem from="1770972248899" duration="32000" />
+      <workItem from="1770972393779" duration="675000" />
+      <workItem from="1771233021133" duration="1496000" />
+      <workItem from="1771256195309" duration="180000" />
+      <workItem from="1771331949388" duration="1807000" />
+      <workItem from="1771333792918" duration="7087000" />
+      <workItem from="1771359694183" duration="5648000" />
+      <workItem from="1771366876678" duration="571000" />
+      <workItem from="1771372529837" duration="12000" />
+      <workItem from="1771590094704" duration="10753000" />
+      <workItem from="1771683532534" duration="5788000" />
+      <workItem from="1771690032086" duration="773000" />
+      <workItem from="1771759974659" duration="647000" />
+      <workItem from="1771762738000" duration="9631000" />
+      <workItem from="1771909430239" duration="495000" />
+      <workItem from="1771930867569" duration="8129000" />
+      <workItem from="1771977043395" duration="452000" />
+      <workItem from="1771977527458" duration="176000" />
+      <workItem from="1772186102831" duration="1811000" />
+      <workItem from="1772188028111" duration="12422000" />
+      <workItem from="1772224100776" duration="7446000" />
+      <workItem from="1772281633501" duration="4483000" />
+      <workItem from="1772291425377" duration="5535000" />
+      <workItem from="1772320516267" duration="5986000" />
+      <workItem from="1772339213371" duration="1351000" />
+      <workItem from="1772405170366" duration="1260000" />
+      <workItem from="1772452947293" duration="6571000" />
+      <workItem from="1772483098002" duration="7365000" />
+      <workItem from="1772505758928" duration="584000" />
+      <workItem from="1772527658694" duration="2619000" />
+      <workItem from="1774255392157" duration="10729000" />
+      <workItem from="1774361535725" duration="2054000" />
+      <workItem from="1774364230682" duration="4230000" />
+      <workItem from="1774394421344" duration="119000" />
+      <workItem from="1774396664988" duration="598000" />
+      <workItem from="1774444601645" duration="3789000" />
+      <workItem from="1774475959437" duration="6678000" />
+      <workItem from="1774554739113" duration="3267000" />
+      <workItem from="1774719083626" duration="6713000" />
+      <workItem from="1774739233318" duration="268000" />
+      <workItem from="1774780355527" duration="4360000" />
+      <workItem from="1774793878470" duration="3784000" />
+      <workItem from="1774797992331" duration="226000" />
+      <workItem from="1774798239306" duration="13198000" />
+      <workItem from="1774812266351" duration="3072000" />
+      <workItem from="1774851505505" duration="1211000" />
+      <workItem from="1774861722385" duration="2512000" />
+      <workItem from="1774879874160" duration="4712000" />
+      <workItem from="1774891489232" duration="1677000" />
+      <workItem from="1774893292063" duration="11788000" />
+      <workItem from="1774911286815" duration="1871000" />
+      <workItem from="1774950738907" duration="10486000" />
+      <workItem from="1774991796975" duration="4891000" />
+      <workItem from="1775567430417" duration="494000" />
+      <workItem from="1775569827559" duration="81000" />
+      <workItem from="1775629651915" duration="46000" />
+      <workItem from="1775723912692" duration="1255000" />
+      <workItem from="1775725418488" duration="120000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>
