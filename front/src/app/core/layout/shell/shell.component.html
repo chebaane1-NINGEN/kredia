@@ -1,0 +1,90 @@
+<div class="page">
+  <div class="sheet">
+    <app-navbar></app-navbar>
+
+    <div class="layout">
+      <aside *ngIf="!isHomePage" class="dashboard" aria-label="Dashboard navigation">
+        <nav>
+          <ul>
+
+             <!-- USER -->
+            <li [class.active-parent]="expandedMenus['user']">
+              <a (click)="toggleMenu('user', $event)" class="parent-link">
+                <span>User</span>
+                <span class="chevron" [class.rotated]="expandedMenus['user']">▼</span>
+              </a>
+              <ul class="sub" [class.expanded]="expandedMenus['user']">
+                <li><a routerLink="/user" routerLinkActive="active">User List</a></li>
+                <li><a routerLink="/user/kyc-doc" routerLinkActive="active">KYC Documents</a></li>
+              </ul>
+            </li>
+ 
+             <!-- CREDIT -->
+            <li [class.active-parent]="expandedMenus['credit']">
+              <a (click)="toggleMenu('credit', $event)" class="parent-link">
+                <span>Credit</span>
+                <span class="chevron" [class.rotated]="expandedMenus['credit']">▼</span>
+              </a>
+              <ul class="sub" [class.expanded]="expandedMenus['credit']">
+                <li><a routerLink="/credit/list" routerLinkActive="active">Crédits</a></li>
+                <li><a routerLink="/credit/echeances" routerLinkActive="active">Echéances</a></li>
+                <li><a routerLink="/credit/kyc" routerLinkActive="active">KYC Loan</a></li>
+              </ul>
+            </li>
+ 
+             <!-- WALLET -->
+            <li [class.active-parent]="expandedMenus['wallet']">
+              <a (click)="toggleMenu('wallet', $event)" class="parent-link">
+                <span>Wallet</span>
+                <span class="chevron" [class.rotated]="expandedMenus['wallet']">▼</span>
+              </a>
+              <ul class="sub" [class.expanded]="expandedMenus['wallet']">
+                <li><a routerLink="/wallet" routerLinkActive="active">Wallet</a></li>
+                <li><a routerLink="/wallet/transactions" routerLinkActive="active">Transactions</a></li>
+                <li><a routerLink="/wallet/audit" routerLinkActive="active">Transaction Audit Log</a></li>
+                <li><a routerLink="/wallet/loan-transactions" routerLinkActive="active">Transaction Loan</a></li>
+                <li><a routerLink="/wallet/virtual-card" routerLinkActive="active">Virtual Card</a></li>
+              </ul>
+            </li>
+ 
+             <!-- SUPPORT -->
+            <li [class.active-parent]="expandedMenus['support']">
+              <a (click)="toggleMenu('support', $event)" class="parent-link">
+                <span>Support</span>
+                <span class="chevron" [class.rotated]="expandedMenus['support']">▼</span>
+              </a>
+              <ul class="sub" [class.expanded]="expandedMenus['support']">
+                <li><a routerLink="/support/notifications" routerLinkActive="active">Notification</a></li>
+                <li><a routerLink="/support/reclamations" routerLinkActive="active">Reclamation</a></li>
+                <li><a routerLink="/support/reclamation-attachments" routerLinkActive="active">Reclamation Attachment</a></li>
+                <li><a routerLink="/support/reclamation-history" routerLinkActive="active">Reclamation History</a></li>
+                <li><a routerLink="/support/reclamation-messages" routerLinkActive="active">Reclamation Message</a></li>
+              </ul>
+            </li>
+ 
+             <!-- INVESTISSEMENT -->
+            <li [class.active-parent]="expandedMenus['investissement']">
+              <a (click)="toggleMenu('investissement', $event)" class="parent-link">
+                <span>Investissement</span>
+                <span class="chevron" [class.rotated]="expandedMenus['investissement']">▼</span>
+              </a>
+              <ul class="sub" [class.expanded]="expandedMenus['investissement']">
+                <li><a routerLink="/investissement/assets" routerLinkActive="active">Investment Asset</a></li>
+                <li><a routerLink="/investissement/orders" routerLinkActive="active">Investment Order</a></li>
+                <li><a routerLink="/investissement/strategies" routerLinkActive="active">Investment Strategy</a></li>
+                <li><a routerLink="/investissement/portfolio" routerLinkActive="active">Portfolio Position</a></li>
+              </ul>
+            </li>
+
+          </ul>
+        </nav>
+      </aside>
+
+      <main class="shell-content">
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+
+    <app-footer></app-footer>
+  </div>
+</div>

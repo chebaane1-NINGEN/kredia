@@ -1,0 +1,25 @@
+<header class="topbar">
+  <div class="brand">
+    <img src="/assets/kredia-logo.png" alt="Kredia logo" />
+    <span>Kredia</span>
+  </div>
+
+  <nav class="nav">
+    <a href="#features">Features</a>
+    <a href="#simulator">Simulator</a>
+    <a href="#coach">AI Coach</a>
+    <a routerLink="/credit/kyc" routerLinkActive="active">KYC</a>
+    <a routerLink="/credit/risk" routerLinkActive="active">Risk Scan</a>
+    <a routerLink="/credit/list" routerLinkActive="active">Mes Crédits</a>
+    <a routerLink="/credit/chatbot" routerLinkActive="active">Chatbot</a>
+
+  </nav>
+
+  <div class="actions">
+    <button class="btn dark-toggle" (click)="toggleDarkMode()" title="Toggle dark mode">
+      <span *ngIf="!darkModeService.isDarkMode()">🌙</span>
+      <span *ngIf="darkModeService.isDarkMode()">☀️</span>
+    </button>
+    <button class="btn ghost">Login</button>
+  </div>
+</header>

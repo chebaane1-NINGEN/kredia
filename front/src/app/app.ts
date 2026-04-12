@@ -1,12 +1,24 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, inject, effect } from '@angular/core';
+import { ShellComponent } from './core/layout/shell/shell.component';
+import { DarkModeService } from './core/services/dark-mode.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  standalone: true,
+  imports: [ShellComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App {
-  protected readonly title = signal('front');
+  darkModeService = inject(DarkModeService);
+
+  constructor() {
+    // Initialize dark mode on app startup
+    this.darkModeService.init();
+    
+    // Apply mode change when signal changes
+    effect(() => {
+      this.darkModeService.isDarkMode();
+    });
+  }
 }

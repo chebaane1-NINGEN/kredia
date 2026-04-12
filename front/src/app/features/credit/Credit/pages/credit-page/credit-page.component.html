@@ -1,0 +1,101 @@
+<section class="credit-page">
+  <header>
+    <h1>Ajouter un crédit</h1>
+    <p>Remplissez les informations principales pour créer un nouveau crédit.</p>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="credit-form">
+    <div class="alert success" *ngIf="success">{{ success }}</div>
+    <div class="alert error" *ngIf="error">{{ error }}</div>
+    <div class="grid">
+      <label>
+        <span>Utilisateur (ID)</span>
+        <input type="number" formControlName="userId" placeholder="Ex: 42" />
+        <small *ngIf="form.controls.userId.touched && form.controls.userId.invalid">
+          ID utilisateur requis.
+        </small>
+      </label>
+
+      <label>
+        <span>Montant</span>
+        <input type="number" formControlName="amount" placeholder="Ex: 1500" />
+        <small *ngIf="form.controls.amount.touched && form.controls.amount.invalid">
+          Montant positif requis.
+        </small>
+      </label>
+
+      <label>
+        <span>Taux d’intérêt (%)</span>
+        <input type="number" formControlName="interestRate" placeholder="Ex: 6.5" />
+        <small *ngIf="form.controls.interestRate.touched && form.controls.interestRate.invalid">
+          Taux positif requis.
+        </small>
+      </label>
+
+      <label>
+        <span>Durée (mois)</span>
+        <input type="number" formControlName="termMonths" placeholder="Ex: 12" />
+        <small *ngIf="form.controls.termMonths.touched && form.controls.termMonths.invalid">
+          Durée valide requise.
+        </small>
+      </label>
+
+      <label>
+        <span>Date de début</span>
+        <input type="date" formControlName="startDate" />
+        <small *ngIf="form.controls.startDate.touched && form.controls.startDate.invalid">
+          Date requise.
+        </small>
+      </label>
+
+      <label>
+        <span>Date de fin</span>
+        <input type="date" formControlName="endDate" />
+        <small *ngIf="form.controls.endDate.touched && form.controls.endDate.invalid">
+          Date requise.
+        </small>
+      </label>
+
+      <label>
+        <span>Type de remboursement</span>
+        <select formControlName="repaymentType">
+          <option *ngFor="let type of repaymentTypes" [value]="type.value">
+            {{ type.label }}
+          </option>
+        </select>
+      </label>
+
+      <label>
+        <span>Statut</span>
+        <select formControlName="status">
+          <option *ngFor="let status of statuses" [value]="status.value">
+            {{ status.label }}
+          </option>
+        </select>
+      </label>
+
+      <label>
+        <span>Revenu mensuel</span>
+        <input type="number" formControlName="income" placeholder="Ex: 2000" />
+        <small *ngIf="form.controls.income.touched && form.controls.income.invalid">
+          Revenu valide requis.
+        </small>
+      </label>
+
+      <label>
+        <span>Personnes à charge</span>
+        <input type="number" formControlName="dependents" placeholder="Ex: 2" />
+        <small *ngIf="form.controls.dependents.touched && form.controls.dependents.invalid">
+          Valeur valide requise.
+        </small>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn primary" [disabled]="submitting">
+        {{ submitting ? 'Envoi...' : 'Créer le crédit' }}
+      </button>
+      <button type="reset" class="btn outline">Réinitialiser</button>
+    </div>
+  </form>
+</section>
