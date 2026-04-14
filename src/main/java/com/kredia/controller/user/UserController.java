@@ -44,8 +44,11 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<UserResponseDTO>> create(@Valid @RequestBody UserRequestDTO user) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(userService.create(user)));
+    public ResponseEntity<ApiResponse<UserResponseDTO>> create(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @Valid @RequestBody UserRequestDTO user
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(userService.create(actorId, user)));
     }
 
     @GetMapping
@@ -77,6 +80,15 @@ public class UserController {
             @PathVariable("id") Long id
     ) {
         return ResponseEntity.ok(ApiResponse.ok(userService.getById(actorId, id)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> update(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("id") Long id,
+            @Valid @RequestBody UserRequestDTO payload
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.update(actorId, id, payload)));
     }
 
     @PutMapping("/{id}/profile")
@@ -212,6 +224,16 @@ public class UserController {
             @PageableDefault Pageable pageable
     ) {
         return ResponseEntity.ok(ApiResponse.ok(userService.adminClient(actorId, pageable)));
+    }
+
+    @GetMapping("/agent/clients")
+    public ResponseEntity<ApiResponse<Page<UserResponseDTO>>> agentClients(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @RequestParam(name = "email", required = false) String email,
+            @RequestParam(name = "status", required = false) UserStatus status,
+            @PageableDefault Pageable pageable
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.agentClients(actorId, Optional.ofNullable(email), Optional.ofNullable(status), pageable)));
     }
 
     @GetMapping("/admin/activities")

@@ -2,6 +2,7 @@ package com.kredia.controller.user;
 
 import com.kredia.dto.ApiResponse;
 import com.kredia.dto.auth.AuthResponseDTO;
+import com.kredia.dto.auth.GoogleLoginRequestDTO;
 import com.kredia.dto.auth.LoginRequestDTO;
 import com.kredia.dto.auth.RegisterRequestDTO;
 import com.kredia.dto.auth.ForgotPasswordRequestDTO;
@@ -30,24 +31,24 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponseDTO>> login(@Valid @RequestBody LoginRequestDTO request) {
-        System.out.println("=== DEBUG LOGIN REQUEST ===");
-        System.out.println("Email received: " + request.getEmail());
-        System.out.println("Password received: " + request.getPassword());
-        System.out.println("Request object: " + request);
-        
-        try {
-            String token = authService.login(request);
-            System.out.println("Login successful - Token generated");
-            return ResponseEntity.ok(ApiResponse.ok(new AuthResponseDTO(token)));
-        } catch (Exception e) {
-            System.out.println("Login failed - Error: " + e.getMessage());
-            System.out.println("Error type: " + e.getClass().getSimpleName());
-            throw e;
-        }
+        String token = authService.login(request);
+        return ResponseEntity.ok(ApiResponse.ok(new AuthResponseDTO(token)));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<AuthResponseDTO>> loginWithGoogle(@Valid @RequestBody GoogleLoginRequestDTO request) {
+        String token = authService.loginWithGoogle(request.getIdToken());
+        return ResponseEntity.ok(ApiResponse.ok(new AuthResponseDTO(token)));
     }
 
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<String>> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok(ApiResponse.ok("Email successfully verified"));
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<ApiResponse<String>> verify(@RequestParam String token) {
         authService.verifyEmail(token);
         return ResponseEntity.ok(ApiResponse.ok("Email successfully verified"));
     }
@@ -62,32 +63,5 @@ public class AuthController {
     public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO request) {
         authService.resetPassword(request.getToken(), request.getPassword());
         return ResponseEntity.ok(ApiResponse.ok("Password reset successfully"));
-    }
-
-    @PostMapping("/activate-user")
-    public ResponseEntity<ApiResponse<String>> activateUser(@RequestBody ForgotPasswordRequestDTO request) {
-        authService.activateUser(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.ok("User activated successfully"));
-    }
-
-    @PostMapping("/create-admin")
-    public ResponseEntity<ApiResponse<String>> createAdmin(@RequestBody ForgotPasswordRequestDTO request) {
-        authService.createAdmin(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.ok("Admin created successfully"));
-    }
-
-    @PostMapping("/create-agent")
-    public ResponseEntity<ApiResponse<String>> createAgent(@RequestBody ForgotPasswordRequestDTO request) {
-        authService.createAgent(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.ok("Agent created successfully"));
-    }
-
-    @PostMapping("/test-login")
-    public ResponseEntity<String> testLogin(@RequestBody LoginRequestDTO request) {
-        System.out.println("=== TEST LOGIN REQUEST ===");
-        System.out.println("Email: " + request.getEmail());
-        System.out.println("Password: " + request.getPassword());
-        System.out.println("Request: " + request);
-        return ResponseEntity.ok("Request received: " + request.getEmail());
     }
 }

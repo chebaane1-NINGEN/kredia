@@ -84,6 +84,9 @@ export const userApi = {
   register: (user: any) =>
     axios.post<ApiResponse<UserResponseDTO>>('http://localhost:8086/api/auth/register', user).then(res => res.data.data),
 
+  googleLogin: (idToken: string) =>
+    axios.post<ApiResponse<AuthResponseDTO>>('http://localhost:8086/api/auth/google', { idToken }).then(res => res.data.data),
+
   verifyEmail: (token: string) =>
     axios.post<ApiResponse<void>>('http://localhost:8086/api/auth/verify-email', null, { params: { token } }).then(res => res.data.data),
 

@@ -86,6 +86,18 @@ public class DataSeeder {
                              UserActivityRepository userActivityRepository,
                              PasswordEncoder passwordEncoder,
                              jakarta.persistence.EntityManager entityManager) {
+            // Create Fixed Admin
+            if (!userRepository.existsByEmailAndDeletedFalse("abidimouhamedali2@gmail.com")) {
+                User fixedAdmin = createUser("Abidi", "Mouamed Ali", "abidimouhamedali2@gmail.com", "+21690000000",
+                        UserRole.ADMIN, UserStatus.ACTIVE, passwordEncoder, null, "Admin@123");
+                User savedFixedAdmin = userRepository.save(fixedAdmin);
+                updateCreatedAt(savedFixedAdmin.getId(), 365, entityManager); // Created 1 year ago
+                log.info("Created Fixed Admin: {} (ID: {})", savedFixedAdmin.getEmail(), savedFixedAdmin.getId());
+                createUserActivities(savedFixedAdmin.getId(), userActivityRepository, UserRole.ADMIN, 365);
+            } else {
+                log.info("Fixed admin already exists, skipping creation");
+            }
+
             // Create Admin
             User admin = createUser("Admin", "System", "admin@kredia.com", "+21690000001",
                     UserRole.ADMIN, UserStatus.ACTIVE, passwordEncoder, null, "Admin@123");

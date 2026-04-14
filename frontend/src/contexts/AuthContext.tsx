@@ -76,39 +76,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
+  const handleAuthSuccess = useCallback(async (token: string) => {
+    localStorage.setItem('kredia_token', token);
+
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    const decodedToken = JSON.parse(jsonPayload);
+    const userId = Number(decodedToken.sub);
+    const userRole = decodedToken.role;
+
+    const user = await userApi.getById(userId, userId);
+    setCurrentUser(user);
+
+    localStorage.setItem('kredia_actor_id', String(userId));
+    localStorage.setItem('kredia_role', userRole);
+    localStorage.setItem('kredia_user_id', String(userId));
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     setAuthError(null);
     try {
       const authResponse = await userApi.login(email, password);
-      const token = authResponse.token;
-      localStorage.setItem('kredia_token', token);
-      
-      // Parse token
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      
-      const decodedToken = JSON.parse(jsonPayload);
-      const userId = Number(decodedToken.sub);
-      const userRole = decodedToken.role;
-      
-      const user = await userApi.getById(userId, userId);
-      setCurrentUser(user);
-      
-      // Store essential info in localStorage for fast access/RBAC
-      localStorage.setItem('kredia_actor_id', String(userId));
-      localStorage.setItem('kredia_role', userRole);
-      localStorage.setItem('kredia_user_id', String(userId));
+      await handleAuthSuccess(authResponse.token);
     } catch (err: any) {
       setAuthError(err.message || 'Login failed');
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [handleAuthSuccess]);
 
   const register = useCallback(async (formData: any) => {
     setIsLoading(true);
@@ -133,13 +134,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const loginWithGoogle = async () => {
-    console.log('Google login requested');
-    // Implement redirect to Google OAuth
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const googleIdentity = window.google?.accounts?.id;
+      if (!googleIdentity) {
+        throw new Error('Google Identity Services SDK is not loaded. Please refresh the page.');
+      }
+
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!clientId || clientId.includes('YOUR_ACTUAL')) {
+        throw new Error('Google Client ID is not configured. Please check your .env file.');
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        googleIdentity.initialize({
+          client_id: clientId,
+          callback: async (response: any) => {
+            if (!response?.credential) {
+              reject(new Error('Google sign-in failed. Please try again.'));
+              return;
+            }
+
+            try {
+              const authResponse = await userApi.googleLogin(response.credential);
+              await handleAuthSuccess(authResponse.token);
+              resolve();
+            } catch (error: any) {
+              console.error('Google login backend error:', error);
+              reject(new Error(error.message || 'Failed to authenticate with server'));
+            }
+          }
+        });
+
+        googleIdentity.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            reject(new Error('Google sign-in was cancelled. Please try again.'));
+          }
+        });
+      });
+    } catch (err: any) {
+      console.error('Google login error:', err);
+      setAuthError(err.message || 'Google login failed');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const loginWithGithub = async () => {
-    console.log('GitHub login requested');
-    // Implement redirect to GitHub OAuth
+    setAuthError(null);
+    window.location.href = 'http://localhost:8086/oauth2/authorization/github';
   };
 
   const hasRole = (role: UserRole) => currentUser?.role === role;

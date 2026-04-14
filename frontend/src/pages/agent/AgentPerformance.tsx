@@ -173,7 +173,7 @@ const AgentPerformance: React.FC = () => {
                 outerRadius={100}
                 dataKey="count"
               >
-                {performance.actionBreakdown.map((entry: any, index: number) => (
+                {performance.actionBreakdown?.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

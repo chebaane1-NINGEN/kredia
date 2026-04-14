@@ -7,10 +7,8 @@ import com.kredia.dto.user.UserResponseDTO;
 public interface AuthService {
     UserResponseDTO register(RegisterRequestDTO request);
     String login(LoginRequestDTO request);
+    String loginWithGoogle(String idToken);
     void verifyEmail(String token);
     void forgotPassword(String email);
     void resetPassword(String token, String newPassword);
-    void activateUser(String email);
-    void createAdmin(String email);
-    void createAgent(String email);
 }

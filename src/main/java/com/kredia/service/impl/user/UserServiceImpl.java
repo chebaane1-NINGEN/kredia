@@ -22,6 +22,7 @@ import com.kredia.repository.user.KycDocumentRepository;
 import com.kredia.repository.user.UserActivityRepository;
 import com.kredia.repository.user.UserRepository;
 import com.kredia.repository.user.UserSpecifications;
+import com.kredia.service.user.EmailService;
 import com.kredia.service.user.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +43,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @SuppressWarnings("all")
@@ -54,24 +56,31 @@ public class UserServiceImpl implements UserService {
     private final UserActivityRepository userActivityRepository;
     private final KycDocumentRepository kycDocumentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
-    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, UserActivityRepository userActivityRepository, KycDocumentRepository kycDocumentRepository, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, UserActivityRepository userActivityRepository, KycDocumentRepository kycDocumentRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.userActivityRepository = userActivityRepository;
         this.kycDocumentRepository = kycDocumentRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     @Override
     @Transactional
-    public UserResponseDTO create(UserRequestDTO user) {
+    public UserResponseDTO create(Long actorId, UserRequestDTO user) {
         Objects.requireNonNull(user, "user");
+
+        User actor = loadActor(actorId);
+        if (actor.getRole() != UserRole.ADMIN && actor.getRole() != UserRole.AGENT) {
+            throw new ForbiddenException("Only admins and agents can create users");
+        }
 
         if (userRepository.existsByEmailAndDeletedFalse(user.getEmail())) {
             throw new BusinessException("Email already exists");
         }
-        if (userRepository.existsByPhoneNumberAndDeletedFalse(user.getPhoneNumber())) {
+        if (user.getPhoneNumber() != null && userRepository.existsByPhoneNumberAndDeletedFalse(user.getPhoneNumber())) {
             throw new BusinessException("Phone number already exists");
         }
 
@@ -80,17 +89,34 @@ public class UserServiceImpl implements UserService {
         if (user.getPassword() != null && !user.getPassword().isBlank()) {
             entity.setPasswordHash(passwordEncoder.encode(user.getPassword()));
         } else {
-            entity.setPasswordHash(passwordEncoder.encode("password")); // Default password
+            String temporaryPassword = "Kredia" + java.util.UUID.randomUUID().toString().substring(0, 8);
+            entity.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         }
-        
-        if (entity.getStatus() == null) entity.setStatus(UserStatus.PENDING_VERIFICATION);
-        if (entity.getRole() == null) entity.setRole(UserRole.CLIENT);
-        entity.setDeleted(false);
-        entity.setEmailVerified(entity.getStatus() == UserStatus.ACTIVE);
+
+        if (entity.getRole() == null) {
+            entity.setRole(UserRole.CLIENT);
+        }
+
+        if (actor.getRole() == UserRole.AGENT) {
+            if (entity.getRole() != UserRole.CLIENT) {
+                throw new BusinessException("Agents can only create client accounts");
+            }
+            entity.setAssignedAgent(actor);
+            entity.setStatus(UserStatus.PENDING_VERIFICATION);
+            entity.setEmailVerified(false);
+            entity.setDeleted(false);
+            entity.setVerificationToken(java.util.UUID.randomUUID().toString());
+            emailService.sendPasswordResetEmail(entity.getEmail(), entity.getVerificationToken());
+            log.info("Agent created client {} and requested verification", entity.getEmail());
+        } else {
+            if (entity.getStatus() == null) entity.setStatus(UserStatus.PENDING_VERIFICATION);
+            entity.setEmailVerified(entity.getStatus() == UserStatus.ACTIVE);
+            entity.setDeleted(false);
+        }
 
         User saved = userRepository.save(entity);
-        recordActivity(saved.getId(), UserActivityActionType.CREATED, "User created");
-        log.info("user_created userId={} email={}", saved.getId(), saved.getEmail());
+        recordActivity(saved.getId(), UserActivityActionType.CREATED, "User created by " + actor.getRole() + " " + actor.getEmail());
+        log.info("user_created userId={} email={} createdBy={}", saved.getId(), saved.getEmail(), actor.getEmail());
         return userMapper.toResponse(saved);
     }
 
@@ -178,10 +204,56 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public UserResponseDTO update(Long actorId, Long id, UserRequestDTO payload) {
+        User actor = loadActor(actorId);
+        User target = findForMutation(id);
+
+        if (actor.getRole() == UserRole.ADMIN) {
+            if (payload.getEmail() != null && userRepository.existsByEmailAndDeletedFalseAndIdNot(payload.getEmail(), id)) {
+                throw new BusinessException("Email already exists");
+            }
+            if (payload.getPhoneNumber() != null && userRepository.existsByPhoneNumberAndDeletedFalseAndIdNot(payload.getPhoneNumber(), id)) {
+                throw new BusinessException("Phone number already exists");
+            }
+            if (payload.getEmail() != null) target.setEmail(payload.getEmail());
+            if (payload.getFirstName() != null) target.setFirstName(payload.getFirstName());
+            if (payload.getLastName() != null) target.setLastName(payload.getLastName());
+            if (payload.getPhoneNumber() != null) target.setPhoneNumber(payload.getPhoneNumber());
+            if (payload.getRole() != null) target.setRole(payload.getRole());
+            if (payload.getStatus() != null) target.setStatus(payload.getStatus());
+            User saved = userRepository.save(target);
+            recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Admin updated user details for " + saved.getEmail());
+            return userMapper.toResponse(saved);
+        }
+
+        if (actor.getRole() == UserRole.AGENT) {
+            if (target.getRole() != UserRole.CLIENT || !Objects.equals(target.getAssignedAgent(), actor)) {
+                throw new ForbiddenException("Agents can only update assigned clients");
+            }
+            if (payload.getEmail() != null && !payload.getEmail().equalsIgnoreCase(target.getEmail()) && userRepository.existsByEmailAndDeletedFalseAndIdNot(payload.getEmail(), id)) {
+                throw new BusinessException("Email already exists");
+            }
+            if (payload.getPhoneNumber() != null && !payload.getPhoneNumber().equals(target.getPhoneNumber()) && userRepository.existsByPhoneNumberAndDeletedFalseAndIdNot(payload.getPhoneNumber(), id)) {
+                throw new BusinessException("Phone number already exists");
+            }
+            if (payload.getEmail() != null) target.setEmail(payload.getEmail());
+            if (payload.getFirstName() != null) target.setFirstName(payload.getFirstName());
+            if (payload.getLastName() != null) target.setLastName(payload.getLastName());
+            if (payload.getPhoneNumber() != null) target.setPhoneNumber(payload.getPhoneNumber());
+            User saved = userRepository.save(target);
+            recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Client updated by agent " + actor.getEmail());
+            return userMapper.toResponse(saved);
+        }
+
+        throw new ForbiddenException("Only admins or assigned agents can update this user");
+    }
+
+    @Override
+    @Transactional
     public UserResponseDTO adminUpdateUser(Long actorId, Long id, AdminUserUpdateDTO payload) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
-        
+
         User target = findForMutation(id);
 
         if (payload.getEmail() != null && userRepository.existsByEmailAndDeletedFalseAndIdNot(payload.getEmail(), id)) {
@@ -193,8 +265,27 @@ public class UserServiceImpl implements UserService {
 
         userMapper.copyAdminUserFields(payload, target);
         User saved = userRepository.save(target);
-        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Admin updated user details by admin " + actorId);
+        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "Admin updated user " + saved.getEmail());
         return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserResponseDTO> agentClients(Long agentId, Optional<String> email, Optional<UserStatus> status, Pageable pageable) {
+        User actor = loadActor(agentId);
+        validateRole(actor, UserRole.AGENT);
+
+        Specification<User> spec = UserSpecifications.notDeleted()
+                .and(UserSpecifications.assignedAgentEquals(actor));
+
+        if (email != null && email.isPresent() && !email.get().isBlank()) {
+            spec = spec.and(UserSpecifications.emailEquals(email.get()));
+        }
+        if (status != null && status.isPresent()) {
+            spec = spec.and(UserSpecifications.statusEquals(status.get()));
+        }
+
+        return userRepository.findAll(spec, pageable).map(userMapper::toResponse);
     }
 
     @Override
@@ -202,8 +293,13 @@ public class UserServiceImpl implements UserService {
     public void delete(Long actorId, Long id) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
-        
+
         User target = findForMutation(id);
+
+        // Protect the fixed admin
+        if ("abidimouhamedali2@gmail.com".equals(target.getEmail())) {
+            throw new ForbiddenException("Protected admin account cannot be deleted");
+        }
 
         if (target.getRole() == UserRole.ADMIN) {
             long activeAdminCount = userRepository.countByRoleAndDeletedFalseAndStatus(UserRole.ADMIN, UserStatus.ACTIVE);
@@ -244,8 +340,14 @@ public class UserServiceImpl implements UserService {
     public UserResponseDTO block(Long actorId, Long id) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
-        
+
         User user = findForMutation(id);
+
+        // Protect the fixed admin
+        if ("abidimouhamedali2@gmail.com".equals(user.getEmail())) {
+            throw new ForbiddenException("Protected admin account cannot be blocked");
+        }
+
         if (user.getStatus() == UserStatus.BLOCKED) {
             throw new BusinessException("User is already blocked");
         }
@@ -331,8 +433,13 @@ public class UserServiceImpl implements UserService {
     public UserResponseDTO changeRole(Long actorId, Long id, UserRole role) {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
-        
+
         User user = findForMutation(id);
+
+        // Protect the fixed admin
+        if ("abidimouhamedali2@gmail.com".equals(user.getEmail())) {
+            throw new ForbiddenException("Protected admin account role cannot be changed");
+        }
 
         if (role == UserRole.ADMIN && user.getStatus() != UserStatus.ACTIVE) {
             throw new BusinessException("Only ACTIVE users can be assigned ADMIN role");
@@ -348,7 +455,7 @@ public class UserServiceImpl implements UserService {
         UserRole previous = user.getRole();
         user.setRole(role);
         User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.ROLE_CHANGED, 
+        recordActivity(saved.getId(), UserActivityActionType.ROLE_CHANGED,
             String.format("Role changed from %s to %s by admin %s", previous, role, actor.getEmail()));
         log.info("user_role_changed userId={} from={} to={}", saved.getId(), previous, saved.getRole());
         return userMapper.toResponse(saved);

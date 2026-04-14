@@ -21,6 +21,7 @@ export interface AgentPerformanceDTO {
     approvals: number;
     rejections: number;
   }>;
+  actionBreakdown?: Array<{ action: string; count: number; percentage: number }>;
 }
 
 export interface AgentActivityDTO {
@@ -46,11 +47,11 @@ export interface AgentClientsResponse {
 // Agent API Service
 class AgentApiService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('kredia_token');
     return {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      'X-Actor-Id': localStorage.getItem('userId') || '1'
+      'Authorization': token ? `Bearer ${token}` : '',
+      'X-Actor-Id': localStorage.getItem('kredia_actor_id') || ''
     };
   }
 
@@ -66,10 +67,9 @@ class AgentApiService {
         params.append('status', status.toString());
       }
       if (search) {
-        params.append('search', search);
+        params.append('email', search);
       }
 
-      // Use the existing user endpoint with agent filter
       const response = await fetch(`${API_BASE_URL}/user/agent/clients?${params}`, {
         headers: this.getAuthHeaders()
       });
@@ -154,7 +154,7 @@ class AgentApiService {
   // Get agent performance data
   async getAgentPerformance(): Promise<AgentPerformanceDTO> {
     try {
-      const agentId = localStorage.getItem('userId') || '1';
+const agentId = localStorage.getItem('kredia_user_id') || '1';
       const response = await fetch(`${API_BASE_URL}/user/agent/${agentId}/performance`, {
         headers: this.getAuthHeaders()
       });
@@ -175,7 +175,7 @@ class AgentApiService {
   // Get agent activities (audit log)
   async getAgentActivities(page = 0, size = 10, actionType?: string, search?: string): Promise<{ content: AgentActivityDTO[], totalPages: number, totalElements: number }> {
     try {
-      const agentId = localStorage.getItem('userId') || '1';
+      const agentId = localStorage.getItem('kredia_user_id') || '1';
       const params = new URLSearchParams({
         page: page.toString(),
         size: size.toString()

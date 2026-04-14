@@ -332,7 +332,7 @@ const Login: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => window.location.href = 'http://localhost:8086/oauth2/authorization/google'}
+                onClick={loginWithGoogle}
                 className="flex items-center justify-center gap-3 px-4 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-semibold text-slate-700"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">

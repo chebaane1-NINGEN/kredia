@@ -25,7 +25,7 @@ import java.util.Optional;
 public interface UserService {
 
     // --- Basic CRUD & Management ---
-    UserResponseDTO create(UserRequestDTO user);
+    UserResponseDTO create(Long actorId, UserRequestDTO user);
     UserResponseDTO getById(Long actorId, Long id);
     Page<UserResponseDTO> search(
             Long actorId,
@@ -37,6 +37,7 @@ public interface UserService {
             Pageable pageable
     );
 
+    UserResponseDTO update(Long actorId, Long id, UserRequestDTO payload);
     UserResponseDTO updateProfile(Long actorId, Long id, ClientProfileUpdateDTO payload);
     UserResponseDTO adminUpdateUser(Long actorId, Long id, AdminUserUpdateDTO payload);
 
@@ -61,6 +62,7 @@ public interface UserService {
     AdminStatsDTO adminStats(Long actorId);
     Page<UserResponseDTO> adminAgent(Long actorId, Pageable pageable);
     Page<UserResponseDTO> adminClient(Long actorId, Pageable pageable);
+    Page<UserResponseDTO> agentClients(Long actorId, Optional<String> email, Optional<UserStatus> status, Pageable pageable);
     Page<UserActivityResponseDTO> adminAudit(Long actorId, Long userId, Pageable pageable);
     Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, Optional<UserRole> role, Pageable pageable);
 

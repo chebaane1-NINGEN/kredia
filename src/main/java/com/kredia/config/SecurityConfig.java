@@ -63,6 +63,8 @@ public class SecurityConfig {
                 .requestMatchers("/admin/**").authenticated()
                 .requestMatchers("/agent/**").authenticated()
                 .requestMatchers("/client/**").authenticated()
+                // OAuth2 endpoints should be publicly accessible for redirects
+                .requestMatchers("/oauth2/**").permitAll()
                 // Health check endpoint
                 .requestMatchers("/actuator/health").permitAll()
                 // Any other request needs authentication
