@@ -34,6 +34,13 @@ public class UserActivity {
     public UserActivity() {
     }
 
+    @PrePersist
+    public void prePersist() {
+        if (this.timestamp == null) {
+            this.timestamp = Instant.now();
+        }
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

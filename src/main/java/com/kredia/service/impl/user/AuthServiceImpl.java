@@ -75,6 +75,7 @@ public class AuthServiceImpl implements AuthService {
         user.setEmail(request.getEmail());
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
+        user.setPhoneNumber(request.getPhoneNumber());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setRole(UserRole.CLIENT); // Default role for registration
         user.setStatus(UserStatus.PENDING_VERIFICATION);
@@ -264,6 +265,9 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setVerificationToken(null);
         user.setFailedLoginAttempts(0);
+        if (user.getStatus() == UserStatus.BLOCKED) {
+            user.setStatus(UserStatus.ACTIVE);
+        }
         userRepository.save(user);
         log.info("Password successfully reset for user: {}", user.getEmail());
     }

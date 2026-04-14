@@ -8,10 +8,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.kredia.security.JwtAuthenticationFilter;
 import com.kredia.security.CustomOAuth2UserService;
 import com.kredia.security.OAuth2AuthenticationSuccessHandler;
+import org.springframework.http.HttpStatus;
 
 @Configuration
 @EnableWebSecurity
@@ -65,10 +67,14 @@ public class SecurityConfig {
                 .requestMatchers("/client/**").authenticated()
                 // OAuth2 endpoints should be publicly accessible for redirects
                 .requestMatchers("/oauth2/**").permitAll()
-                // Health check endpoint
+                // Health check endpoints should be public
+                .requestMatchers("/api/health", "/api/health/**").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 // Any other request needs authentication
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             )
             // OAuth2 Login configuration
             .oauth2Login(oauth2 -> oauth2
