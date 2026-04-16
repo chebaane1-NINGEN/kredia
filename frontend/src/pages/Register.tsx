@@ -23,6 +23,7 @@ import {
   validatePassword, 
   validatePasswordConfirm, 
   validateFullName, 
+  validatePhoneNumber,
   getAuthErrorMessage, 
   getPasswordStrength,
   FormErrors 
@@ -52,7 +53,8 @@ const Register: React.FC = () => {
     lastName: false,
     email: false,
     password: false,
-    confirmPassword: false
+    confirmPassword: false,
+    phoneNumber: false
   });
 
   useEffect(() => {
@@ -90,6 +92,10 @@ const Register: React.FC = () => {
         const confirmValidation = validatePasswordConfirm(formData.password, value);
         error = confirmValidation.error || '';
         break;
+      case 'phoneNumber':
+        const phoneValidation = validatePhoneNumber(value);
+        error = phoneValidation.error || '';
+        break;
     }
 
     setErrors(prev => ({ ...prev, [field]: error }));
@@ -122,8 +128,9 @@ const Register: React.FC = () => {
     const emailValid = validateEmail(formData.email).isValid;
     const passwordValid = validatePassword(formData.password).isValid;
     const confirmValid = validatePasswordConfirm(formData.password, formData.confirmPassword).isValid;
+    const phoneValid = validatePhoneNumber(formData.phoneNumber).isValid;
     
-    return firstNameValid && lastNameValid && emailValid && passwordValid && confirmValid && !isLoading;
+    return firstNameValid && lastNameValid && emailValid && passwordValid && confirmValid && phoneValid && !isLoading;
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -136,7 +143,8 @@ const Register: React.FC = () => {
       lastName: true, 
       email: true, 
       password: true, 
-      confirmPassword: true 
+      confirmPassword: true,
+      phoneNumber: true
     });
     
     // Validate all fields
@@ -145,8 +153,9 @@ const Register: React.FC = () => {
     const emailValid = validateField('email', formData.email);
     const passwordValid = validateField('password', formData.password);
     const confirmValid = validateField('confirmPassword', formData.confirmPassword);
+    const phoneValid = validateField('phoneNumber', formData.phoneNumber);
     
-    if (!firstNameValid || !lastNameValid || !emailValid || !passwordValid || !confirmValid) {
+    if (!firstNameValid || !lastNameValid || !emailValid || !passwordValid || !confirmValid || !phoneValid) {
       return;
     }
 
@@ -154,10 +163,12 @@ const Register: React.FC = () => {
       setIsLoading(true);
       setErrors({});
       
-      // Combine first and last name for the API
       const registrationData = {
-        ...formData,
-        fullName: `${formData.firstName} ${formData.lastName}`
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phoneNumber: formData.phoneNumber
       };
       
       await register(registrationData);
@@ -375,6 +386,43 @@ const Register: React.FC = () => {
                 <div className="flex items-center gap-2 mt-2 text-rose-500 text-sm animate-fade-in">
                   <AlertCircle size={14} />
                   {errors.email}
+                </div>
+              )}
+            </div>
+
+            {/* Phone Number Field */}
+            <div>
+              <label className="block text-sm font-bold text-slate-700 uppercase tracking-widest mb-2">
+                Phone Number
+              </label>
+              <div className="relative group">
+                <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                  touched.phoneNumber && errors.phoneNumber ? 'text-rose-500' : 
+                  touched.phoneNumber && !errors.phoneNumber ? 'text-emerald-500' : 
+                  'text-slate-400 group-focus-within:text-indigo-600'
+                }`}>
+                  {touched.phoneNumber && !errors.phoneNumber ? <CheckCircle2 size={18} /> : <Phone size={18} />}
+                </div>
+                <input
+                  type="tel"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange('phoneNumber')}
+                  onBlur={handleBlur('phoneNumber')}
+                  className={`w-full pl-12 pr-4 py-3.5 rounded-xl border font-medium transition-all outline-none text-slate-900 ${
+                    touched.phoneNumber && errors.phoneNumber 
+                      ? 'border-rose-300 bg-rose-50 focus:border-rose-500' 
+                      : touched.phoneNumber && !errors.phoneNumber
+                      ? 'border-emerald-300 bg-emerald-50 focus:border-emerald-500'
+                      : 'border-slate-200 bg-slate-50 focus:border-indigo-600 focus:bg-white'
+                  }`}
+                  placeholder="+216 2000 0000"
+                  autoComplete="tel"
+                />
+              </div>
+              {touched.phoneNumber && errors.phoneNumber && (
+                <div className="flex items-center gap-2 mt-2 text-rose-500 text-sm animate-fade-in">
+                  <AlertCircle size={14} />
+                  {errors.phoneNumber}
                 </div>
               )}
             </div>

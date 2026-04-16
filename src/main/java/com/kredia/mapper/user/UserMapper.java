@@ -94,8 +94,10 @@ public class UserMapper {
         UserActivityResponseDTO dto = new UserActivityResponseDTO();
         dto.setId(activity.getId());
         dto.setUserId(activity.getUserId());
+        dto.setTargetUserId(activity.getTargetUserId());
         dto.setActionType(activity.getActionType());
         dto.setDescription(activity.getDescription());
+        dto.setMetadata(activity.getMetadata());
         dto.setTimestamp(activity.getTimestamp());
         return dto;
     }

@@ -7,6 +7,7 @@ public class ApiErrorResponse {
     private Instant timestamp;
     private int status;
     private String error;
+    private String code;
     private String message;
     private String path;
 
@@ -32,6 +33,14 @@ public class ApiErrorResponse {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
     }
 
     public String getMessage() {

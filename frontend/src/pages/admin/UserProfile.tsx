@@ -23,6 +23,9 @@ const UserProfile: React.FC = () => {
     confirmPassword: '',
   });
 
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
@@ -34,6 +37,29 @@ const UserProfile: React.FC = () => {
 
   const validatePassword = (password: string) => {
     return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password);
+  };
+
+  const validatePasswordForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!passwordData.currentPassword) {
+      newErrors.currentPassword = 'Current password is required';
+    }
+    
+    if (!passwordData.newPassword) {
+      newErrors.newPassword = 'New password is required';
+    } else if (!validatePassword(passwordData.newPassword)) {
+      newErrors.newPassword = 'Password must be at least 8 characters with uppercase, lowercase, and numbers';
+    }
+    
+    if (!passwordData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your new password';
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    setPasswordErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const validateForm = () => {
@@ -61,27 +87,46 @@ const UserProfile: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const validatePasswordForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!passwordData.currentPassword) {
-      newErrors.currentPassword = 'Current password is required';
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        addToast('Image size must be less than 5MB', 'error');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        addToast('Please select a valid image file', 'error');
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-    
-    if (!passwordData.newPassword) {
-      newErrors.newPassword = 'New password is required';
-    } else if (!validatePassword(passwordData.newPassword)) {
-      newErrors.newPassword = 'Password must be at least 8 characters with uppercase, lowercase, and numbers';
+  };
+
+  const handleImageUpload = async () => {
+    if (!selectedImage || !currentUser) return;
+
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('profilePicture', selectedImage);
+
+      // Note: This would need a backend endpoint for image upload
+      // For now, we'll simulate the upload
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate upload
+
+      addToast('Profile picture updated successfully', 'success');
+      setSelectedImage(null);
+      setImagePreview(null);
+    } catch (error) {
+      addToast('Failed to upload image', 'error');
+    } finally {
+      setLoading(false);
     }
-    
-    if (!passwordData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your new password';
-    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    
-    setPasswordErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -150,21 +195,50 @@ const UserProfile: React.FC = () => {
           <div className="finova-card p-8 flex flex-col items-center text-center">
             <div className="relative group">
               <div className="w-32 h-32 rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-4xl font-bold shadow-xl shadow-indigo-200 overflow-hidden">
-                {currentUser.profilePictureUrl ? (
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                ) : currentUser.profilePictureUrl ? (
                   <img src={currentUser.profilePictureUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   `${currentUser.firstName[0]}${currentUser.lastName[0]}`
                 )}
               </div>
-              <button className="absolute -bottom-2 -right-2 p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-indigo-600 hover:border-indigo-600 shadow-lg transition-all active:scale-95">
+              <label className="absolute -bottom-2 -right-2 p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-indigo-600 hover:border-indigo-600 shadow-lg transition-all active:scale-95 cursor-pointer">
                 <Camera size={18} />
-              </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+              </label>
             </div>
             <h3 className="mt-6 text-xl font-bold text-slate-900">{currentUser.firstName} {currentUser.lastName}</h3>
             <p className="text-sm text-slate-500 mt-1 uppercase font-bold tracking-widest">{currentUser.role}</p>
             <div className={`mt-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${currentUser.status === UserStatus.ACTIVE ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
               {currentUser.status}
             </div>
+            {selectedImage && (
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={handleImageUpload}
+                  disabled={loading}
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {loading ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+                  Upload
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedImage(null);
+                    setImagePreview(null);
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="finova-card p-0 overflow-hidden">

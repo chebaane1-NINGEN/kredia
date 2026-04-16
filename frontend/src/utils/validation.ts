@@ -19,7 +19,7 @@ export const validateEmail = (email: string): ValidationResult => {
   return { isValid: true };
 };
 
-// Password validation with strength requirements
+// Password validation with strength requirements for registration
 export const validatePassword = (password: string): ValidationResult => {
   if (!password || password.length === 0) {
     return { isValid: false, error: 'Password is required' };
@@ -54,6 +54,15 @@ export const validatePassword = (password: string): ValidationResult => {
   return { isValid: true };
 };
 
+// Login password validation only checks required fields, to support existing accounts
+export const validateLoginPassword = (password: string): ValidationResult => {
+  if (!password || password.length === 0) {
+    return { isValid: false, error: 'Password is required' };
+  }
+
+  return { isValid: true };
+};
+
 // Password confirmation validation
 export const validatePasswordConfirm = (password: string, confirmPassword: string): ValidationResult => {
   if (!confirmPassword || confirmPassword.length === 0) {
@@ -62,6 +71,20 @@ export const validatePasswordConfirm = (password: string, confirmPassword: strin
 
   if (password !== confirmPassword) {
     return { isValid: false, error: 'Passwords do not match' };
+  }
+
+  return { isValid: true };
+};
+
+// Phone number validation
+export const validatePhoneNumber = (phoneNumber: string): ValidationResult => {
+  if (!phoneNumber || phoneNumber.trim().length === 0) {
+    return { isValid: false, error: 'Phone number is required' };
+  }
+
+  const phoneRegex = /^\+?[0-9]{8,20}$/;
+  if (!phoneRegex.test(phoneNumber.trim())) {
+    return { isValid: false, error: 'Enter a valid phone number with country code' };
   }
 
   return { isValid: true };
@@ -95,6 +118,7 @@ export interface FormErrors {
   email?: string;
   password?: string;
   confirmPassword?: string;
+  phoneNumber?: string;
   fullName?: string;
   firstName?: string;
   lastName?: string;
@@ -131,7 +155,29 @@ export const getPasswordStrength = (password: string): {
 export const getAuthErrorMessage = (error: any, context: 'login' | 'register'): string => {
   if (!error) return '';
 
-  // Handle specific error codes
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  // Handle specific error codes returned by the backend
+  if (error.code) {
+    switch (error.code) {
+      case 'EMAIL_NOT_FOUND':
+      case 'INVALID_PASSWORD':
+        return 'Incorrect email or password';
+      case 'ACCOUNT_BLOCKED':
+        return 'Your account is blocked. Please contact support.';
+      case 'ACCOUNT_SUSPENDED':
+        return 'Your account is suspended. Please contact support.';
+      case 'EMAIL_NOT_VERIFIED':
+        return 'Please verify your email before logging in.';
+      case 'EMAIL_ALREADY_EXISTS':
+        return 'An account with this email already exists';
+      default:
+        break;
+    }
+  }
+
   if (error.status) {
     switch (error.status) {
       case 400:
@@ -141,6 +187,10 @@ export const getAuthErrorMessage = (error: any, context: 'login' | 'register'): 
       case 401:
         return context === 'login' 
           ? 'Incorrect email or password' 
+          : 'Registration failed';
+      case 403:
+        return context === 'login' 
+          ? 'Access denied. Please check your account status.' 
           : 'Registration failed';
       case 409:
         return 'An account with this email already exists';
@@ -153,18 +203,19 @@ export const getAuthErrorMessage = (error: any, context: 'login' | 'register'): 
     }
   }
 
-  // Handle error messages
   if (error.message) {
-    if (error.message.includes('User already exists')) {
-      return 'An account with this email already exists';
+    if (typeof error.message === 'string') {
+      if (error.message.includes('User already exists')) {
+        return 'An account with this email already exists';
+      }
+      if (error.message.includes('Invalid credentials')) {
+        return 'Incorrect email or password';
+      }
+      if (error.message.includes('Network error')) {
+        return 'Network error. Please check your connection';
+      }
+      return error.message;
     }
-    if (error.message.includes('Invalid credentials')) {
-      return 'Incorrect email or password';
-    }
-    if (error.message.includes('Network error')) {
-      return 'Network error. Please check your connection';
-    }
-    return error.message;
   }
 
   return context === 'login' 

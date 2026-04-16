@@ -57,11 +57,14 @@ export interface AdminStatsDTO {
 export interface UserActivityResponseDTO {
   id: number;
   userId: number;
-  actorId?: number;
+  targetUserId?: number;
   actionType: string;
   description: string;
-  ipAddress?: string;
+  metadata?: string;
   timestamp: string;
+  userName?: string;
+  targetUserName?: string;
+  ipAddress?: string;
   isSuspicious?: boolean;
 }
 
@@ -73,6 +76,14 @@ export interface AgentPerformanceDTO {
   averageResponseTimeHrs: number;
   clientSatisfactionScore: number;
   performanceRating: string;
+  approvalActionsCount: number;
+  rejectionActionsCount: number;
+  totalActions: number;
+  performanceScore: number;
+  numberOfClientsHandled: number;
+  totalAssignedClients: number;
+  activeAssignedClients: number;
+  averageProcessingTimeSeconds: number;
 }
 
 export interface ClientRiskScoreDTO {
@@ -84,11 +95,21 @@ export interface ClientRiskScoreDTO {
 }
 
 export interface ClientEligibilityDTO {
-  clientId: number;
-  maxLoanAmount: number;
-  maxInvestmentLimit: number;
-  isEligibleForPremium: boolean;
-  reasons: string[];
+  eligible: boolean;
+  reason: string;
+  isEligibleForPremium?: boolean;
+  maxLoanAmount?: number;
+}
+
+export interface MessageDTO {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  content: string;
+  timestamp: string;
+  isRead: boolean;
+  senderName?: string;
+  receiverName?: string;
 }
 
 export interface Page<T> {
@@ -115,5 +136,6 @@ export interface ApiResponse<T> {
 export interface AuthResponseDTO {
   token: string;
   type: string;
+  role?: UserRole;
   user?: UserResponseDTO;
 }

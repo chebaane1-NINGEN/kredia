@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import {
   ApiResponse,
   Page,
@@ -9,92 +9,100 @@ import {
   AgentPerformanceDTO,
   ClientRiskScoreDTO,
   ClientEligibilityDTO,
+  MessageDTO,
   UserRole,
   UserStatus,
   AuthResponseDTO
 } from '../types/user.types';
 
-const api = axios.create({
-  baseURL: 'http://localhost:8086/api/user',
-  timeout: 8000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
+const createClient = (baseURL: string): AxiosInstance => {
+  const instance = axios.create({
+    baseURL,
+    timeout: 8000,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
 
-// Request interceptor - add auth header
-api.interceptors.request.use(
-  (config) => {
-    const actorId = localStorage.getItem('kredia_actor_id');
-    const token = localStorage.getItem('kredia_token');
-    
-    if (actorId && config.headers) {
-      config.headers['X-Actor-Id'] = actorId;
+  instance.interceptors.request.use(
+    (config) => {
+      const actorId = localStorage.getItem('kredia_actor_id');
+      const token = localStorage.getItem('kredia_token');
+      if (actorId && config.headers) {
+        config.headers['X-Actor-Id'] = actorId;
+      }
+      if (token && config.headers) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
+      console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+      return config;
+    },
+    (error) => {
+      console.error('[API] Request error:', error);
+      return Promise.reject(error);
     }
-    if (token && config.headers) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
-    return config;
-  },
-  (error) => {
-    console.error('[API] Request error:', error);
-    return Promise.reject(error);
-  }
-);
+  );
 
-// Response interceptor - handle errors globally
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('[API] Response error:', error.message);
-    
-    // Handle timeout and network errors
-    if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
-      const msg = 'Backend not reachable. Please ensure the server is running on port 8086.';
-      console.warn('[QA-ROBUSTNESS] Network error detected:', msg);
-      return Promise.reject(new Error(msg));
+  instance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      console.error('[API] Response error:', error?.message || error);
+
+      if (!error.response) {
+        return Promise.reject(new Error('Backend not reachable (server down or wrong port).'));
+      }
+
+      if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
+        return Promise.reject(new Error('Backend not reachable. Please ensure the server is running on port 8086.'));
+      }
+
+      if (error.response?.status === 404) {
+        return Promise.reject(new Error('Resource not found (404).'));
+      }
+
+      if (error.response?.status >= 500) {
+        return Promise.reject(new Error('Server error. Please try again later.'));
+      }
+
+      const payload = error.response?.data;
+      if (payload?.message) {
+        return Promise.reject(new Error(payload.message));
+      }
+      if (payload?.error) {
+        return Promise.reject(new Error(payload.error));
+      }
+      return Promise.reject(error);
     }
-    
-    if (error.response?.status === 404) {
-      return Promise.reject(new Error('Resource not found (404).'));
-    }
-    
-    if (error.response?.status >= 500) {
-      return Promise.reject(new Error('Server error. Please try again later.'));
-    }
-    
-    // Handle business errors (400, etc.)
-    if (error.response?.data?.message) {
-      return Promise.reject(new Error(error.response.data.message));
-    }
-    
-    return Promise.reject(error);
-  }
-);
+  );
+
+  return instance;
+};
+
+const api = createClient('http://localhost:8086/api/user');
+const authApi = createClient('http://localhost:8086/api/auth');
 
 // Helper to extract data from the wrapper
 const extractData = <T>(response: { data: ApiResponse<T> }): T => response.data.data;
 
 export const userApi = {
   // ---- Auth Endpoints ----
-  login: (email: string, password: string) => 
-    axios.post<ApiResponse<AuthResponseDTO>>('http://localhost:8086/api/auth/login', { email, password }).then(res => res.data.data),
-    
+  login: (email: string, password: string) =>
+    authApi.post<ApiResponse<AuthResponseDTO>>('/login', { email, password }).then(res => res.data.data),
+
   register: (user: any) =>
-    axios.post<ApiResponse<UserResponseDTO>>('http://localhost:8086/api/auth/register', user).then(res => res.data.data),
+    authApi.post<ApiResponse<UserResponseDTO>>('/register', user).then(res => res.data.data),
 
   googleLogin: (idToken: string) =>
-    axios.post<ApiResponse<AuthResponseDTO>>('http://localhost:8086/api/auth/google', { idToken }).then(res => res.data.data),
+    authApi.post<ApiResponse<AuthResponseDTO>>('/google', { idToken }).then(res => res.data.data),
 
   verifyEmail: (token: string) =>
-    axios.post<ApiResponse<void>>('http://localhost:8086/api/auth/verify-email', null, { params: { token } }).then(res => res.data.data),
+    authApi.post<ApiResponse<void>>('/verify-email', null, { params: { token } }).then(res => res.data.data),
 
   forgotPassword: (email: string) =>
-    axios.post<ApiResponse<void>>('http://localhost:8086/api/auth/forgot-password', { email }).then(res => res.data.data),
+    authApi.post<ApiResponse<void>>('/forgot-password', { email }).then(res => res.data.data),
 
   resetPassword: (token: string, password: string) =>
-    axios.post<ApiResponse<void>>('http://localhost:8086/api/auth/reset-password', { token, password }).then(res => res.data.data),
+    authApi.post<ApiResponse<void>>('/reset-password', { token, password }).then(res => res.data.data),
     
   // ---- CRUD ----
   create: (user: UserRequestDTO) => api.post<ApiResponse<UserResponseDTO>>('', user).then(extractData),
@@ -148,4 +156,16 @@ export const userApi = {
   getClientActivities: (clientId: number, p?: { page?: number; size?: number }) => api.get<ApiResponse<Page<UserActivityResponseDTO>>>(`/client/${clientId}/activity`, { params: p }).then(extractData),
   getClientRiskScore: (clientId: number) => api.get<ApiResponse<ClientRiskScoreDTO>>(`/client/${clientId}/risk-score`).then(extractData),
   getClientEligibility: (clientId: number) => api.get<ApiResponse<ClientEligibilityDTO>>(`/client/${clientId}/eligibility`).then(extractData),
+
+  // ---- Messaging ----
+  sendMessage: (receiverId: number, content: string) =>
+    api.post<ApiResponse<MessageDTO>>('/messages', null, { params: { receiverId, content } }).then(extractData),
+  getConversation: (otherUserId: number, p?: { page?: number; size?: number }) =>
+    api.get<ApiResponse<Page<MessageDTO>>>(`/messages/conversation/${otherUserId}`, { params: p }).then(extractData),
+  getRecentConversations: () =>
+    api.get<ApiResponse<MessageDTO[]>>('/messages/recent').then(extractData),
+  getAllMessages: (p?: { page?: number; size?: number }) =>
+    api.get<ApiResponse<Page<MessageDTO>>>('/messages', { params: p }).then(extractData),
+  markMessageAsRead: (messageId: number) =>
+    api.patch<ApiResponse<void>>(`/messages/${messageId}/read`).then(extractData),
 };

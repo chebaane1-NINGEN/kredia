@@ -2,6 +2,7 @@ package com.kredia.service.impl.user;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.kredia.dto.auth.AuthResponseDTO;
 import com.kredia.dto.auth.LoginRequestDTO;
 import com.kredia.dto.auth.RegisterRequestDTO;
 import com.kredia.dto.user.UserResponseDTO;
@@ -19,6 +20,7 @@ import com.kredia.service.user.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,12 +69,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponseDTO register(RegisterRequestDTO request) {
-        if (userRepository.existsByEmailAndDeletedFalse(request.getEmail())) {
-            throw new BusinessException("Email already exists");
+        String email = normalizeEmail(request.getEmail());
+        if (userRepository.existsByEmailIgnoreCaseAndDeletedFalse(email)) {
+            throw new BusinessException("EMAIL_ALREADY_EXISTS", "An account with this email already exists", HttpStatus.CONFLICT);
         }
 
         User user = new User();
-        user.setEmail(request.getEmail());
+        user.setEmail(email);
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setPhoneNumber(request.getPhoneNumber());
@@ -88,7 +91,6 @@ public class AuthServiceImpl implements AuthService {
         emailService.sendVerificationEmail(saved.getEmail(), verificationToken);
         log.info("Verification link for {}: http://localhost:5173/verify?token={}", saved.getEmail(), verificationToken);
 
-        // Log activity
         UserActivity activity = new UserActivity();
         activity.setUserId(saved.getId());
         activity.setActionType(UserActivityActionType.CREATED);
@@ -100,32 +102,47 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(noRollbackFor = BusinessException.class)
-    public String login(LoginRequestDTO request) {
-        User user = userRepository.findByEmailAndDeletedFalse(request.getEmail())
-                .orElseThrow(() -> new BusinessException("Invalid email or password"));
+    public AuthResponseDTO login(LoginRequestDTO request) {
+        String email = normalizeEmail(request.getEmail());
+        log.info("Login attempt: {}", email);
 
-        if (user.getStatus() == UserStatus.PENDING_VERIFICATION) {
-            throw new BusinessException("Please verify your email before logging in");
+        User user = userRepository.findByEmailIgnoreCaseAndDeletedFalse(email)
+                .orElseThrow(() -> {
+                    log.error("Login failed: {} not found", email);
+                    return new BusinessException("EMAIL_NOT_FOUND", "Email not found", HttpStatus.UNAUTHORIZED);
+                });
+
+        if (!user.isEmailVerified()) {
+            log.error("Login failed for {}: email not verified", user.getEmail());
+            throw new BusinessException("EMAIL_NOT_VERIFIED", "Please verify your email before login", HttpStatus.FORBIDDEN);
         }
 
         if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new BusinessException("Account is blocked due to too many failed attempts or administrative action");
+            log.error("Login failed for {}: account blocked", user.getEmail());
+            throw new BusinessException("ACCOUNT_BLOCKED", "Account is blocked. Contact admin.", HttpStatus.FORBIDDEN);
         }
 
         if (user.getStatus() == UserStatus.SUSPENDED) {
-            throw new BusinessException("Account is suspended");
+            log.error("Login failed for {}: account suspended", user.getEmail());
+            throw new BusinessException("ACCOUNT_SUSPENDED", "Account is suspended.", HttpStatus.FORBIDDEN);
         }
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        boolean passwordMatches = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
+        if (!passwordMatches && isLegacyPlainPassword(user.getPasswordHash(), request.getPassword())) {
+            passwordMatches = true;
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            log.info("Legacy plaintext password migrated for user {}", user.getEmail());
+        }
+
+        if (!passwordMatches) {
             int attempts = user.getFailedLoginAttempts() + 1;
             user.setFailedLoginAttempts(attempts);
 
             if (attempts >= 3) {
                 user.setStatus(UserStatus.BLOCKED);
                 emailService.sendSecurityAlert(user.getEmail(), "Account blocked after 3 failed login attempts");
-                log.warn("User {} blocked after 3 failed login attempts", user.getEmail());
+                log.warn("User {} blocked after {} failed login attempts", user.getEmail(), attempts);
 
-                // Log failed login and block
                 UserActivity failedActivity = new UserActivity();
                 failedActivity.setUserId(user.getId());
                 failedActivity.setActionType(UserActivityActionType.FAILED_LOGIN);
@@ -138,41 +155,53 @@ public class AuthServiceImpl implements AuthService {
                 blockActivity.setDescription("Account automatically blocked due to failed login attempts");
                 userActivityRepository.save(blockActivity);
             } else {
-                // Log failed login attempt
                 UserActivity failedActivity = new UserActivity();
                 failedActivity.setUserId(user.getId());
                 failedActivity.setActionType(UserActivityActionType.FAILED_LOGIN);
                 failedActivity.setDescription("Failed login attempt " + attempts + " of 3");
                 userActivityRepository.save(failedActivity);
+                log.error("Login failed for {}: invalid password attempt {}", user.getEmail(), attempts);
             }
 
             userRepository.save(user);
-            throw new BusinessException("Invalid email or password. Attempt " + attempts + " of 3");
+            throw new BusinessException("INVALID_PASSWORD", "Incorrect password", HttpStatus.UNAUTHORIZED);
         }
 
         user.setFailedLoginAttempts(0);
         userRepository.save(user);
 
-        // Log successful login
         UserActivity loginActivity = new UserActivity();
         loginActivity.setUserId(user.getId());
         loginActivity.setActionType(UserActivityActionType.LOGIN);
         loginActivity.setDescription("User logged in successfully");
         userActivityRepository.save(loginActivity);
 
-        return tokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        String token = tokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        log.info("Login successful: {}", user.getEmail());
+        return new AuthResponseDTO(token, user.getRole().name(), userMapper.toResponse(user));
+    }
+
+    private boolean isLegacyPlainPassword(String storedHash, String rawPassword) {
+        return storedHash != null && !storedHash.startsWith("$2a$") && !storedHash.startsWith("$2b$") && !storedHash.startsWith("$2y$") && storedHash.equals(rawPassword);
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
     }
 
     @Override
     @Transactional
-    public String loginWithGoogle(String idToken) {
+    public AuthResponseDTO loginWithGoogle(String idToken) {
+        log.info("Google login attempt");
         GoogleTokenData googleToken = verifyGoogleToken(idToken);
 
         if (!googleToken.emailVerified()) {
+            log.error("Google login failed: email not verified");
             throw new BusinessException("Google account email is not verified");
         }
 
         if (!googleClientId.isBlank() && !googleClientId.equals(googleToken.aud())) {
+            log.error("Google login failed: invalid token audience {}", googleToken.aud());
             throw new BusinessException("Invalid Google token audience");
         }
 
@@ -192,7 +221,6 @@ public class AuthServiceImpl implements AuthService {
                     emailService.sendWelcomeEmail(saved.getEmail(), saved.getFirstName());
                     log.info("New Google user created: {}", saved.getEmail());
 
-                    // Log Google user creation
                     UserActivity createActivity = new UserActivity();
                     createActivity.setUserId(saved.getId());
                     createActivity.setActionType(UserActivityActionType.CREATED);
@@ -203,10 +231,12 @@ public class AuthServiceImpl implements AuthService {
                 });
 
         if (user.getStatus() == UserStatus.BLOCKED) {
+            log.error("Google login failed for {}: account blocked", user.getEmail());
             throw new BusinessException("Account is blocked");
         }
 
         if (user.getStatus() == UserStatus.SUSPENDED) {
+            log.error("Google login failed for {}: account suspended", user.getEmail());
             throw new BusinessException("Account is suspended");
         }
 
@@ -218,14 +248,15 @@ public class AuthServiceImpl implements AuthService {
         user.setFailedLoginAttempts(0);
         userRepository.save(user);
 
-        // Log Google login
         UserActivity googleLoginActivity = new UserActivity();
         googleLoginActivity.setUserId(user.getId());
         googleLoginActivity.setActionType(UserActivityActionType.GOOGLE_LOGIN);
         googleLoginActivity.setDescription("User logged in via Google OAuth");
         userActivityRepository.save(googleLoginActivity);
 
-        return tokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        String token = tokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        log.info("Google login successful: {}", user.getEmail());
+        return new AuthResponseDTO(token, user.getRole().name(), userMapper.toResponse(user));
     }
 
     @Override

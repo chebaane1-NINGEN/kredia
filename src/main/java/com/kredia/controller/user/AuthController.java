@@ -31,14 +31,12 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponseDTO>> login(@Valid @RequestBody LoginRequestDTO request) {
-        String token = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.ok(new AuthResponseDTO(token)));
+        return ResponseEntity.ok(ApiResponse.ok(authService.login(request)));
     }
 
     @PostMapping("/google")
     public ResponseEntity<ApiResponse<AuthResponseDTO>> loginWithGoogle(@Valid @RequestBody GoogleLoginRequestDTO request) {
-        String token = authService.loginWithGoogle(request.getIdToken());
-        return ResponseEntity.ok(ApiResponse.ok(new AuthResponseDTO(token)));
+        return ResponseEntity.ok(ApiResponse.ok(authService.loginWithGoogle(request.getIdToken())));
     }
 
     @PostMapping("/verify-email")

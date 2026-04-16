@@ -115,7 +115,7 @@ public class UserServiceImpl implements UserService {
         }
 
         User saved = userRepository.save(entity);
-        recordActivity(saved.getId(), UserActivityActionType.CREATED, "User created by " + actor.getRole() + " " + actor.getEmail());
+        recordActivity(actorId, saved.getId(), UserActivityActionType.CREATED, actor.getRole() + " " + actor.getEmail() + " created user " + saved.getEmail(), "{\"role\":\"" + saved.getRole() + "\",\"status\":\"" + saved.getStatus() + "\"}");
         log.info("user_created userId={} email={} createdBy={}", saved.getId(), saved.getEmail(), actor.getEmail());
         return userMapper.toResponse(saved);
     }
@@ -361,7 +361,7 @@ public class UserServiceImpl implements UserService {
         UserStatus previous = user.getStatus();
         user.setStatus(UserStatus.BLOCKED);
         User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.STATUS_CHANGED, "User blocked by admin " + actor.getEmail());
+        recordActivity(actorId, saved.getId(), UserActivityActionType.STATUS_CHANGED, "Admin " + actor.getEmail() + " blocked user " + saved.getEmail(), "{\"previousStatus\":\"" + previous + "\",\"newStatus\":\"" + saved.getStatus() + "\"}");
         log.info("user_status_changed userId={} from={} to={}", saved.getId(), previous, saved.getStatus());
         return userMapper.toResponse(saved);
     }
@@ -455,8 +455,8 @@ public class UserServiceImpl implements UserService {
         UserRole previous = user.getRole();
         user.setRole(role);
         User saved = userRepository.save(user);
-        recordActivity(saved.getId(), UserActivityActionType.ROLE_CHANGED,
-            String.format("Role changed from %s to %s by admin %s", previous, role, actor.getEmail()));
+        recordActivity(actorId, saved.getId(), UserActivityActionType.ROLE_CHANGED,
+            "Admin " + actor.getEmail() + " changed role of " + saved.getEmail() + " from " + previous + " to " + role, "{\"previousRole\":\"" + previous + "\",\"newRole\":\"" + role + "\"}");
         log.info("user_role_changed userId={} from={} to={}", saved.getId(), previous, saved.getRole());
         return userMapper.toResponse(saved);
     }
@@ -545,23 +545,50 @@ public class UserServiceImpl implements UserService {
         User actor = loadActor(actorId);
         validateRole(actor, UserRole.ADMIN);
 
+        // KPIs globaux
         long totalUser = userRepository.countByDeletedFalse();
-        long totalClient = userRepository.countByRoleAndDeletedFalse(UserRole.CLIENT);
-        long totalAgent = userRepository.countByRoleAndDeletedFalse(UserRole.AGENT);
         long activeUser = userRepository.countByStatusAndDeletedFalse(UserStatus.ACTIVE);
         long blockedUser = userRepository.countByStatusAndDeletedFalse(UserStatus.BLOCKED);
         long suspendedUser = userRepository.countByStatusAndDeletedFalse(UserStatus.SUSPENDED);
+        long totalClient = userRepository.countByRoleAndDeletedFalse(UserRole.CLIENT);
+        long totalAgent = userRepository.countByRoleAndDeletedFalse(UserRole.AGENT);
+
+        // Activation rate: (active_users / total_users) * 100
+        double activationRate = totalUser > 0 ? (activeUser * 100.0) / totalUser : 0.0;
+
+        // Last 24h registrations
         long last24hRegistrations = userRepository.countByCreatedAtAfterAndDeletedFalse(Instant.now().minus(24, ChronoUnit.HOURS));
 
+        // Role distribution
         Map<UserRole, Long> distribution = new EnumMap<>(UserRole.class);
         for (UserRole r : UserRole.values()) {
             distribution.put(r, userRepository.countByRoleAndDeletedFalse(r));
         }
 
-        double health = 0.0;
-        if (totalUser > 0) {
-            health = (activeUser * 100.0) / totalUser;
+        // Health Index calculation: (0.5 * active_users_ratio) + (0.3 * low_block_rate) + (0.2 * user_activity_score)
+        double activeUsersRatio = totalUser > 0 ? (activeUser * 1.0) / totalUser : 0.0;
+        double blockRate = totalUser > 0 ? (blockedUser * 1.0) / totalUser : 0.0;
+        double lowBlockRate = Math.max(0, 1.0 - blockRate); // Lower block rate is better
+
+        // User activity score based on recent activities
+        long recentActivities = userActivityRepository.count();
+        double userActivityScore = Math.min(1.0, recentActivities / 1000.0); // Normalize to 0-1
+
+        double healthIndex = (0.5 * activeUsersRatio) + (0.3 * lowBlockRate) + (0.2 * userActivityScore);
+        healthIndex = Math.round(healthIndex * 100.0) / 100.0; // Round to 2 decimal places
+
+        // Registration evolution by day/week/month based on created_at
+        Map<String, Long> evolution = new java.util.LinkedHashMap<>();
+        List<Object[]> evolutionData = userRepository.countRegistrationsByDay(); // Changed to by day
+        for (Object[] row : evolutionData) {
+            evolution.put((String) row[0], ((Number) row[1]).longValue());
         }
+
+        // Recent activities for audit trail
+        List<UserActivityResponseDTO> recentActivitiesList = userActivityRepository.findTop10ByOrderByTimestampDesc()
+                .stream()
+                .map(this::mapActivity)
+                .toList();
 
         AdminStatsDTO dto = new AdminStatsDTO();
         dto.setTotalUser(totalUser);
@@ -572,22 +599,9 @@ public class UserServiceImpl implements UserService {
         dto.setSuspendedUser(suspendedUser);
         dto.setLast24hRegistrations(last24hRegistrations);
         dto.setRoleDistribution(distribution);
-        dto.setSystemHealthIndex(health);
-
-        // Populate registration evolution
-        Map<String, Long> evolution = new java.util.LinkedHashMap<>();
-        List<Object[]> evolutionData = userRepository.countRegistrationsByMonth();
-        for (Object[] row : evolutionData) {
-            evolution.put((String) row[0], ((Number) row[1]).longValue());
-        }
+        dto.setSystemHealthIndex(healthIndex);
         dto.setRegistrationEvolution(evolution);
-
-        // Populate recent activities
-        List<UserActivityResponseDTO> recentActivities = userActivityRepository.findTop10ByOrderByTimestampDesc()
-                .stream()
-                .map(this::mapActivity)
-                .toList();
-        dto.setRecentActivities(recentActivities);
+        dto.setRecentActivities(recentActivitiesList);
 
         return dto;
     }
@@ -647,25 +661,41 @@ public class UserServiceImpl implements UserService {
         }
 
         List<UserActivity> acts = userActivityRepository.findByUserIdOrderByTimestampAsc(agentId);
+
+        // Calculate real metrics
         long approvals = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.APPROVAL).count();
         long rejections = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.REJECTION).count();
-        long handled = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.CLIENT_HANDLED).count();
+        long clientsHandled = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.CLIENT_HANDLED).count();
+
+        // Clients assigned to this agent
+        long assignedClients = userRepository.countByAssignedAgentAndDeletedFalse(agent);
+
+        // Active clients assigned
+        long activeClients = userRepository.countByAssignedAgentAndStatusAndDeletedFalse(agent, UserStatus.ACTIVE);
 
         long totalActions = approvals + rejections;
-        double score = 0.0;
+        double performanceScore = 0.0;
         if (totalActions > 0) {
-            score = (approvals * 100.0) / totalActions;
+            performanceScore = (approvals * 100.0) / totalActions;
         }
 
-        double avgProcessingSeconds = computeAverageProcessingTimeSeconds(acts);
+        // Calculate average processing time from activities
+        double avgProcessingTimeSeconds = computeAverageProcessingTimeSeconds(acts);
+
+        // Calculate client satisfaction (mock for now - could be based on feedback)
+        double clientSatisfactionScore = Math.min(100.0, 70.0 + (performanceScore * 0.3));
 
         AgentPerformanceDTO dto = new AgentPerformanceDTO();
+        dto.setAgentId(agentId);
         dto.setApprovalActionsCount(approvals);
         dto.setRejectionActionsCount(rejections);
         dto.setTotalActions(totalActions);
-        dto.setPerformanceScore(score);
-        dto.setNumberOfClientsHandled(handled);
-        dto.setAverageProcessingTimeSeconds(avgProcessingSeconds);
+        dto.setPerformanceScore(Math.round(performanceScore * 100.0) / 100.0);
+        dto.setNumberOfClientsHandled(clientsHandled);
+        dto.setTotalAssignedClients(assignedClients);
+        dto.setActiveAssignedClients(activeClients);
+        dto.setAverageProcessingTimeSeconds(Math.round(avgProcessingTimeSeconds * 100.0) / 100.0);
+        dto.setClientSatisfactionScore(Math.round(clientSatisfactionScore * 100.0) / 100.0);
         return dto;
     }
 
@@ -769,6 +799,34 @@ public class UserServiceImpl implements UserService {
         return dto;
     }
 
+    @Override
+    @Transactional
+    public UserResponseDTO updateProfilePicture(Long userId, String imageUrl) {
+        User user = loadActor(userId);
+
+        String oldPictureUrl = user.getProfilePictureUrl();
+        user.setProfilePictureUrl(imageUrl);
+        User saved = userRepository.save(user);
+
+        recordActivity(userId, userId, UserActivityActionType.CREATED, "Profile picture updated", "{\"oldUrl\":\"" + (oldPictureUrl != null ? oldPictureUrl : "") + "\",\"newUrl\":\"" + imageUrl + "\"}");
+
+        return userMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public void deleteProfilePicture(Long userId) {
+        User user = loadActor(userId);
+
+        String oldPictureUrl = user.getProfilePictureUrl();
+        if (oldPictureUrl != null) {
+            user.setProfilePictureUrl(null);
+            userRepository.save(user);
+
+            recordActivity(userId, userId, UserActivityActionType.CREATED, "Profile picture deleted", "{\"deletedUrl\":\"" + oldPictureUrl + "\"}");
+        }
+    }
+
     private User findForMutation(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
@@ -779,10 +837,16 @@ public class UserServiceImpl implements UserService {
     }
 
     private void recordActivity(Long userId, UserActivityActionType type, String description) {
+        recordActivity(userId, null, type, description, null);
+    }
+
+    private void recordActivity(Long userId, Long targetUserId, UserActivityActionType type, String description, String metadata) {
         UserActivity activity = new UserActivity();
         activity.setUserId(userId);
+        activity.setTargetUserId(targetUserId);
         activity.setActionType(type);
         activity.setDescription(description);
+        activity.setMetadata(metadata);
         activity.setTimestamp(Instant.now());
         userActivityRepository.save(activity);
     }

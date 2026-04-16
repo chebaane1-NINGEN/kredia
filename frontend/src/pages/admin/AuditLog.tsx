@@ -108,6 +108,83 @@ const AuditLog: React.FC = () => {
     return 'bg-indigo-50 text-indigo-600 border-indigo-100';
   };
 
+  const getReadableDescription = (log: UserActivityResponseDTO): string => {
+    const action = String(log.actionType || '').toUpperCase();
+    const desc = log.description || '';
+
+    // Parse the description to extract meaningful information
+    if (action.includes('CREATE')) {
+      if (desc.includes('created user')) {
+        const match = desc.match(/created user (\w+) (\w+)/i);
+        if (match) return `Admin created new ${match[1].toLowerCase()} account for ${match[2]}`;
+      }
+      return 'New user account created';
+    }
+
+    if (action.includes('DELETE')) {
+      if (desc.includes('deleted user')) {
+        const match = desc.match(/deleted user (\w+) (\w+)/i);
+        if (match) return `Admin permanently deleted ${match[1]} ${match[2]}'s account`;
+      }
+      return 'User account deleted';
+    }
+
+    if (action.includes('UPDATE') || action.includes('MODIFY')) {
+      if (desc.includes('updated user')) {
+        const match = desc.match(/updated user (\w+) (\w+)/i);
+        if (match) return `Admin modified ${match[1]} ${match[2]}'s profile information`;
+      }
+      return 'User profile updated';
+    }
+
+    if (action.includes('LOGIN')) {
+      if (desc.includes('logged in')) {
+        const match = desc.match(/(\w+) (\w+) logged in/i);
+        if (match) return `${match[1]} ${match[2]} signed into the system`;
+      }
+      return 'User login successful';
+    }
+
+    if (action.includes('LOGOUT')) {
+      return 'User signed out of the system';
+    }
+
+    if (action.includes('BLOCK')) {
+      if (desc.includes('blocked user')) {
+        const match = desc.match(/blocked user (\w+) (\w+)/i);
+        if (match) return `Admin blocked ${match[1]} ${match[2]}'s account`;
+      }
+      return 'User account blocked';
+    }
+
+    if (action.includes('ACTIVATE')) {
+      if (desc.includes('activated user')) {
+        const match = desc.match(/activated user (\w+) (\w+)/i);
+        if (match) return `Admin activated ${match[1]} ${match[2]}'s account`;
+      }
+      return 'User account activated';
+    }
+
+    if (action.includes('SUSPEND')) {
+      if (desc.includes('suspended user')) {
+        const match = desc.match(/suspended user (\w+) (\w+)/i);
+        if (match) return `Admin suspended ${match[1]} ${match[2]}'s account`;
+      }
+      return 'User account suspended';
+    }
+
+    if (action.includes('ROLE')) {
+      if (desc.includes('changed role')) {
+        const match = desc.match(/changed role of (\w+) (\w+) from (\w+) to (\w+)/i);
+        if (match) return `Admin changed ${match[1]} ${match[2]}'s role from ${match[3]} to ${match[4]}`;
+      }
+      return 'User role modified';
+    }
+
+    // Default fallback
+    return desc || 'System activity recorded';
+  };
+
   const hasActiveFilters = filterDate || filterAction !== 'ALL' || filterRisk !== 'ALL' || searchTerm;
 
   return (
@@ -259,7 +336,7 @@ const AuditLog: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{log.description}</p>
+                      <p className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{getReadableDescription(log)}</p>
                       {log.ipAddress && <p className="text-[10px] text-slate-400 mt-0.5 font-medium uppercase tracking-tighter">Terminal: {log.ipAddress}</p>}
                     </td>
                     <td className="px-6 py-4">
@@ -274,8 +351,8 @@ const AuditLog: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <p className="text-xs font-bold text-slate-700">{new Date(log.timestamp).toLocaleDateString()}</p>
-                      <p className="text-[10px] text-slate-400 font-medium">{new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      <p className="text-xs font-bold text-slate-700">{log.timestamp ? new Date(log.timestamp).toLocaleDateString() : 'N/A'}</p>
+                      <p className="text-[10px] text-slate-400 font-medium">{log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
                     </td>
                   </tr>
                 ))

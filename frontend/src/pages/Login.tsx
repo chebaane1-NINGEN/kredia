@@ -18,7 +18,7 @@ import {
   Wallet,
   CheckCircle2
 } from 'lucide-react';
-import { validateEmail, validatePassword, getAuthErrorMessage, FormErrors } from '../utils/validation';
+import { validateEmail, validateLoginPassword, getAuthErrorMessage, FormErrors } from '../utils/validation';
 
 const Login: React.FC = () => {
   const { login, loginWithGoogle, loginWithGithub, authError, clearAuthError, currentUser } = useAuth();
@@ -58,7 +58,7 @@ const Login: React.FC = () => {
       const emailValidation = validateEmail(value);
       error = emailValidation.error || '';
     } else if (field === 'password') {
-      const passwordValidation = validatePassword(value);
+      const passwordValidation = validateLoginPassword(value);
       error = passwordValidation.error || '';
     }
 
@@ -88,7 +88,7 @@ const Login: React.FC = () => {
 
   const isFormValid = () => {
     const emailValid = validateEmail(formData.email).isValid;
-    const passwordValid = validatePassword(formData.password).isValid;
+    const passwordValid = validateLoginPassword(formData.password).isValid;
     return emailValid && passwordValid && !isLoading;
   };
 

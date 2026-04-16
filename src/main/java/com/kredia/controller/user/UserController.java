@@ -11,6 +11,8 @@ import com.kredia.dto.user.AdminUserUpdateDTO;
 import com.kredia.dto.user.UserRequestDTO;
 import com.kredia.dto.user.UserResponseDTO;
 import com.kredia.dto.user.UserRoleChangeRequestDTO;
+import com.kredia.dto.user.MessageDTO;
+import com.kredia.service.user.MessageService;
 import com.kredia.entity.user.KycDocument;
 import com.kredia.enums.DocumentType;
 import com.kredia.enums.KycStatus;
@@ -37,10 +39,12 @@ public class UserController {
 
     private final UserService userService;
     private final KycDocumentService kycDocumentService;
+    private final MessageService messageService;
 
-    public UserController(UserService userService, KycDocumentService kycDocumentService) {
+    public UserController(UserService userService, KycDocumentService kycDocumentService, MessageService messageService) {
         this.userService = userService;
         this.kycDocumentService = kycDocumentService;
+        this.messageService = messageService;
     }
 
     @PostMapping
@@ -311,5 +315,75 @@ public class UserController {
             @RequestParam("status") KycStatus status
     ) {
         return ResponseEntity.ok(ApiResponse.ok(kycDocumentService.verifyDocument(actorId, docId, status)));
+    }
+
+    // --- Messaging Endpoints ---
+    @PostMapping("/messages")
+    public ResponseEntity<ApiResponse<MessageDTO>> sendMessage(
+            @RequestHeader("X-Actor-Id") Long senderId,
+            @RequestParam("receiverId") Long receiverId,
+            @RequestParam("content") String content
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(messageService.sendMessage(senderId, receiverId, content)));
+    }
+
+    @GetMapping("/messages/conversation/{otherUserId}")
+    public ResponseEntity<ApiResponse<Page<MessageDTO>>> getConversation(
+            @RequestHeader("X-Actor-Id") Long userId,
+            @PathVariable("otherUserId") Long otherUserId,
+            @PageableDefault Pageable pageable
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(messageService.getConversation(userId, otherUserId, pageable)));
+    }
+
+    @GetMapping("/messages")
+    public ResponseEntity<ApiResponse<Page<MessageDTO>>> getAllMessages(
+            @RequestHeader("X-Actor-Id") Long userId,
+            @PageableDefault Pageable pageable
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(messageService.getAllMessages(userId, pageable)));
+    }
+
+    @GetMapping("/messages/recent")
+    public ResponseEntity<ApiResponse<List<MessageDTO>>> getRecentConversations(
+            @RequestHeader("X-Actor-Id") Long userId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(messageService.getRecentConversations(userId)));
+    }
+
+    @GetMapping("/messages/unread-count")
+    public ResponseEntity<ApiResponse<Long>> getUnreadCount(
+            @RequestHeader("X-Actor-Id") Long userId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(messageService.getUnreadCount(userId)));
+    }
+
+    @PatchMapping("/messages/{messageId}/read")
+    public ResponseEntity<ApiResponse<Void>> markAsRead(
+            @RequestHeader("X-Actor-Id") Long userId,
+            @PathVariable("messageId") Long messageId
+    ) {
+        messageService.markAsRead(userId, messageId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    // --- Profile Picture Management ---
+    @PutMapping("/{id}/profile-picture")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> updateProfilePicture(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("id") Long userId,
+            @RequestParam("imageUrl") String imageUrl
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.updateProfilePicture(userId, imageUrl)));
+    }
+
+    @DeleteMapping("/{id}/profile-picture")
+    public ResponseEntity<ApiResponse<Void>> deleteProfilePicture(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("id") Long userId
+    ) {
+        userService.deleteProfilePicture(userId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 }

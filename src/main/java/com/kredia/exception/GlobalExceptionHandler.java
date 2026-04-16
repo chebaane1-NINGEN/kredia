@@ -25,27 +25,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), "NOT_FOUND", request);
     }
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFoundLegacy(NotFoundException ex, HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), "NOT_FOUND", request);
     }
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiErrorResponse> handleBusiness(BusinessException ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "Business Error", ex.getMessage(), request);
+        HttpStatus status = ex.getStatus() != null ? ex.getStatus() : HttpStatus.BAD_REQUEST;
+        return build(status, "Business Error", ex.getMessage(), ex.getCode(), request);
     }
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ApiErrorResponse> handleBadRequestLegacy(BadRequestException ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), request);
+        return build(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage(), "BAD_REQUEST", request);
     }
 
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ApiErrorResponse> handleForbidden(ForbiddenException ex, HttpServletRequest request) {
-        return build(HttpStatus.FORBIDDEN, "Forbidden", ex.getMessage(), request);
+        return build(HttpStatus.FORBIDDEN, "Forbidden", ex.getMessage(), "FORBIDDEN", request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -55,32 +56,32 @@ public class GlobalExceptionHandler {
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                 .findFirst()
                 .orElse("Validation error");
-        return build(HttpStatus.BAD_REQUEST, "Validation Error", message, request);
+        return build(HttpStatus.BAD_REQUEST, "Validation Error", message, "VALIDATION_ERROR", request);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "Validation Error", ex.getMessage(), request);
+        return build(HttpStatus.BAD_REQUEST, "Validation Error", ex.getMessage(), "VALIDATION_ERROR", request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "Data Integrity Error", "Request violates data constraints", request);
+        return build(HttpStatus.BAD_REQUEST, "Data Integrity Error", "Request violates data constraints", "DATA_INTEGRITY_ERROR", request);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, "Concurrency Error", "Resource was updated concurrently", request);
+        return build(HttpStatus.CONFLICT, "Concurrency Error", "Resource was updated concurrently", "CONCURRENCY_ERROR", request);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
+        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), "NOT_FOUND", request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "Bad Request", "Invalid parameter value", request);
+        return build(HttpStatus.BAD_REQUEST, "Bad Request", "Invalid parameter value", "BAD_REQUEST", request);
     }
 
     @ExceptionHandler(Exception.class)
@@ -98,14 +99,15 @@ public class GlobalExceptionHandler {
                 , root.getClass().getName()
                 , root.getMessage()
         );
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Error", "Unexpected error", request);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Error", "Unexpected error", "INTERNAL_ERROR", request);
     }
 
-    private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String error, String message, HttpServletRequest request) {
+    private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String error, String message, String code, HttpServletRequest request) {
         ApiErrorResponse body = new ApiErrorResponse();
         body.setTimestamp(Instant.now());
         body.setStatus(status.value());
         body.setError(error);
+        body.setCode(code);
         body.setMessage(message);
         body.setPath(request.getRequestURI());
         return ResponseEntity.status(status).body(body);

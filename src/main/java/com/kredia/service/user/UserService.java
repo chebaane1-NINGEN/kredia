@@ -76,4 +76,8 @@ public interface UserService {
     Page<UserActivityResponseDTO> clientActivity(Long clientId, Pageable pageable);
     ClientRiskScoreDTO clientRiskScore(Long clientId);
     ClientEligibilityDTO clientEligibility(Long clientId);
+
+    // --- Profile Picture Management ---
+    UserResponseDTO updateProfilePicture(Long userId, String imageUrl);
+    void deleteProfilePicture(Long userId);
 }

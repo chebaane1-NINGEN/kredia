@@ -78,6 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleAuthSuccess = useCallback(async (token: string) => {
     localStorage.setItem('kredia_token', token);
+    localStorage.setItem('token', token);
 
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -94,6 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     localStorage.setItem('kredia_actor_id', String(userId));
     localStorage.setItem('kredia_role', userRole);
+    localStorage.setItem('role', userRole);
     localStorage.setItem('kredia_user_id', String(userId));
   }, []);
 

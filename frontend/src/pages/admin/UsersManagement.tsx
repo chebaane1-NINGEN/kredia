@@ -284,6 +284,46 @@ const UsersManagement: React.FC = () => {
     return Math.round(healthIndex);
   };
 
+  const handleIndividualAction = async (userId: number, action: string) => {
+    try {
+      setLoading(true);
+      switch (action) {
+        case 'delete':
+          await userApi.delete(userId);
+          addToast('User deleted successfully', 'success');
+          break;
+        case 'restore':
+          await userApi.restore(userId);
+          addToast('User restored successfully', 'success');
+          break;
+        case 'block':
+          await userApi.block(userId);
+          addToast('User blocked successfully', 'success');
+          break;
+        case 'activate':
+          await userApi.activate(userId);
+          addToast('User activated successfully', 'success');
+          break;
+        case 'suspend':
+          await userApi.suspend(userId);
+          addToast('User suspended successfully', 'success');
+          break;
+        case 'deactivate':
+          await userApi.deactivate(userId);
+          addToast('User deactivated successfully', 'success');
+          break;
+        default:
+          addToast('Unknown action', 'error');
+          return;
+      }
+      fetchUsers();
+    } catch (error: any) {
+      addToast(`Failed to ${action} user: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getHealthBadge = (index: number) => {
     if (index >= 80) return { text: 'Excellent', color: 'bg-green-100 text-green-800' };
     if (index >= 60) return { text: 'Good', color: 'bg-blue-100 text-blue-800' };
@@ -291,11 +331,11 @@ const UsersManagement: React.FC = () => {
     return { text: 'Poor', color: 'bg-red-100 text-red-800' };
   };
 
-  const isAllSelected = users.length > 0 && selectedUsers.length === users.length;
-  const isIndeterminate = selectedUsers.length > 0 && selectedUsers.length < users.length;
-
   const healthIndex = getHealthIndex();
   const healthBadge = getHealthBadge(healthIndex);
+
+  const isAllSelected = users.length > 0 && selectedUsers.length === users.length;
+  const isIndeterminate = selectedUsers.length > 0 && selectedUsers.length < users.length;
 
   return (
     <div className="space-y-6">
@@ -648,24 +688,54 @@ const UsersManagement: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString()}
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1">
                         <button
                           onClick={() => navigate(`/admin/users/${user.id}`)}
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="text-indigo-600 hover:text-indigo-900 p-1"
                           title="View Details"
                         >
-                          <Eye size={16} />
+                          <Eye size={14} />
                         </button>
                         <button
                           onClick={() => navigate(`/admin/users/${user.id}?edit=true`)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-blue-600 hover:text-blue-900 p-1"
                           title="Edit User"
                         >
-                          <Edit2 size={16} />
+                          <Edit2 size={14} />
                         </button>
+                        
+                        {/* Quick Status Actions */}
+                        {user.status !== UserStatus.ACTIVE && (
+                          <button
+                            onClick={() => handleIndividualAction(user.id, 'activate')}
+                            className="text-green-600 hover:text-green-900 p-1"
+                            title="Activate User"
+                          >
+                            <CheckCircle2 size={14} />
+                          </button>
+                        )}
+                        {user.status !== UserStatus.SUSPENDED && (
+                          <button
+                            onClick={() => handleIndividualAction(user.id, 'suspend')}
+                            className="text-yellow-600 hover:text-yellow-900 p-1"
+                            title="Suspend User"
+                          >
+                            <Clock size={14} />
+                          </button>
+                        )}
+                        {user.status !== UserStatus.BLOCKED && (
+                          <button
+                            onClick={() => handleIndividualAction(user.id, 'block')}
+                            className="text-red-600 hover:text-red-900 p-1"
+                            title="Block User"
+                          >
+                            <Ban size={14} />
+                          </button>
+                        )}
+                        
                         <button
                           onClick={() => setConfirmModal({
                             isOpen: true,
@@ -673,10 +743,10 @@ const UsersManagement: React.FC = () => {
                             userName: `${user.firstName} ${user.lastName}`,
                             action: 'delete'
                           })}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:text-red-900 p-1"
                           title="Delete User"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -723,9 +793,8 @@ const UsersManagement: React.FC = () => {
           title={`Confirm ${confirmModal.action}`}
           message={`Are you sure you want to ${confirmModal.action} ${confirmModal.userName}?`}
           onConfirm={() => {
-            console.log(`Confirmed ${confirmModal.action} for user ${confirmModal.userId}`);
+            handleIndividualAction(confirmModal.userId, confirmModal.action);
             setConfirmModal({ isOpen: false, userId: 0, userName: '', action: '' });
-            fetchUsers();
           }}
           onCancel={() => setConfirmModal({ isOpen: false, userId: 0, userName: '', action: '' })}
         />

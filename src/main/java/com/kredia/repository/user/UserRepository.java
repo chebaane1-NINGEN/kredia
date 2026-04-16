@@ -19,11 +19,17 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     Optional<User> findByEmailAndDeletedFalse(String email);
 
+    Optional<User> findByEmailIgnoreCaseAndDeletedFalse(String email);
+
     Optional<User> findByVerificationToken(String verificationToken);
 
     boolean existsByEmailAndDeletedFalse(String email);
 
+    boolean existsByEmailIgnoreCaseAndDeletedFalse(String email);
+
     boolean existsByEmailAndDeletedFalseAndIdNot(String email, Long id);
+
+    boolean existsByEmailIgnoreCaseAndDeletedFalseAndIdNot(String email, Long id);
 
     boolean existsByPhoneNumberAndDeletedFalse(String phoneNumber);
 
@@ -42,7 +48,12 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     @org.springframework.data.jpa.repository.Query(value = "SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count FROM user WHERE deleted = false GROUP BY month ORDER BY month DESC LIMIT 6", nativeQuery = true)
     java.util.List<Object[]> countRegistrationsByMonth();
 
+    @org.springframework.data.jpa.repository.Query(value = "SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as day, COUNT(*) as count FROM user WHERE deleted = false AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) GROUP BY day ORDER BY day DESC", nativeQuery = true)
+    java.util.List<Object[]> countRegistrationsByDay();
+
     Page<User> findAllByRoleAndDeletedFalse(UserRole role, Pageable pageable);
 
-    Page<User> findAllByAssignedAgentAndDeletedFalse(User agent, Pageable pageable);
+    long countByAssignedAgentAndDeletedFalse(User agent);
+
+    long countByAssignedAgentAndStatusAndDeletedFalse(User agent, UserStatus status);
 }
