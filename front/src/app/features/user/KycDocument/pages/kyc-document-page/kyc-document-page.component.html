@@ -1,0 +1,39 @@
+<section class="kyc-document-page">
+  <header>
+    <h1>KYC Documents</h1>
+    <p>Review and manage user identity verification documents.</p>
+  </header>
+
+  <div class="alert error" *ngIf="error">{{ error }}</div>
+
+  <div class="table-responsive" *ngIf="!loading || docs.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>User ID</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Submitted</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let d of docs">
+          <td>{{ d.docId }}</td>
+          <td>{{ d.userId }}</td>
+          <td>{{ d.docType }}</td>
+          <td><span [class]="getStatusClass(d.status)">{{ d.status }}</span></td>
+          <td>{{ d.submittedAt | date:'short' }}</td>
+          <td>
+            <button (click)="approve(d.docId!)" [disabled]="d.status === 'APPROVED'">Approve</button>
+            <button (click)="reject(d.docId!)"  [disabled]="d.status === 'REJECTED'">Reject</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="docs.length === 0 && !loading">No KYC documents found.</p>
+  </div>
+
+  <p *ngIf="loading && docs.length === 0">Loading...</p>
+</section>

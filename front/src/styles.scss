@@ -1,1 +1,147 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --emerald-600: #00c070;
+  --emerald-700: #00a560;
+  --navy-900: #223344;
+  --font-title: 'Space Grotesk', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  
+  /* Light mode colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fb;
+  --bg-tertiary: #fdfefe;
+  --text-primary: #223344;
+  --text-secondary: rgba(34, 51, 68, 0.7);
+  --border-color: rgba(34, 51, 68, 0.08);
+  --shadow-color: rgba(15, 23, 42, 0.08);
+}
+
+html.dark-mode {
+  --bg-primary: #0f1419;
+  --bg-secondary: #1a1f2e;
+  --bg-tertiary: #252c3c;
+  --text-primary: #f0f4f8;
+  --text-secondary: rgba(240, 244, 248, 0.6);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --shadow-color: rgba(0, 0, 0, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Force Navbar Link Colors */
+.topbar .nav a {
+  color: #0d2b45 !important;
+}
+
+.topbar .nav a:hover {
+  color: #0d2b45 !important;
+}
+
+html.dark-mode .topbar .nav a {
+  color: rgba(240, 244, 248, 0.9) !important;
+}
+
+html.dark-mode .topbar .nav a:hover {
+  color: #ffffff !important;
+}
+
+
+button {
+  font-family: inherit;
+}
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--emerald-600), #00a560);
+  color: white;
+  box-shadow: 0 8px 16px rgba(0, 192, 112, 0.2);
+}
+
+.btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 192, 112, 0.3);
+  background: linear-gradient(135deg, #00a560, #008a50);
+}
+
+.btn.outline {
+  background: transparent;
+  border: 2px solid var(--emerald-600);
+  color: var(--emerald-600);
+  transition: all 0.2s ease;
+}
+
+.btn.outline:hover {
+  background: var(--emerald-600);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 192, 112, 0.2);
+}
+
+.btn.ghost {
+  background: var(--navy-900);
+  color: white;
+  padding-inline: 20px;
+  transition: all 0.2s ease;
+}
+
+.btn.ghost:hover {
+  background: #1a1f2e;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(34, 51, 68, 0.2);
+}
+
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: translateX(-120%);
+  transition: transform 0.6s ease;
+}
+
+.btn:hover::after {
+  transform: translateX(120%);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}

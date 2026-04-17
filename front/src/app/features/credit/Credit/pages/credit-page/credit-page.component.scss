@@ -1,0 +1,180 @@
+.credit-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 3vw, 40px);
+  position: relative;
+}
+
+.credit-page header {
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  border-radius: 12px;
+  background: var(--emerald-600);
+  box-shadow: 0 12px 30px rgba(0, 192, 112, 0.08);
+  transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.12s ease;
+}
+
+.credit-page h1 {
+  font-family: var(--font-title);
+  margin: 0 0 8px;
+  color: #ffffff;
+}
+
+.credit-page p {
+  margin: 0;
+  color: rgba(255,255,255,0.95);
+}
+
+.credit-form {
+  background: linear-gradient(160deg, #ffffff 0%, #f4f8fb 100%);
+  border-radius: 20px;
+  padding: clamp(20px, 3vw, 32px);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(34, 51, 68, 0.08);
+  display: grid;
+  gap: 24px;
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.alert.success {
+  background: rgba(0, 192, 112, 0.12);
+  color: #0a7a4e;
+}
+
+.alert.error {
+  background: rgba(224, 27, 36, 0.08);
+  color: #b42318;
+}
+
+.grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+label {
+  display: grid;
+  gap: 10px;
+  align-items: start;
+  font-size: 0.95rem;
+  color: rgba(34, 51, 68, 0.9);
+}
+
+input,
+select {
+  border: 1px solid rgba(34, 51, 68, 0.2);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  background: #f7fafc;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--navy-900);
+  box-shadow: 0 0 0 3px rgba(34, 51, 68, 0.12);
+}
+
+/* Style only the fields inside the form to use Dark Navy background and white text */
+.credit-form input,
+.credit-form select,
+.credit-form textarea {
+  background: #f7fafc;
+  color: var(--navy-900) !important;
+  border: 1px solid rgba(34, 51, 68, 0.18);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+
+.credit-form input::placeholder,
+.credit-form select::placeholder,
+.credit-form textarea::placeholder {
+  color: var(--navy-900) !important;
+}
+
+/* Vendor-specific placeholder selectors */
+.credit-form input::-webkit-input-placeholder,
+.credit-form select::-webkit-input-placeholder,
+.credit-form textarea::-webkit-input-placeholder {
+  color: var(--navy-900) !important;
+}
+.credit-form input:-ms-input-placeholder,
+.credit-form select:-ms-input-placeholder,
+.credit-form textarea:-ms-input-placeholder {
+  color: var(--navy-900) !important;
+}
+.credit-form input::-ms-input-placeholder,
+.credit-form select::-ms-input-placeholder,
+.credit-form textarea::-ms-input-placeholder {
+  color: var(--navy-900) !important;
+}
+
+/* Make the three important fields slightly more prominent */
+.credit-form input[formControlName="userId"],
+.credit-form input[formControlName="amount"],
+.credit-form input[formControlName="interestRate"] {
+  font-weight: 600;
+  color: var(--navy-900) !important;
+}
+
+/* Also target input values (number field arrows) and webkit autofill */
+.credit-form input[type="number"],
+.credit-form input[type="date"] {
+  color: var(--navy-900) !important;
+}
+
+/* Ensure select options display dark text */
+.credit-form select,
+.credit-form select option {
+  color: var(--navy-900) !important;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill::first-line {
+  color: var(--navy-900) !important;
+}
+
+/* Badge-style labels (rounded pill like Login) */
+.credit-form label span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #2f3e4e;
+  color: #ffffff;
+  border-radius: 22px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  width: fit-content;
+}
+
+/* Keep a clean spacing between badge and input */
+.credit-form label > span {
+  margin-bottom: 8px;
+}
+small {
+  color: #c05621;
+  font-size: 0.8rem;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+button[disabled] {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}

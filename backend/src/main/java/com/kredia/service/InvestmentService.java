@@ -12,6 +12,7 @@ import com.kredia.enums.OrderType;
 import com.kredia.enums.RiskLevel;
 import com.kredia.enums.StrategyRiskProfile;
 import com.kredia.repository.*;
+import com.kredia.repository.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -162,7 +163,7 @@ public class InvestmentService {
     }
 
     public List<InvestmentOrder> getOrdersByUserId(Long userId) {
-        return orderRepository.findByUserUserId(userId);
+        return orderRepository.findByUser_Id(userId);
     }
 
     public List<InvestmentOrder> getOrdersByAssetSymbol(String assetSymbol) {
@@ -174,7 +175,7 @@ public class InvestmentService {
     }
 
     public List<InvestmentOrder> getOrdersByUserIdAndStatus(Long userId, OrderStatus status) {
-        return orderRepository.findByUserUserIdAndOrderStatus(userId, status);
+        return orderRepository.findByUser_IdAndOrderStatus(userId, status);
     }
 
     // ==================== InvestmentStrategy CRUD ====================
@@ -499,7 +500,7 @@ public class InvestmentService {
 
     private PositionMutationResult createOrUpdatePosition(InvestmentStrategy strategy, String symbol, BigDecimal quantity, BigDecimal currentPrice) {
         Optional<PortfolioPosition> existingPosition = positionRepository
-                .findByUserUserIdAndAssetSymbol(strategy.getUser().getUserId(), symbol);
+                .findByUser_IdAndAssetSymbol(strategy.getUser().getId(), symbol);
 
         if (existingPosition.isPresent()) {
             PortfolioPosition position = existingPosition.get();
@@ -551,7 +552,7 @@ public class InvestmentService {
     }
 
     public List<InvestmentStrategy> getStrategiesByUserId(Long userId) {
-        return strategyRepository.findByUserUserId(userId);
+        return strategyRepository.findByUser_Id(userId);
     }
 
     public List<InvestmentStrategy> getStrategiesByActiveStatus(Boolean isActive) {
@@ -559,7 +560,7 @@ public class InvestmentService {
     }
 
     public List<InvestmentStrategy> getStrategiesByUserIdAndActiveStatus(Long userId, Boolean isActive) {
-        return strategyRepository.findByUserUserIdAndIsActive(userId, isActive);
+        return strategyRepository.findByUser_IdAndIsActive(userId, isActive);
     }
 
     // ==================== PortfolioPosition CRUD ====================
@@ -631,7 +632,7 @@ public class InvestmentService {
     }
 
     public List<PortfolioPosition> getPositionsByUserId(Long userId) {
-        return positionRepository.findByUserUserId(userId);
+        return positionRepository.findByUser_Id(userId);
     }
 
     public List<PortfolioPosition> getPositionsByAssetId(Long assetId) {
@@ -641,7 +642,7 @@ public class InvestmentService {
     }
 
     public Optional<PortfolioPosition> getPositionByUserIdAndAssetSymbol(Long userId, String assetSymbol) {
-        return positionRepository.findByUserUserIdAndAssetSymbol(userId, assetSymbol);
+        return positionRepository.findByUser_IdAndAssetSymbol(userId, assetSymbol);
     }
 
     // ==================== Portfolio Value Calculation ====================
@@ -713,7 +714,7 @@ public class InvestmentService {
      * Récupère toutes les positions d'un utilisateur enrichies avec les calculs de profit.
      */
     public List<PortfolioPositionResponseDTO> getPositionsWithProfitByUserId(Long userId) {
-        List<PortfolioPosition> positions = positionRepository.findByUserUserId(userId);
+        List<PortfolioPosition> positions = positionRepository.findByUser_Id(userId);
         return positions.stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
@@ -733,7 +734,7 @@ public class InvestmentService {
      * Récupère une position spécifique d'un utilisateur enrichie avec les calculs de profit.
      */
     public Optional<PortfolioPositionResponseDTO> getPositionWithProfitByUserIdAndAssetSymbol(Long userId, String assetSymbol) {
-        return positionRepository.findByUserUserIdAndAssetSymbol(userId, assetSymbol)
+        return positionRepository.findByUser_IdAndAssetSymbol(userId, assetSymbol)
                 .map(this::convertToResponseDTO);
     }
 }

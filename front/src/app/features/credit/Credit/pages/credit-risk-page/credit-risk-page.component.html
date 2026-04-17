@@ -1,0 +1,64 @@
+<section class="risk-page">
+  <div class="risk-hero">
+    <h1 class="risk-hero__title">Analyse du Risque de Crédit</h1>
+    <p class="risk-hero__subtitle">
+      Scannez vos demandes de crédit grâce à notre modèle d'Intelligence Artificielle prédictive.
+    </p>
+  </div>
+
+  <div class="container">
+    <div class="risk-card input-card" [class.loading]="loading">
+      <div class="input-group">
+        <label for="creditId">Identifiant du Crédit</label>
+        <div class="input-wrapper">
+          <input type="number" id="creditId" placeholder="Ex: 5"
+            [(ngModel)]="creditId" (keyup.enter)="predict()" />
+          <button class="btn primary" (click)="predict()" [disabled]="loading || !creditId">
+            <span *ngIf="!loading">Lancer l'Analyse</span>
+            <span *ngIf="loading" class="spinner"></span>
+          </button>
+        </div>
+      </div>
+      <div class="alert error" *ngIf="error">⚠️ {{ error }}</div>
+    </div>
+
+    <div class="result-layout" *ngIf="result">
+      <div class="risk-card probability-card">
+        <h2 class="card-title">Probabilité de Défaut</h2>
+        <div class="gauge-container">
+          <div class="gauge">
+            <svg viewBox="0 0 100 50">
+              <path d="M10,45 A40,40 0 0,1 90,45" fill="none" stroke="#eee" stroke-width="8" stroke-linecap="round" />
+              <path d="M10,45 A40,40 0 0,1 90,45" fill="none"
+                [attr.stroke]="getProbabilityColor()"
+                stroke-width="8" stroke-linecap="round"
+                [style.stroke-dasharray]="(result.default_probability * 126) + ', 126'" />
+            </svg>
+            <div class="gauge-value" [style.color]="getProbabilityColor()">
+              {{ (result.default_probability * 100).toFixed(1) }}%
+            </div>
+          </div>
+          <div class="risk-label" [class]="getRiskLabelClass()">{{ result.risk_label }}</div>
+        </div>
+      </div>
+
+      <div class="risk-card details-card">
+        <h2 class="card-title">Recommandations IA</h2>
+        <div class="recommendation-content">
+          <p class="recommendation-text">{{ result.recommendation }}</p>
+          <div class="meta-info">
+            <div class="meta-item">
+              <span class="meta-label">ID Crédit</span>
+              <span class="meta-value">#{{ result.credit_id }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Sévérité</span>
+              <span class="meta-value">{{ result.risk_level }}</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn outline reset-btn" (click)="reset()">Nouvelle Analyse</button>
+      </div>
+    </div>
+  </div>
+</section>

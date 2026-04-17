@@ -10,5 +10,5 @@ import java.util.Collection;
 @Repository
 public interface CreditRepository extends JpaRepository<Credit, Long> {
 
-    boolean existsByUserUserIdAndStatusIn(Long userId, Collection<CreditStatus> statuses);
+    boolean existsByUser_IdAndStatusIn(Long userId, Collection<CreditStatus> statuses);
 }

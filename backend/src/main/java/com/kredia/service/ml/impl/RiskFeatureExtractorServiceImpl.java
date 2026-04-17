@@ -39,7 +39,7 @@ public class RiskFeatureExtractorServiceImpl implements RiskFeatureExtractorServ
 
         int messageLen = fullMessage.length();
 
-        var walletOpt = walletRepository.findByUser_UserId(userId);
+        var walletOpt = walletRepository.findByUser_Id(userId);
         double walletBalance = walletOpt
                 .map(w -> w.getBalance() != null ? w.getBalance().doubleValue() : 0.0)
                 .orElse(0.0);
@@ -47,7 +47,7 @@ public class RiskFeatureExtractorServiceImpl implements RiskFeatureExtractorServ
                 .map(w -> w.getFrozenBalance() != null ? w.getFrozenBalance().doubleValue() : 0.0)
                 .orElse(0.0);
 
-        int creditHasActive = creditRepository.existsByUserUserIdAndStatusIn(
+        int creditHasActive = creditRepository.existsByUser_IdAndStatusIn(
                 userId,
                 List.of(CreditStatus.ACTIVE, CreditStatus.APPROVED)
         ) ? 1 : 0;

@@ -2,7 +2,7 @@ package com.kredia.service;
 
 import com.kredia.entity.wallet.Wallet;
 import com.kredia.repository.WalletRepository;
-import com.kredia.repository.UserRepository;
+import com.kredia.repository.user.UserRepository;
 import com.kredia.enums.WalletStatus;
 import com.kredia.entity.user.User;
 import com.kredia.util.HashUtil;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.kredia.repository.UserRepository;
+import com.kredia.repository.user.UserRepository;
 
 @Service
 @Transactional
@@ -35,7 +35,7 @@ public class WalletService {
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             // Check if user already has a wallet
-            if (walletRepository.findByUser_UserId(userId).isPresent()) {
+            if (walletRepository.findByUser_Id(userId).isPresent()) {
                 throw new RuntimeException("This User already has an active wallet!");
             }
 

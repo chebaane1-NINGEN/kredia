@@ -5,7 +5,7 @@ import com.kredia.entity.support.Reclamation;
 import com.kredia.enums.NotificationType;
 import com.kredia.enums.ReclamationStatus;
 import com.kredia.repository.NotificationRepository;
-import com.kredia.repository.UserRepository;
+import com.kredia.repository.user.UserRepository;
 import com.kredia.service.ReclamationTriggerService;
 import com.kredia.util.NotificationFactory;
 import lombok.RequiredArgsConstructor;

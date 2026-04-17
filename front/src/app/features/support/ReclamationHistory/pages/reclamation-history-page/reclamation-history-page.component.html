@@ -1,0 +1,38 @@
+<section class="reclamation-history-page">
+  <header>
+    <h1>Reclamation History</h1>
+    <p>Track all status changes and updates on reclamations.</p>
+  </header>
+
+  <div class="alert error" *ngIf="error">{{ error }}</div>
+
+  <div class="table-responsive" *ngIf="!loading || history.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Reclamation ID</th>
+          <th>Changed By</th>
+          <th>Previous Status</th>
+          <th>New Status</th>
+          <th>Comment</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let h of history">
+          <td>{{ h.historyId }}</td>
+          <td>{{ h.reclamationId }}</td>
+          <td>{{ h.changedBy }}</td>
+          <td><span [class]="getStatusClass(h.previousStatus)">{{ h.previousStatus }}</span></td>
+          <td><span [class]="getStatusClass(h.newStatus)">{{ h.newStatus }}</span></td>
+          <td>{{ h.comment }}</td>
+          <td>{{ h.changedAt | date:'short' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="history.length === 0 && !loading">No history entries found.</p>
+  </div>
+
+  <p *ngIf="loading && history.length === 0">Loading...</p>
+</section>

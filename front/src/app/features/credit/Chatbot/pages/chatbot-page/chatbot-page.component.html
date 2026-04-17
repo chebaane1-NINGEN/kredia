@@ -1,0 +1,30 @@
+<section class="chatbot-page">
+  <header>
+    <h1>AI Coach — Recommandation de remboursement</h1>
+    <p>Décris ta situation et le chatbot te recommande un type de remboursement.</p>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="chatbot-form">
+    <label>
+      <span>Description</span>
+      <textarea rows="6" formControlName="description"
+        placeholder="Ex: J'ai un revenu stable, je veux un remboursement mensuel..."></textarea>
+      <small *ngIf="form.controls.description.touched && form.controls.description.invalid">
+        Merci d'entrer une description d'au moins 10 caractères.
+      </small>
+    </label>
+    <div class="actions">
+      <button type="submit" class="btn primary" [disabled]="loading">
+        {{ loading ? 'Envoi...' : 'Obtenir la recommandation' }}
+      </button>
+      <button type="reset" class="btn outline">Réinitialiser</button>
+    </div>
+  </form>
+
+  <div class="alert error" *ngIf="error">{{ error }}</div>
+
+  <div class="result" *ngIf="response">
+    <h3>Recommandation</h3>
+    <p>{{ response.recommendation }}</p>
+  </div>
+</section>

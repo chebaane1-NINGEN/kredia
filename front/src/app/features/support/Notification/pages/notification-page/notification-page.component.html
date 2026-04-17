@@ -1,0 +1,40 @@
+<section class="notification-page">
+  <header>
+    <h1>Notifications</h1>
+    <p>View and manage all user notifications.</p>
+  </header>
+
+  <div class="alert error" *ngIf="error">{{ error }}</div>
+
+  <div class="table-responsive" *ngIf="!loading || notifications.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>User ID</th>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Read</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let n of notifications">
+          <td>{{ n.notificationId }}</td>
+          <td>{{ n.userId }}</td>
+          <td>{{ n.title }}</td>
+          <td><span [class]="getTypeClass(n.type)">{{ n.type }}</span></td>
+          <td>{{ n.isRead ? 'Yes' : 'No' }}</td>
+          <td>{{ n.createdAt | date:'short' }}</td>
+          <td>
+            <button (click)="markAsRead(n.notificationId!)" [disabled]="n.isRead">Mark Read</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="notifications.length === 0 && !loading">No notifications found.</p>
+  </div>
+
+  <p *ngIf="loading && notifications.length === 0">Loading...</p>
+</section>

@@ -1,0 +1,38 @@
+<section class="investment-asset-page">
+  <header>
+    <h1>Investment Assets</h1>
+    <p>Browse all available investment assets and their current prices.</p>
+  </header>
+
+  <div class="alert error" *ngIf="error">{{ error }}</div>
+
+  <div class="table-responsive" *ngIf="!loading || assets.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Symbol</th>
+          <th>Type</th>
+          <th>Price</th>
+          <th>Currency</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of assets">
+          <td>{{ a.assetId }}</td>
+          <td>{{ a.name }}</td>
+          <td>{{ a.symbol }}</td>
+          <td><span [class]="getTypeClass(a.assetType)">{{ a.assetType }}</span></td>
+          <td>{{ a.currentPrice | currency:a.currency:'symbol':'1.2-2' }}</td>
+          <td>{{ a.currency }}</td>
+          <td><span [class]="getStatusClass(a.status)">{{ a.status }}</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="assets.length === 0 && !loading">No assets found.</p>
+  </div>
+
+  <p *ngIf="loading && assets.length === 0">Loading...</p>
+</section>

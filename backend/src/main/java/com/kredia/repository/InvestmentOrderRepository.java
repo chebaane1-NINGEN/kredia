@@ -9,8 +9,8 @@ import java.util.List;
 
 @Repository
 public interface InvestmentOrderRepository extends JpaRepository<InvestmentOrder, Long> {
-    List<InvestmentOrder> findByUserUserId(Long userId);
+    List<InvestmentOrder> findByUser_Id(Long userId);
     List<InvestmentOrder> findByAssetSymbol(String assetSymbol);
     List<InvestmentOrder> findByOrderStatus(OrderStatus orderStatus);
-    List<InvestmentOrder> findByUserUserIdAndOrderStatus(Long userId, OrderStatus orderStatus);
+    List<InvestmentOrder> findByUser_IdAndOrderStatus(Long userId, OrderStatus orderStatus);
 }

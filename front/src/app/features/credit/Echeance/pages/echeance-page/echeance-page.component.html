@@ -1,0 +1,49 @@
+<section class="echeance-page">
+  <header>
+    <h1>Échéances</h1>
+    <p>Liste des échéances avec la possibilité de payer un montant.</p>
+  </header>
+
+  <div class="alert error" *ngIf="error">{{ error }}</div>
+
+  <div class="table-wrapper" *ngIf="!loading; else loadingTpl">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>N°</th><th>Échéance</th><th>Montant dû</th>
+          <th>Reste à payer</th><th>Statut</th><th>Payer</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of items">
+          <td>#{{ item.echeance.echeanceId }}</td>
+          <td>{{ item.echeance.echeanceNumber }}</td>
+          <td>{{ item.echeance.dueDate }}</td>
+          <td>{{ item.echeance.amountDue }}</td>
+          <td>{{ item.remainingAmount }}</td>
+          <td>
+            <span class="status" [class]="item.echeance.status.toLowerCase()">
+              {{ item.echeance.status }}
+            </span>
+          </td>
+          <td class="pay-cell">
+            <input type="number" min="0"
+              [value]="payAmounts[item.echeance.echeanceId] || ''"
+              (input)="payAmounts[item.echeance.echeanceId] = $any($event.target).valueAsNumber"
+              placeholder="Montant" />
+            <button class="btn primary"
+              [disabled]="payingId === item.echeance.echeanceId"
+              (click)="pay(item.echeance.echeanceId)">
+              {{ payingId === item.echeance.echeanceId ? 'Envoi...' : 'Payer' }}
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="items.length === 0">
+          <td colspan="7" class="empty">Aucune échéance disponible.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #loadingTpl><p>Chargement...</p></ng-template>
+</section>

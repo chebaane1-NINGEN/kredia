@@ -1,0 +1,41 @@
+<section class="wallet-page">
+  <header>
+    <h1>Wallets</h1>
+    <p>Manage all user wallets and their statuses.</p>
+  </header>
+
+  <div class="alert error" *ngIf="error">{{ error }}</div>
+
+  <div class="table-responsive" *ngIf="!loading || wallets.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>User ID</th>
+          <th>Balance</th>
+          <th>Currency</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let w of wallets">
+          <td>{{ w.walletId }}</td>
+          <td>{{ w.userId }}</td>
+          <td>{{ w.balance | currency:w.currency:'symbol':'1.2-2' }}</td>
+          <td>{{ w.currency }}</td>
+          <td>{{ w.walletType }}</td>
+          <td><span [class]="getStatusClass(w.status)">{{ w.status }}</span></td>
+          <td>
+            <button (click)="freeze(w.walletId!)"   [disabled]="w.status === 'FROZEN'">Freeze</button>
+            <button (click)="unfreeze(w.walletId!)" [disabled]="w.status !== 'FROZEN'">Unfreeze</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="wallets.length === 0 && !loading">No wallets found.</p>
+  </div>
+
+  <p *ngIf="loading && wallets.length === 0">Loading...</p>
+</section>

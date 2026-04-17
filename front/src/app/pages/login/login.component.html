@@ -1,0 +1,56 @@
+<div class="login-wrapper">
+  <div class="login-card">
+
+    <!-- Brand -->
+    <div class="login-brand">
+      <div class="brand-icon">
+        <img src="/assets/kredia-logo.png" alt="Kredia" />
+      </div>
+      <h1 class="brand-name">KREDIA</h1>
+    </div>
+
+    <p class="login-subtitle">Connectez-vous à votre espace administration</p>
+
+    <!-- Form -->
+    <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+
+      <div class="alert error" *ngIf="error">⚠️ {{ error }}</div>
+
+      <div class="field">
+        <label for="email">Adresse email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="admin@kredia.com"
+          autocomplete="email"
+        />
+        <small *ngIf="form.controls.email.touched && form.controls.email.invalid">
+          Email valide requis.
+        </small>
+      </div>
+
+      <div class="field">
+        <label for="password">Mot de passe</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+        />
+        <small *ngIf="form.controls.password.touched && form.controls.password.invalid">
+          Mot de passe requis (min. 4 caractères).
+        </small>
+      </div>
+
+      <button type="submit" class="btn-login" [disabled]="loading">
+        <span *ngIf="!loading">Se connecter</span>
+        <span *ngIf="loading" class="spinner-wrap">
+          <span class="spinner"></span> Connexion...
+        </span>
+      </button>
+
+    </form>
+  </div>
+</div>

@@ -8,7 +8,7 @@ import java.util.List;
 
 @Repository
 public interface InvestmentStrategyRepository extends JpaRepository<InvestmentStrategy, Long> {
-    List<InvestmentStrategy> findByUserUserId(Long userId);
+    List<InvestmentStrategy> findByUser_Id(Long userId);
     List<InvestmentStrategy> findByIsActive(Boolean isActive);
-    List<InvestmentStrategy> findByUserUserIdAndIsActive(Long userId, Boolean isActive);
+    List<InvestmentStrategy> findByUser_IdAndIsActive(Long userId, Boolean isActive);
 }

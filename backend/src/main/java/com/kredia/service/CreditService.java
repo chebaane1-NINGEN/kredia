@@ -6,7 +6,7 @@ import com.kredia.entity.user.User;
 import com.kredia.enums.EcheanceStatus;
 import com.kredia.enums.RepaymentType;
 import com.kredia.repository.CreditRepository;
-import com.kredia.repository.UserRepository;
+import com.kredia.repository.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
