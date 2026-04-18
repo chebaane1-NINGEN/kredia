@@ -187,11 +187,16 @@ public class GeminiService {
      * Convertit une URL Cloudinary "raw" en URL d'image accessible
      */
     private String processCloudinaryUrl(String url) {
-        if (url.contains("/raw/upload/")) {
-            if (url.toLowerCase().endsWith(".pdf")) {
-                return url.replace("/raw/upload/", "/image/upload/f_jpg,pg_1/");
-            } else {
-                return url.replace("/raw/upload/", "/image/upload/");
+        if (url.toLowerCase().endsWith(".pdf")) {
+            // Remplacer "raw/upload/" par "image/upload/" si nécessaire
+            if (url.contains("/raw/upload/")) {
+                url = url.replace("/raw/upload/", "/image/upload/");
+            }
+            // Insérer la transformation de format PDF vers JPG page 1
+            if (url.contains("/upload/v")) {
+                return url.replace("/upload/v", "/upload/f_jpg,pg_1/v");
+            } else if (url.contains("/upload/")) {
+                return url.replace("/upload/", "/upload/f_jpg,pg_1/");
             }
         }
         return url;

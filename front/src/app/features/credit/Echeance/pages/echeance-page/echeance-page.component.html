@@ -1,7 +1,9 @@
 <section class="echeance-page">
   <header>
-    <h1>Échéances</h1>
-    <p>Liste des échéances avec la possibilité de payer un montant.</p>
+    <h1>{{ auth.isClient() ? 'Mes Échéances' : 'Échéances' }}</h1>
+    <p>{{ auth.isClient()
+      ? 'État de vos remboursements de crédit.'
+      : 'Liste des échéances avec la possibilité de payer un montant.' }}</p>
   </header>
 
   <div class="alert error" *ngIf="error">{{ error }}</div>
@@ -10,36 +12,40 @@
     <table>
       <thead>
         <tr>
-          <th>ID</th><th>N°</th><th>Échéance</th><th>Montant dû</th>
-          <th>Reste à payer</th><th>Statut</th><th>Payer</th>
+          <th>N°</th><th>Date échéance</th><th>Montant dû</th>
+          <th>Reste à payer</th><th>Statut</th>
+          <th *ngIf="!auth.isClient()">ID</th>
+          <th *ngIf="auth.isClient()">Payer</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let item of items">
-          <td>#{{ item.echeance.echeanceId }}</td>
           <td>{{ item.echeance.echeanceNumber }}</td>
-          <td>{{ item.echeance.dueDate }}</td>
-          <td>{{ item.echeance.amountDue }}</td>
-          <td>{{ item.remainingAmount }}</td>
+          <td>{{ item.echeance.dueDate | date:'dd/MM/yyyy' }}</td>
+          <td><strong>{{ item.echeance.amountDue | currency:'EUR':'symbol':'1.2-2' }}</strong></td>
+          <td>{{ item.remainingAmount | currency:'EUR':'symbol':'1.2-2' }}</td>
           <td>
             <span class="status" [class]="item.echeance.status.toLowerCase()">
-              {{ item.echeance.status }}
+              {{ getStatusLabel(item.echeance.status) }}
             </span>
           </td>
-          <td class="pay-cell">
+          <td *ngIf="!auth.isClient()">#{{ item.echeance.echeanceId }}</td>
+          <td class="pay-cell" *ngIf="auth.isClient()">
             <input type="number" min="0"
               [value]="payAmounts[item.echeance.echeanceId] || ''"
               (input)="payAmounts[item.echeance.echeanceId] = $any($event.target).valueAsNumber"
               placeholder="Montant" />
             <button class="btn primary"
-              [disabled]="payingId === item.echeance.echeanceId"
+              [disabled]="payingId === item.echeance.echeanceId || item.echeance.status === 'PAID'"
               (click)="pay(item.echeance.echeanceId)">
               {{ payingId === item.echeance.echeanceId ? 'Envoi...' : 'Payer' }}
             </button>
           </td>
         </tr>
         <tr *ngIf="items.length === 0">
-          <td colspan="7" class="empty">Aucune échéance disponible.</td>
+          <td colspan="100%" class="empty">
+            {{ auth.isClient() ? 'Aucune échéance trouvée pour votre compte.' : 'Aucune échéance disponible.' }}
+          </td>
         </tr>
       </tbody>
     </table>

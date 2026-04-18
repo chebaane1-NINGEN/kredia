@@ -15,6 +15,7 @@ export interface KycLoanResponse {
   documentPath: string;
   submittedAt: string;
   verifiedStatus: VerifiedStatus;
+  verificationMessage?: string;
 }
 
 export interface KycLoan {

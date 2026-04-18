@@ -1,9 +1,12 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { KycLoanVm } from '../../vm/kyc-loan.vm';
 import { DocumentTypeLoan, KycLoanResponse, VerifiedStatus } from '../../models/kyc-loan.model';
+import { AuthService } from '../../../../../core/services/auth.service';
+import { CreditVm } from '../../../Credit/vm/credit.vm';
+import { Credit } from '../../../Credit/models/credit.model';
 
 export interface DocEntry {
   documentType: DocumentTypeLoan;
@@ -23,11 +26,14 @@ export interface DocEntry {
   styleUrl: './kyc-loan-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class KycLoanPageComponent {
+export class KycLoanPageComponent implements OnInit {
   private readonly vm  = inject(KycLoanVm);
   private readonly cdr = inject(ChangeDetectorRef);
+  readonly auth        = inject(AuthService);
+  private readonly creditVm = inject(CreditVm);
 
   // ── État UI ────────────────────────────────────────────
+  // Pour CLIENT : userId est lu depuis le JWT. Pour admin, on garde la saisie manuelle.
   creditId        = 1;
   userId          = 1;
   selectedDocType: DocumentTypeLoan = 'ID_PROOF';
@@ -36,10 +42,12 @@ export class KycLoanPageComponent {
 
   uploading       = false;
   verifying       = false;
+  hasCreditsError = false;
   error: string | null = null;
   uploadedDoc: KycLoanResponse | null = null;
   verifyResult: KycLoanResponse | null = null;
   uploadedDocs: KycLoanResponse[] = [];
+  clientCredits: Credit[] = [];
 
   // ── Données statiques de présentation ─────────────────
   readonly docTypes: DocEntry[] = [
@@ -49,6 +57,62 @@ export class KycLoanPageComponent {
     { documentType: 'BANK_STATEMENT', label: 'Relevé bancaire',           icon: '🏦' },
     { documentType: 'OTHER',          label: 'Autre document',            icon: '📎' }
   ];
+
+  ngOnInit(): void {
+    const tokenUserId = this.auth.getCurrentUserId();
+    if (this.auth.isClient() && tokenUserId) {
+      this.userId = tokenUserId;
+      this.loadClientDocs();
+      this.autoSelectCredit();
+    } else if (!this.auth.isClient()) {
+      // Pour l'Admin, on charge l'intégralité des documents déposés
+      this.loadAllDocs();
+    }
+  }
+
+  // ── Auto-Sélect. Crédit (CLIENT) ──────────────────────
+  autoSelectCredit(): void {
+    this.creditVm.findByUserId(this.userId).subscribe({
+      next: (credits) => {
+        this.clientCredits = credits || [];
+        if (this.clientCredits.length > 0) {
+          this.creditId = this.clientCredits[0].creditId ?? 1;
+          this.hasCreditsError = false;
+          this.cdr.markForCheck();
+        } else {
+          this.hasCreditsError = true;
+          this.cdr.markForCheck();
+        }
+      }
+    });
+  }
+
+  // ── Charger les docs existants du client ──────────────
+  loadClientDocs(): void {
+    this.vm.getByUserId(this.userId).subscribe({
+      next: (docs) => {
+        this.uploadedDocs = docs ?? [];
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // ── Charger TOUS les docs (ADMIN) ─────────────────────
+  loadAllDocs(): void {
+    this.vm.getAll().subscribe({
+      next: (docs) => {
+        this.uploadedDocs = docs ?? [];
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.error = "Erreur chargement tous les docs : " + this.extractError(err);
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   // ── Drag & Drop ────────────────────────────────────────
   onDragOver(event: DragEvent): void {
@@ -137,6 +201,38 @@ export class KycLoanPageComponent {
       });
   }
 
+  approve(kycLoanId: number): void {
+    this.verifying = true;
+    this.error = null;
+    this.cdr.markForCheck();
+    this.vm.approve(kycLoanId)
+      .pipe(finalize(() => { this.verifying = false; this.cdr.markForCheck(); }))
+      .subscribe({
+        next: (result) => {
+          this.verifyResult = result;
+          this.uploadedDocs = this.uploadedDocs.map(d => d.kycLoanId === result.kycLoanId ? result : d);
+          this.cdr.markForCheck();
+        },
+        error: (err) => { this.error = this.extractError(err); this.cdr.markForCheck(); }
+      });
+  }
+
+  reject(kycLoanId: number): void {
+    this.verifying = true;
+    this.error = null;
+    this.cdr.markForCheck();
+    this.vm.reject(kycLoanId)
+      .pipe(finalize(() => { this.verifying = false; this.cdr.markForCheck(); }))
+      .subscribe({
+        next: (result) => {
+          this.verifyResult = result;
+          this.uploadedDocs = this.uploadedDocs.map(d => d.kycLoanId === result.kycLoanId ? result : d);
+          this.cdr.markForCheck();
+        },
+        error: (err) => { this.error = this.extractError(err); this.cdr.markForCheck(); }
+      });
+  }
+
   // ── Helpers de présentation ────────────────────────────
   statusLabel(status: VerifiedStatus): string {
     return { APPROVED: 'Approuvé ✅', REJECTED: 'Rejeté ❌', PENDING: 'En attente ⏳' }[status];
@@ -166,3 +262,4 @@ export class KycLoanPageComponent {
     return "Une erreur inattendue s'est produite.";
   }
 }
+

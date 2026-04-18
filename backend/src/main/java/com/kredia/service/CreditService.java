@@ -230,6 +230,10 @@ public class CreditService {
         return creditRepository.findAll();
     }
 
+    public List<Credit> getCreditsByUserId(Long userId) {
+        return creditRepository.findByUser_Id(userId);
+    }
+
     public Credit updateCredit(Long id, Credit creditDetails) {
         return creditRepository.findById(id).map(credit -> {
             credit.setAmount(creditDetails.getAmount());

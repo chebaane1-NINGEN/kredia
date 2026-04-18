@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EcheanceVm } from '../../vm/echeance.vm';
 import { EcheancePaymentResponse } from '../../models/echeance.model';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 @Component({
   standalone: true,
@@ -14,6 +15,7 @@ import { EcheancePaymentResponse } from '../../models/echeance.model';
 export class EcheancePageComponent implements OnInit {
   private readonly vm  = inject(EcheanceVm);
   private readonly cdr = inject(ChangeDetectorRef);
+  readonly auth        = inject(AuthService);
 
   // ── État UI ────────────────────────────────────────────
   loading = false;
@@ -32,7 +34,12 @@ export class EcheancePageComponent implements OnInit {
     this.error   = null;
     this.cdr.markForCheck();
 
-    this.vm.getAll().subscribe({
+    const userId = this.auth.getCurrentUserId();
+    const request$ = this.auth.isClient() && userId
+      ? this.vm.getByUserId(userId)
+      : this.vm.getAll();
+
+    request$.subscribe({
       next:  (data) => { this.items = data ?? []; this.loading = false; this.cdr.markForCheck(); },
       error: ()     => { this.loading = false; this.error = 'Erreur lors du chargement des échéances.'; this.cdr.markForCheck(); }
     });
@@ -63,4 +70,16 @@ export class EcheancePageComponent implements OnInit {
       }
     });
   }
+
+  // ── Helpers ────────────────────────────────────────────
+  getStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      'PAID':          '✅ Payée',
+      'PENDING':       '⏳ En attente',
+      'OVERDUE':       '🔴 En retard',
+      'PARTIALLY_PAID':'🟡 Partiellement payée'
+    };
+    return labels[status] ?? status;
+  }
 }
+

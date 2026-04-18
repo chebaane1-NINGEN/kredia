@@ -1,9 +1,14 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ChatbotVm } from '../../vm/chatbot.vm';
 import { ChatbotRecommendation } from '../../models/chatbot.model';
+import { AuthService } from '../../../../../core/services/auth.service';
+import { CreditVm } from '../../../Credit/vm/credit.vm';
+import { EcheanceVm } from '../../../Echeance/vm/echeance.vm';
+import { Credit } from '../../../Credit/models/credit.model';
+import { EcheancePaymentResponse } from '../../../Echeance/models/echeance.model';
 
 @Component({
   standalone: true,
@@ -13,9 +18,9 @@ import { ChatbotRecommendation } from '../../models/chatbot.model';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChatbotPageComponent {
-  private readonly vm  = inject(ChatbotVm);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly fb  = inject(FormBuilder);
+  private readonly vm         = inject(ChatbotVm);
+  private readonly cdr        = inject(ChangeDetectorRef);
+  private readonly fb         = inject(FormBuilder);
 
   // ── État UI ────────────────────────────────────────────
   loading = false;

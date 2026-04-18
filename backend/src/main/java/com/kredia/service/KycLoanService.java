@@ -66,9 +66,7 @@ public class KycLoanService {
             kycLoan = kycLoanRepository.save(kycLoan);
             log.info("KycLoan saved with id: {}", kycLoan.getKycLoanId());
 
-            verifyDocumentAsync(kycLoan.getKycLoanId(), documentUrl, documentType.name());
-
-            return toResponse(kycLoan, "Document uploadé avec succès. Vérification en cours...");
+            return toResponse(kycLoan, "Document uploadé avec succès. En attente de vérification par un administrateur.");
 
         } catch (Exception e) {
             log.error("Error uploading document", e);
@@ -96,9 +94,7 @@ public class KycLoanService {
             kycLoan = kycLoanRepository.save(kycLoan);
             log.info("KycLoan saved with id: {}", kycLoan.getKycLoanId());
 
-            verifyDocumentAsync(kycLoan.getKycLoanId(), documentPath, documentType.name());
-
-            return toResponse(kycLoan, "Document créé avec succès. Vérification en cours...");
+            return toResponse(kycLoan, "Document créé avec succès. En attente de vérification par un administrateur.");
 
         } catch (Exception e) {
             log.error("Error creating document from URL", e);
@@ -156,48 +152,58 @@ public class KycLoanService {
                 .collect(Collectors.toList());
     }
 
+    public List<KycLoanResponse> getDocumentsByUser(Long userId) {
+        return kycLoanRepository.findByUser_Id(userId).stream()
+                .map(kyc -> toResponse(kyc, null))
+                .collect(Collectors.toList());
+    }
+
     public KycLoanResponse getDocumentById(Long kycLoanId) {
         KycLoan kycLoan = kycLoanRepository.findById(kycLoanId)
                 .orElseThrow(() -> new NotFoundException("KycLoan not found with id " + kycLoanId));
         return toResponse(kycLoan, null);
     }
 
+    public List<KycLoanResponse> getAllDocuments() {
+        return kycLoanRepository.findAll().stream()
+                .map(kyc -> toResponse(kyc, null))
+                .collect(Collectors.toList());
+    }
+
+    public KycLoanResponse manuallyApprove(Long kycLoanId) {
+        KycLoan kycLoan = kycLoanRepository.findById(kycLoanId)
+                .orElseThrow(() -> new NotFoundException("KycLoan not found with id " + kycLoanId));
+        kycLoan.setVerifiedStatus(KycStatus.APPROVED);
+        kycLoanRepository.save(kycLoan);
+        return toResponse(kycLoan, "Document approuvé manuellement");
+    }
+
+    public KycLoanResponse manuallyReject(Long kycLoanId) {
+        KycLoan kycLoan = kycLoanRepository.findById(kycLoanId)
+                .orElseThrow(() -> new NotFoundException("KycLoan not found with id " + kycLoanId));
+        kycLoan.setVerifiedStatus(KycStatus.REJECTED);
+        kycLoanRepository.save(kycLoan);
+        return toResponse(kycLoan, "Document refusé manuellement");
+    }
+
     public KycLoanResponse forceVerification(Long kycLoanId) {
         KycLoan kycLoan = kycLoanRepository.findById(kycLoanId)
                 .orElseThrow(() -> new NotFoundException("KycLoan not found with id " + kycLoanId));
 
-        log.info("Force verification requested for KycLoan {}, current status: {}", kycLoanId, kycLoan.getVerifiedStatus());
+        log.info("AI evaluation requested for KycLoan {}", kycLoanId);
 
-        if (kycLoan.getVerifiedStatus() == KycStatus.PENDING) {
-            try {
-                String geminiResponse = geminiService.verifyDocument(
-                        kycLoan.getDocumentPath(),
-                        kycLoan.getDocumentType().name()
-                );
-                log.info("Gemini response for force verification: {}", geminiResponse);
+        try {
+            String geminiResponse = geminiService.verifyDocument(
+                    kycLoan.getDocumentPath(),
+                    kycLoan.getDocumentType().name()
+            );
+            log.info("Gemini response for evaluation: {}", geminiResponse);
 
-                if (geminiResponse.toUpperCase().contains("APPROVED") ||
-                        geminiResponse.toUpperCase().contains("VERIFIED")) {
-                    kycLoan.setVerifiedStatus(KycStatus.APPROVED);
-                } else if (geminiResponse.toUpperCase().contains("REJECTED")) {
-                    kycLoan.setVerifiedStatus(KycStatus.REJECTED);
-                } else {
-                    kycLoan.setVerifiedStatus(KycStatus.APPROVED);
-                }
-
-                kycLoanRepository.save(kycLoan);
-                log.info("KycLoan {} force verified with status: {}", kycLoanId, kycLoan.getVerifiedStatus());
-
-                return toResponse(kycLoan, "Vérification forcée: " + kycLoan.getVerifiedStatus());
-            } catch (Exception e) {
-                log.error("Error during force verification: {}", e.getMessage(), e);
-                kycLoan.setVerifiedStatus(KycStatus.APPROVED);
-                kycLoanRepository.save(kycLoan);
-                return toResponse(kycLoan, "Vérification forcée (erreur, auto-approuvé): VERIFIED");
-            }
+            return toResponse(kycLoan, "Avis de l'IA : " + geminiResponse);
+        } catch (Exception e) {
+            log.error("Error during AI evaluation: {}", e.getMessage(), e);
+            return toResponse(kycLoan, "Erreur de l'IA : Impossible d'analyser le document.");
         }
-
-        return toResponse(kycLoan, "Document déjà vérifié: " + kycLoan.getVerifiedStatus());
     }
 
     private KycLoanResponse toResponse(KycLoan kycLoan, String message) {

@@ -45,5 +45,10 @@ public class EcheanceController {
     public ResponseEntity<List<EcheancePaymentResponse>> getAllEcheances() {
         return new ResponseEntity<>(echeanceService.getAllEcheances(), HttpStatus.OK);
     }
+
+    @GetMapping("/by-user/{userId}")
+    public ResponseEntity<List<EcheancePaymentResponse>> getEcheancesByUserId(@PathVariable Long userId) {
+        return new ResponseEntity<>(echeanceService.getEcheancesByUserId(userId), HttpStatus.OK);
+    }
 }
 

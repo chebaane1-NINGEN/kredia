@@ -15,6 +15,10 @@ export class EcheanceVm {
     return this.api.getAll();
   }
 
+  getByUserId(userId: number): Observable<EcheancePaymentResponse[]> {
+    return this.api.getByUserId(userId);
+  }
+
   pay(echeanceId: number, amount: number): Observable<EcheancePaymentResponse> {
     return this.api.pay(echeanceId, amount);
   }

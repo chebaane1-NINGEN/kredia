@@ -33,7 +33,7 @@ public class JwtTokenProvider {
         this.jwtSecret = Keys.hmacShaKeyFor(secretBytes);
     }
 
-    public String generateToken(Long actorId, String email, String role) {
+    public String generateToken(Long actorId, String email, String role, String firstName, String lastName) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
@@ -41,6 +41,8 @@ public class JwtTokenProvider {
                 .setSubject(Long.toString(actorId))
                 .claim("email", email)
                 .claim("role", role)
+                .claim("firstName", firstName)
+                .claim("lastName", lastName)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(jwtSecret, jwtAlgorithm)

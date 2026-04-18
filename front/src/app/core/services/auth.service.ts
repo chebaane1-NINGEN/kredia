@@ -26,6 +26,17 @@ export interface LoginResponse {
   jwt?: string;
 }
 
+/** Payload JWT décodé */
+export interface JwtPayload {
+  sub: string;  // userId (string depuis JWT)
+  email: string;
+  role: string;
+  firstName?: string;
+  lastName?: string;
+  iat: number;
+  exp: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http   = inject(HttpClient);
@@ -70,5 +81,53 @@ export class AuthService {
 
   isLoggedIn(): boolean {
     return !!this.getToken();
+  }
+
+  // ── Décodage JWT (natif, sans librairie) ───────────────
+  decodeToken(): JwtPayload | null {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      // Décodage Base64url → JSON
+      const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const json = atob(payload);
+      return JSON.parse(json) as JwtPayload;
+    } catch {
+      return null;
+    }
+  }
+
+  getCurrentUserId(): number | null {
+    const payload = this.decodeToken();
+    if (!payload?.sub) return null;
+    const id = parseInt(payload.sub, 10);
+    return isNaN(id) ? null : id;
+  }
+
+  getCurrentUserRole(): string | null {
+    return this.decodeToken()?.role ?? null;
+  }
+
+  getCurrentUserEmail(): string | null {
+    return this.decodeToken()?.email ?? null;
+  }
+
+  getCurrentUserFirstName(): string | null {
+    return this.decodeToken()?.firstName ?? null;
+  }
+
+  getCurrentUserLastName(): string | null {
+    return this.decodeToken()?.lastName ?? null;
+  }
+
+  isClient(): boolean {
+    return this.getCurrentUserRole() === 'CLIENT';
+  }
+
+  isAdmin(): boolean {
+    const role = this.getCurrentUserRole();
+    return role === 'ADMIN' || role === 'SUPER_ADMIN';
   }
 }

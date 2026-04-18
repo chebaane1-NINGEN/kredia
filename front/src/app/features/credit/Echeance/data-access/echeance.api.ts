@@ -14,6 +14,12 @@ export class EcheanceApi {
       .pipe(timeout(10000));
   }
 
+  getByUserId(userId: number): Observable<EcheancePaymentResponse[]> {
+    return this.http
+      .get<EcheancePaymentResponse[]>(`${API_BASE_URL}/api/echeances/by-user/${userId}`)
+      .pipe(timeout(10000));
+  }
+
   pay(echeanceId: number, amount: number): Observable<EcheancePaymentResponse> {
     return this.http
       .put<EcheancePaymentResponse>(`${API_BASE_URL}/api/echeances/${echeanceId}/pay`, { amount })

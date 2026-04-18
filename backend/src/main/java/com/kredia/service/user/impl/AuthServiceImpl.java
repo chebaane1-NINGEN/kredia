@@ -83,7 +83,7 @@ public class AuthServiceImpl implements AuthService {
         user.setFailedLoginAttempts(0);
         userRepository.save(user);
 
-        return jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        return jwtTokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name(), user.getFirstName(), user.getLastName());
     }
 
     @Override

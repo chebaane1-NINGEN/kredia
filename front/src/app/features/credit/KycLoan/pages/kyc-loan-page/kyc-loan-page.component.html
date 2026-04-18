@@ -15,7 +15,14 @@
     <div class="kyc-card upload-card">
       <h2 class="card-title">📤 Soumettre un document</h2>
 
-      <div class="field-row">
+      <!-- Info CLIENT : userId auto-détecté -->
+      <div class="client-info-banner" *ngIf="auth.isClient()">
+        <span class="client-info-banner__icon">🔒</span>
+        <span>Vos documents sont rattachés à votre compte (ID : <strong>{{ userId }}</strong>)</span>
+      </div>
+
+      <!-- Champs manuels : affichés uniquement pour les admins -->
+      <div class="field-row" *ngIf="!auth.isClient()">
         <div class="field">
           <label for="kycCreditId">ID Crédit</label>
           <input id="kycCreditId" type="number" [(ngModel)]="creditId" min="1" />
@@ -24,6 +31,16 @@
           <label for="kycUserId">ID Utilisateur</label>
           <input id="kycUserId" type="number" [(ngModel)]="userId" min="1" />
         </div>
+      </div>
+
+      <!-- Sélection du crédit : affiché pour le client s'il a des crédits -->
+      <div class="field" *ngIf="auth.isClient() && clientCredits.length > 0">
+        <label for="clientCreditSelect">Sélectionnez le crédit concerné</label>
+        <select id="clientCreditSelect" [(ngModel)]="creditId">
+          <option *ngFor="let c of clientCredits" [value]="c.creditId">
+            Crédit #{{ c.creditId }} - {{ (c.amount || 0) | currency:'EUR':'symbol':'1.0-0' }} ({{ c.status === 'APPROVED' ? 'Approuvé' : c.status === 'PENDING' ? 'En attente' : c.status }})
+          </option>
+        </select>
       </div>
 
       <div class="field">
@@ -74,8 +91,9 @@
       </div>
 
       <div class="alert alert--error" *ngIf="error">⚠️ {{ error }}</div>
+      <div class="alert alert--error" *ngIf="hasCreditsError">⚠️ Vous devez avoir au moins un crédit pour uploader un document.</div>
 
-      <button class="btn-upload" [disabled]="!selectedFile || uploading" (click)="upload()">
+      <button class="btn-upload" [disabled]="!selectedFile || uploading || hasCreditsError" (click)="upload()">
         <span *ngIf="!uploading">🚀 Uploader le document</span>
         <span *ngIf="uploading" class="spinner-wrap">
           <span class="spinner"></span> Envoi en cours…
@@ -118,29 +136,43 @@
             [href]="uploadedDoc.documentPath" target="_blank" class="doc-link">
             🔗 Voir le document
           </a>
-          <button class="btn-verify" [disabled]="verifying" (click)="verify(uploadedDoc.kycLoanId)">
-            <span *ngIf="!verifying">🔎 Vérifier maintenant</span>
-            <span *ngIf="verifying" class="spinner-wrap">
-              <span class="spinner"></span> Vérification…
-            </span>
-          </button>
+          
+          <div class="admin-actions" *ngIf="!auth.isClient() && uploadedDoc.verifiedStatus === 'PENDING'">
+            <button class="btn-verify-ai" [disabled]="verifying" (click)="verify(uploadedDoc.kycLoanId)">
+              <span *ngIf="!verifying">🤖 Tester avec l'IA</span>
+              <span *ngIf="verifying" class="spinner-wrap"><span class="spinner"></span></span>
+            </button>
+            <button class="btn-approve" [disabled]="verifying" (click)="approve(uploadedDoc.kycLoanId)">
+              <span *ngIf="!verifying">✅ Accepter</span>
+              <span *ngIf="verifying" class="spinner-wrap"><span class="spinner"></span></span>
+            </button>
+            <button class="btn-reject" [disabled]="verifying" (click)="reject(uploadedDoc.kycLoanId)">
+              <span *ngIf="!verifying">❌ Refuser</span>
+              <span *ngIf="verifying" class="spinner-wrap"><span class="spinner"></span></span>
+            </button>
+          </div>
         </div>
       </ng-container>
 
       <div class="verdict-banner" *ngIf="verifyResult"
-        [class]="'verdict-banner--' + statusClass(verifyResult.verifiedStatus)">
+        [class]="'verdict-banner--' + statusClass(verifyResult.verifiedStatus)"
+        [class.verdict-banner--ai]="verifyResult.verifiedStatus === 'PENDING' && verifyResult.verificationMessage && verifyResult.verificationMessage.includes('IA')">
         <div class="verdict-banner__emoji">
           {{ verifyResult.verifiedStatus === 'APPROVED' ? '✅' :
-             verifyResult.verifiedStatus === 'REJECTED' ? '❌' : '⏳' }}
+             verifyResult.verifiedStatus === 'REJECTED' ? '❌' : 
+             (verifyResult.verificationMessage && verifyResult.verificationMessage.includes('IA') ? '🤖' : '⏳') }}
         </div>
         <div class="verdict-banner__content">
-          <h3>{{ verifyResult.verifiedStatus === 'APPROVED' ? 'Document approuvé !' :
-                 verifyResult.verifiedStatus === 'REJECTED' ? 'Document rejeté' : 'En attente' }}</h3>
-          <p>{{ verifyResult.verifiedStatus === 'APPROVED'
-              ? 'Votre document a été validé avec succès.'
-              : verifyResult.verifiedStatus === 'REJECTED'
-              ? "Ce document n'a pas pu être validé. Veuillez en soumettre un autre."
-              : "Votre document est en cours d'analyse." }}</p>
+          <h3>{{ verifyResult.verifiedStatus === 'APPROVED' ? "Document approuvé !" :
+                 verifyResult.verifiedStatus === 'REJECTED' ? "Document rejeté" : 
+                 (verifyResult.verificationMessage && verifyResult.verificationMessage.includes('IA') ? "Analyse de l'IA terminée" : "En attente") }}</h3>
+          <p>{{ (verifyResult.verifiedStatus === 'PENDING' && verifyResult.verificationMessage && verifyResult.verificationMessage.includes('IA')) 
+                ? verifyResult.verificationMessage 
+                : (verifyResult.verifiedStatus === 'APPROVED'
+                  ? "Votre document a été validé avec succès."
+                  : verifyResult.verifiedStatus === 'REJECTED'
+                  ? "Ce document n'a pas pu être validé. Veuillez en soumettre un autre."
+                  : "Votre document est en cours d'analyse.") }}</p>
         </div>
       </div>
     </div>
@@ -168,8 +200,17 @@
             </td>
             <td>{{ doc.submittedAt | date:'dd/MM/yy HH:mm' }}</td>
             <td>
-              <button class="btn-verify-sm"
-                (click)="verify(doc.kycLoanId)" [disabled]="verifying">Vérifier</button>
+              <ng-container *ngIf="!auth.isClient()">
+                <div class="table-actions" *ngIf="doc.verifiedStatus === 'PENDING'; else verifiedBadge">
+                  <button class="btn-verify-sm ai" (click)="verify(doc.kycLoanId)" [disabled]="verifying">Tester IA</button>
+                  <button class="btn-verify-sm approve" (click)="approve(doc.kycLoanId)" [disabled]="verifying">Accepter</button>
+                  <button class="btn-verify-sm reject" (click)="reject(doc.kycLoanId)" [disabled]="verifying">Refuser</button>
+                </div>
+                <ng-template #verifiedBadge>
+                  <span class="doc-badge">{{ doc.verifiedStatus }}</span>
+                </ng-template>
+              </ng-container>
+              <span *ngIf="auth.isClient()" class="doc-badge">Lecture seule</span>
             </td>
           </tr>
         </tbody>

@@ -65,6 +65,29 @@ public class KycLoanController {
         }
     }
 
+    @GetMapping
+    public ResponseEntity<List<KycLoanResponse>> getAllDocuments() {
+        return new ResponseEntity<>(kycLoanService.getAllDocuments(), HttpStatus.OK);
+    }
+
+    @PutMapping("/{kycLoanId}/approve")
+    public ResponseEntity<?> approveDocument(@PathVariable Long kycLoanId) {
+        try {
+            return new ResponseEntity<>(kycLoanService.manuallyApprove(kycLoanId), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PutMapping("/{kycLoanId}/reject")
+    public ResponseEntity<?> rejectDocument(@PathVariable Long kycLoanId) {
+        try {
+            return new ResponseEntity<>(kycLoanService.manuallyReject(kycLoanId), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @PutMapping("/{kycLoanId}/verify")
     public ResponseEntity<?> forceVerification(@PathVariable Long kycLoanId) {
         try {
@@ -73,5 +96,10 @@ public class KycLoanController {
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @GetMapping("/by-user/{userId}")
+    public ResponseEntity<List<KycLoanResponse>> getDocumentsByUser(@PathVariable Long userId) {
+        return new ResponseEntity<>(kycLoanService.getDocumentsByUser(userId), HttpStatus.OK);
     }
 }

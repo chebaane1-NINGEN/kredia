@@ -45,7 +45,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         User user = userRepository.findByEmailAndDeletedFalse(email)
                 .orElseThrow(() -> new RuntimeException("User not found after OAuth2 login"));
 
-        String token = tokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name());
+        String token = tokenProvider.generateToken(user.getId(), user.getEmail(), user.getRole().name(), user.getFirstName(), user.getLastName());
 
         return UriComponentsBuilder.fromUriString("http://localhost:5173/oauth2/redirect")
                 .queryParam("token", token)
