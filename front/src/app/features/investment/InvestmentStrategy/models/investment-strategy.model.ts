@@ -1,12 +1,7 @@
-export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
-
 export interface InvestmentStrategy {
-  strategyId?: number;
+  id: number;
   name: string;
   description: string;
-  riskLevel: RiskLevel;
+  riskLevel: string;
   expectedReturn: number;
-  minInvestment: number;
-  isActive: boolean;
-  createdAt?: string;
 }

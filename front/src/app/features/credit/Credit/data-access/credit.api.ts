@@ -24,6 +24,10 @@ export class CreditApi {
     return this.http.get<Credit[]>(`${API_BASE_URL}/api/credits`);
   }
 
+  findByUserId(userId: number): Observable<Credit[]> {
+    return this.http.get<Credit[]>(`${API_BASE_URL}/api/credits/by-user/${userId}`);
+  }
+
   exportExcel(id: number): Observable<Blob> {
     return this.http.get(`${API_BASE_URL}/api/credits/${id}/export`, {
       responseType: 'blob'

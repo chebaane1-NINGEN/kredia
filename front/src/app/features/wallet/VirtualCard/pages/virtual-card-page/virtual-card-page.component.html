@@ -1,39 +1,4 @@
-<section class="virtual-card-page">
-  <header>
-    <h1>Virtual Cards</h1>
-    <p>Manage all user virtual cards and their statuses.</p>
-  </header>
-
-  <div class="alert error" *ngIf="error">{{ error }}</div>
-
-  <div class="table-responsive" *ngIf="!loading || cards.length > 0">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>User ID</th>
-          <th>Masked Number</th>
-          <th>Expiry</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let c of cards">
-          <td>{{ c.cardId }}</td>
-          <td>{{ c.userId }}</td>
-          <td>{{ c.maskedNumber }}</td>
-          <td>{{ c.expiryDate }}</td>
-          <td><span [class]="getStatusClass(c.status)">{{ c.status }}</span></td>
-          <td>
-            <button (click)="block(c.cardId!)"   [disabled]="c.status === 'BLOCKED'">Block</button>
-            <button (click)="unblock(c.cardId!)" [disabled]="c.status !== 'BLOCKED'">Unblock</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="cards.length === 0 && !loading">No virtual cards found.</p>
-  </div>
-
-  <p *ngIf="loading && cards.length === 0">Loading...</p>
-</section>
+<div class="page-container">
+  <h1>Virtual Card</h1>
+  <p>This is a placeholder for the Virtual Card component.</p>
+</div>

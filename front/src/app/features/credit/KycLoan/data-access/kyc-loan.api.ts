@@ -24,13 +24,30 @@ export class KycLoanApi {
     return this.http.post<KycLoanResponse>(`${BASE}/upload`, formData);
   }
 
-  /** Force verify (triggers APPROVED / REJECTED from backend) */
+  /** Force verify (triggers APPROVED / REJECTED from backend via AI) */
   verify(kycLoanId: number): Observable<KycLoanResponse> {
     return this.http.put<KycLoanResponse>(`${BASE}/${kycLoanId}/verify`, {});
+  }
+
+  approve(kycLoanId: number): Observable<KycLoanResponse> {
+    return this.http.put<KycLoanResponse>(`${BASE}/${kycLoanId}/approve`, {});
+  }
+
+  reject(kycLoanId: number): Observable<KycLoanResponse> {
+    return this.http.put<KycLoanResponse>(`${BASE}/${kycLoanId}/reject`, {});
+  }
+
+  getAll(): Observable<KycLoanResponse[]> {
+    return this.http.get<KycLoanResponse[]>(BASE);
   }
 
   /** Get all docs for a credit */
   getByCreditId(creditId: number): Observable<KycLoanResponse[]> {
     return this.http.get<KycLoanResponse[]>(`${BASE}/credit/${creditId}`);
+  }
+
+  /** Get all docs for a user */
+  getByUserId(userId: number): Observable<KycLoanResponse[]> {
+    return this.http.get<KycLoanResponse[]>(`${BASE}/by-user/${userId}`);
   }
 }

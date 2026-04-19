@@ -1,40 +1,4 @@
-<section class="portfolio-position-page">
-  <header>
-    <h1>Portfolio Positions</h1>
-    <p>View all open positions and their current performance.</p>
-  </header>
-
-  <div class="alert error" *ngIf="error">{{ error }}</div>
-
-  <div class="table-responsive" *ngIf="!loading || positions.length > 0">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>User ID</th>
-          <th>Asset</th>
-          <th>Quantity</th>
-          <th>Avg Buy Price</th>
-          <th>Current Price</th>
-          <th>Total Value</th>
-          <th>P&amp;L</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let p of positions">
-          <td>{{ p.positionId }}</td>
-          <td>{{ p.userId }}</td>
-          <td>{{ p.assetName }}</td>
-          <td>{{ p.quantity }}</td>
-          <td>{{ p.averageBuyPrice | currency:'USD':'symbol':'1.2-2' }}</td>
-          <td>{{ p.currentPrice | currency:'USD':'symbol':'1.2-2' }}</td>
-          <td>{{ p.totalValue | currency:'USD':'symbol':'1.2-2' }}</td>
-          <td><span [class]="getProfitLossClass(p.profitLoss)">{{ p.profitLoss | currency:'USD':'symbol':'1.2-2' }}</span></td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="positions.length === 0 && !loading">No positions found.</p>
-  </div>
-
-  <p *ngIf="loading && positions.length === 0">Loading...</p>
-</section>
+<div class="page-container">
+  <h1>Portfolio Position</h1>
+  <p>This is a placeholder for the Portfolio Position component.</p>
+</div>

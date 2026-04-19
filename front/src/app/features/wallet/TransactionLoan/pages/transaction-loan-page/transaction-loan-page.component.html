@@ -1,38 +1,4 @@
-<section class="transaction-loan-page">
-  <header>
-    <h1>Loan Transactions</h1>
-    <p>View all disbursements, repayments, penalties, and interest entries.</p>
-  </header>
-
-  <div class="alert error" *ngIf="error">{{ error }}</div>
-
-  <div class="table-responsive" *ngIf="!loading || transactions.length > 0">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Credit ID</th>
-          <th>Wallet ID</th>
-          <th>Amount</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let t of transactions">
-          <td>{{ t.loanTransactionId }}</td>
-          <td>{{ t.creditId }}</td>
-          <td>{{ t.walletId }}</td>
-          <td>{{ t.amount | currency:'USD':'symbol':'1.2-2' }}</td>
-          <td><span [class]="getTypeClass(t.type)">{{ t.type }}</span></td>
-          <td>{{ t.description }}</td>
-          <td>{{ t.createdAt | date:'short' }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="transactions.length === 0 && !loading">No loan transactions found.</p>
-  </div>
-
-  <p *ngIf="loading && transactions.length === 0">Loading...</p>
-</section>
+<div class="page-container">
+  <h1>Transaction Loan</h1>
+  <p>This is a placeholder for the Transaction Loan component.</p>
+</div>

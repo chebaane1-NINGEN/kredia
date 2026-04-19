@@ -52,6 +52,12 @@ public class CreditController {
         return new ResponseEntity<>(credits, HttpStatus.OK);
     }
 
+    @GetMapping("/by-user/{userId}")
+    public ResponseEntity<List<Credit>> getCreditsByUserId(@PathVariable Long userId) {
+        List<Credit> credits = creditService.getCreditsByUserId(userId);
+        return new ResponseEntity<>(credits, HttpStatus.OK);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<Credit> updateCredit(@PathVariable Long id, @Valid @RequestBody Credit creditDetails) {
         try {

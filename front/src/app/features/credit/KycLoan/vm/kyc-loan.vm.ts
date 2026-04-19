@@ -25,7 +25,23 @@ export class KycLoanVm {
     return this.api.verify(kycLoanId);
   }
 
+  approve(kycLoanId: number): Observable<KycLoanResponse> {
+    return this.api.approve(kycLoanId);
+  }
+
+  reject(kycLoanId: number): Observable<KycLoanResponse> {
+    return this.api.reject(kycLoanId);
+  }
+
+  getAll(): Observable<KycLoanResponse[]> {
+    return this.api.getAll();
+  }
+
   getByCreditId(creditId: number): Observable<KycLoanResponse[]> {
     return this.api.getByCreditId(creditId);
+  }
+
+  getByUserId(userId: number): Observable<KycLoanResponse[]> {
+    return this.api.getByUserId(userId);
   }
 }

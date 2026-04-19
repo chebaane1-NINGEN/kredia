@@ -15,6 +15,10 @@ export class CreditVm {
     return this.api.findAll();
   }
 
+  findByUserId(userId: number): Observable<Credit[]> {
+    return this.api.findByUserId(userId);
+  }
+
   create(credit: Credit): Observable<Credit> {
     return this.api.create(credit);
   }

@@ -10,6 +10,7 @@ export interface Credit {
   status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE' | 'COMPLETED' | 'DEFAULTED';
   income: number;
   dependents: number;
+  createdAt?: string;
 }
 
 export interface DefaultPredictionResponse {

@@ -12,4 +12,6 @@ import java.util.Optional;
 public interface KycLoanRepository extends JpaRepository<KycLoan, Long> {
     
     List<KycLoan> findByCreditCreditId(Long creditId);
+
+    List<KycLoan> findByUser_Id(Long userId);
 }

@@ -1,36 +1,4 @@
-<section class="transaction-audit-log-page">
-  <header>
-    <h1>Transaction Audit Logs</h1>
-    <p>Track all actions performed on transactions.</p>
-  </header>
-
-  <div class="alert error" *ngIf="error">{{ error }}</div>
-
-  <div class="table-responsive" *ngIf="!loading || logs.length > 0">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Transaction ID</th>
-          <th>Action</th>
-          <th>Performed By</th>
-          <th>Details</th>
-          <th>Timestamp</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let l of logs">
-          <td>{{ l.auditId }}</td>
-          <td>{{ l.transactionId }}</td>
-          <td><span [class]="getActionClass(l.action)">{{ l.action }}</span></td>
-          <td>{{ l.performedBy }}</td>
-          <td>{{ l.details }}</td>
-          <td>{{ l.timestamp | date:'short' }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="logs.length === 0 && !loading">No audit logs found.</p>
-  </div>
-
-  <p *ngIf="loading && logs.length === 0">Loading...</p>
-</section>
+<div class="page-container">
+  <h1>Transaction Audit Log</h1>
+  <p>This is a placeholder for the Transaction Audit Log component.</p>
+</div>
