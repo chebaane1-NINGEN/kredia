@@ -4,7 +4,7 @@ import { VirtualCardApi } from '../data-access/virtual-card.api';
 import { VirtualCard } from '../models/virtual-card.model';
 
 @Injectable({ providedIn: 'root' })
-export class VirtualCardService {
+export class VirtualCardVm {
   private readonly api = inject(VirtualCardApi);
 
   findAll(): Observable<VirtualCard[]> {

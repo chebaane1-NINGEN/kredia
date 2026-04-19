@@ -1,101 +1,47 @@
-<section class="list-page">
-  <div class="list-hero">
-    <h1>{{ auth.isClient() ? 'Mes Crédits' : 'Gestion des Crédits' }}</h1>
-    <p>{{ auth.isClient()
-      ? 'Consultez l\'état de vos demandes de micro-crédit.'
-      : 'Consultez et gérez l\'ensemble des demandes de micro-crédit.' }}</p>
+<div class="page-container">
+  <div class="header">
+    <h1>Liste des crédits</h1>
+    <button (click)="loadCredits()" class="btn btn--secondary" [disabled]="loading">
+      {{ loading ? 'Chargement...' : 'Actualiser' }}
+    </button>
   </div>
 
-  <div class="container">
-    <div class="list-card">
-      <div class="list-header">
-        <h2 class="title">{{ auth.isClient() ? 'Historique de mes Crédits' : 'Historique des Crédits' }}</h2>
-        <button class="btn outline sm" (click)="loadCredits()" [disabled]="loading">
-          {{ loading ? 'Actualisation...' : 'Actualiser' }}
-        </button>
-      </div>
-
-      <div class="alert error" *ngIf="error">⚠️ {{ error }}</div>
-
-      <!-- Vue CLIENT : colonnes simplifiées -->
-      <ng-container *ngIf="auth.isClient(); else adminView">
-        <div class="table-responsive" *ngIf="!loading || credits.length > 0">
-          <table class="credit-table">
-            <thead>
-              <tr>
-                <th>Montant</th>
-                <th>Type de crédit</th>
-                <th>Statut</th>
-                <th>Date de création</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let c of credits">
-                <td><strong>{{ c.amount | currency:'EUR':'symbol':'1.0-2' }}</strong></td>
-                <td>{{ getRepaymentLabel(c.repaymentType) }}</td>
-                <td>
-                  <span class="status-badge" [class]="getStatusClass(c.status)">
-                    {{ c.status || 'PENDING' }}
-                  </span>
-                </td>
-                <td>{{ c.createdAt ? (c.createdAt | date:'dd/MM/yyyy') : '—' }}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="empty-state" *ngIf="credits.length === 0 && !loading">
-            <div class="icon">📁</div>
-            <p>Aucun crédit trouvé.</p>
-          </div>
-        </div>
-      </ng-container>
-
-      <!-- Vue ADMIN : tableau complet -->
-      <ng-template #adminView>
-        <div class="table-responsive" *ngIf="!loading || credits.length > 0">
-          <table class="credit-table">
-            <thead>
-              <tr>
-                <th>ID</th><th>Montant</th><th>Taux</th><th>Durée</th><th>Statut</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let c of credits">
-                <td><strong>#{{ c.creditId }}</strong></td>
-                <td>{{ c.amount | currency:'EUR':'symbol':'1.0-2' }}</td>
-                <td>{{ c.interestRate }}%</td>
-                <td>{{ c.termMonths }} mois</td>
-                <td>
-                  <span class="status-badge" [class]="getStatusClass(c.status)">
-                    {{ c.status || 'PENDING' }}
-                  </span>
-                </td>
-                <td class="action-cell">
-                  <button class="action-btn excel" (click)="downloadExcel(c.creditId!)" title="Exporter Excel">
-                    📊 <span>Excel</span>
-                  </button>
-                  <button class="action-btn pdf" (click)="downloadPdf(c.creditId!)" title="Télécharger PDF">
-                    📄 <span>PDF</span>
-                  </button>
-                  <a class="action-btn risk" [routerLink]="['/credit/risk']" [queryParams]="{id: c.creditId}">
-                    🔍 <span>Risque</span>
-                  </a>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="empty-state" *ngIf="credits.length === 0 && !loading">
-            <div class="icon">📁</div>
-            <p>Aucun crédit trouvé. Commencez par en créer un !</p>
-            <a routerLink="/credit/create" class="btn primary sm">Créer un crédit</a>
-          </div>
-        </div>
-      </ng-template>
-
-      <div class="skeleton-loader" *ngIf="loading && credits.length === 0">
-        <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5]"></div>
-      </div>
-    </div>
+  <div *ngIf="error" class="alert alert--error">
+    {{ error }}
   </div>
-</section>
+
+  <div *ngIf="loading" class="loader">
+    Chargement des données...
+  </div>
+
+  <table *ngIf="!loading && credits.length > 0" class="credit-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Montant</th>
+        <th>Taux</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let credit of credits">
+        <td>{{ credit.creditId }}</td>
+        <td>{{ credit.amount | currency:'EUR' }}</td>
+        <td>{{ credit.interestRate }}%</td>
+        <td>
+          <span [class]="getStatusClass(credit.status)">{{ credit.status }}</span>
+        </td>
+        <td class="actions">
+          <button (click)="downloadExcel(credit.creditId!)" title="Export Excel">📊</button>
+          <button (click)="downloadPdf(credit.creditId!)" title="Export PDF">PDF</button>
+          <a [routerLink]="['/credit', credit.creditId]" class="btn btn--small">Détails</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="!loading && credits.length === 0" class="empty-state">
+    Aucun crédit trouvé.
+  </div>
+</div>

@@ -1,38 +1,4 @@
-<section class="reclamation-attachment-page">
-  <header>
-    <h1>Reclamation Attachments</h1>
-    <p>View and manage files attached to reclamations.</p>
-  </header>
-
-  <div class="alert error" *ngIf="error">{{ error }}</div>
-
-  <div class="table-responsive" *ngIf="!loading || attachments.length > 0">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Reclamation ID</th>
-          <th>File Name</th>
-          <th>Size</th>
-          <th>Uploaded</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let a of attachments">
-          <td>{{ a.attachmentId }}</td>
-          <td>{{ a.reclamationId }}</td>
-          <td>{{ a.fileName }}</td>
-          <td>{{ fileSizeLabel(a.fileSize) }}</td>
-          <td>{{ a.uploadedAt | date:'short' }}</td>
-          <td>
-            <button (click)="delete(a.attachmentId!)">Delete</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="attachments.length === 0 && !loading">No attachments found.</p>
-  </div>
-
-  <p *ngIf="loading && attachments.length === 0">Loading...</p>
-</section>
+<div class="page-container">
+  <h1>Reclamation Attachment</h1>
+  <p>This is a placeholder for the Reclamation Attachment component.</p>
+</div>

@@ -2,10 +2,10 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit }
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { KycLoanService } from '../../services/kyc-loan.service';
+import { KycLoanVm } from '../../vm/kyc-loan.vm';
 import { DocumentTypeLoan, KycLoanResponse, VerifiedStatus } from '../../models/kyc-loan.model';
 import { AuthService } from '../../../../../core/services/auth.service';
-import { CreditService } from '../../../Credit/services/credit.service';
+import { CreditVm } from '../../../Credit/vm/credit.vm';
 import { Credit } from '../../../Credit/models/credit.model';
 
 export interface DocEntry {
@@ -17,7 +17,7 @@ export interface DocEntry {
 /**
  * Component = ViewModel
  * Contient tout l'état UI, la logique de présentation et les actions.
- * Délègue les appels données au service KycLoanService.
+ * Délègue les appels données au service KycLoanVm.
  */
 @Component({
   standalone: true,
@@ -27,10 +27,10 @@ export interface DocEntry {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class KycLoanPageComponent implements OnInit {
-  private readonly vm  = inject(KycLoanService);
+  private readonly vm  = inject(KycLoanVm);
   private readonly cdr = inject(ChangeDetectorRef);
   readonly auth        = inject(AuthService);
-  private readonly creditService = inject(CreditService);
+  private readonly creditVm = inject(CreditVm);
 
   // ── État UI ────────────────────────────────────────────
   // Pour CLIENT : userId est lu depuis le JWT. Pour admin, on garde la saisie manuelle.
@@ -72,7 +72,7 @@ export class KycLoanPageComponent implements OnInit {
 
   // ── Auto-Sélect. Crédit (CLIENT) ──────────────────────
   autoSelectCredit(): void {
-    this.creditService.findByUserId(this.userId).subscribe({
+    this.creditVm.findByUserId(this.userId).subscribe({
       next: (credits) => {
         this.clientCredits = credits || [];
         if (this.clientCredits.length > 0) {

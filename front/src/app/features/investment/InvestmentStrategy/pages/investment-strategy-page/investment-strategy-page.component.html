@@ -1,36 +1,4 @@
-<section class="investment-strategy-page">
-  <header>
-    <h1>Investment Strategies</h1>
-    <p>Explore available investment strategies and their risk profiles.</p>
-  </header>
-
-  <div class="alert error" *ngIf="error">{{ error }}</div>
-
-  <div class="table-responsive" *ngIf="!loading || strategies.length > 0">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Risk Level</th>
-          <th>Expected Return</th>
-          <th>Min Investment</th>
-          <th>Active</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let s of strategies">
-          <td>{{ s.strategyId }}</td>
-          <td>{{ s.name }}</td>
-          <td><span [class]="getRiskClass(s.riskLevel)">{{ s.riskLevel }}</span></td>
-          <td>{{ s.expectedReturn }}%</td>
-          <td>{{ s.minInvestment | currency:'USD':'symbol':'1.2-2' }}</td>
-          <td>{{ s.isActive ? 'Yes' : 'No' }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="strategies.length === 0 && !loading">No strategies found.</p>
-  </div>
-
-  <p *ngIf="loading && strategies.length === 0">Loading...</p>
-</section>
+<div class="page-container">
+  <h1>Investment Strategy</h1>
+  <p>This is a placeholder for the Investment Strategy component.</p>
+</div>

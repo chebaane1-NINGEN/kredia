@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { CreditService } from '../../services/credit.service';
+import { CreditVm } from '../../vm/credit.vm';
 import { Credit } from '../../models/credit.model';
 
 @Component({
@@ -13,7 +13,7 @@ import { Credit } from '../../models/credit.model';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreditPageComponent {
-  private readonly vm  = inject(CreditService);
+  private readonly vm  = inject(CreditVm);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly fb  = inject(FormBuilder);
 

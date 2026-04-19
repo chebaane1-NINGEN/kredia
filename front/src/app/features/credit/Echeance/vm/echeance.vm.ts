@@ -8,7 +8,7 @@ import { EcheancePaymentResponse } from '../models/echeance.model';
  * Expose des Observables. Aucun état UI.
  */
 @Injectable({ providedIn: 'root' })
-export class EcheanceService {
+export class EcheanceVm {
   private readonly api = inject(EcheanceApi);
 
   getAll(): Observable<EcheancePaymentResponse[]> {

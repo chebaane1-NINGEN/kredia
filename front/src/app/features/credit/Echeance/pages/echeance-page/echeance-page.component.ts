@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { EcheanceService } from '../../services/echeance.service';
+import { EcheanceVm } from '../../vm/echeance.vm';
 import { EcheancePaymentResponse } from '../../models/echeance.model';
 import { AuthService } from '../../../../../core/services/auth.service';
 
@@ -13,7 +13,7 @@ import { AuthService } from '../../../../../core/services/auth.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EcheancePageComponent implements OnInit {
-  private readonly vm  = inject(EcheanceService);
+  private readonly vm  = inject(EcheanceVm);
   private readonly cdr = inject(ChangeDetectorRef);
   readonly auth        = inject(AuthService);
 

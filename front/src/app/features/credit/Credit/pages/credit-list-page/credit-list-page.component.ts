@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit }
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { CreditService } from '../../services/credit.service';
+import { CreditVm } from '../../vm/credit.vm';
 import { Credit } from '../../models/credit.model';
 import { downloadBlob } from '../../../../../core/utils/download.util';
 import { AuthService } from '../../../../../core/services/auth.service';
@@ -10,7 +10,7 @@ import { AuthService } from '../../../../../core/services/auth.service';
 /**
  * Component = ViewModel
  * État UI, logique de présentation, actions.
- * Délègue les appels données à CreditService (service).
+ * Délègue les appels données à CreditVm (service).
  */
 @Component({
   standalone: true,
@@ -20,7 +20,7 @@ import { AuthService } from '../../../../../core/services/auth.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreditListPageComponent implements OnInit {
-  private readonly vm   = inject(CreditService);
+  private readonly vm   = inject(CreditVm);
   private readonly cdr  = inject(ChangeDetectorRef);
   readonly auth         = inject(AuthService);
 

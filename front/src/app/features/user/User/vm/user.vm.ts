@@ -4,7 +4,7 @@ import { UserApi } from '../data-access/user.api';
 import { User, UserStatus } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
-export class UserService {
+export class UserVm {
   private readonly api = inject(UserApi);
 
   findAll(): Observable<User[]> {

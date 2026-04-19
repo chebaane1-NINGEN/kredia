@@ -4,7 +4,7 @@ import { ReclamationAttachmentApi } from '../data-access/reclamation-attachment.
 import { ReclamationAttachment } from '../models/reclamation-attachment.model';
 
 @Injectable({ providedIn: 'root' })
-export class ReclamationAttachmentService {
+export class ReclamationAttachmentVm {
   private readonly api = inject(ReclamationAttachmentApi);
 
   findAll(): Observable<ReclamationAttachment[]> {

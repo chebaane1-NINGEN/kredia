@@ -1,42 +1,11 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { finalize } from 'rxjs';
-import { TransactionLoanService } from '../../services/transaction-loan.service';
-import { TransactionLoan } from '../../models/transaction-loan.model';
 
 @Component({
+  selector: 'app-transaction-loan-page',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './transaction-loan-page.component.html',
-  styleUrl: './transaction-loan-page.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrl: './transaction-loan-page.component.scss'
 })
-export class TransactionLoanPageComponent implements OnInit {
-  private readonly vm  = inject(TransactionLoanService);
-  private readonly cdr = inject(ChangeDetectorRef);
-
-  transactions: TransactionLoan[] = [];
-  loading = false;
-  error: string | null = null;
-
-  ngOnInit(): void {
-    this.loadTransactions();
-  }
-
-  loadTransactions(): void {
-    this.loading = true;
-    this.error   = null;
-    this.cdr.markForCheck();
-
-    this.vm.findAll()
-      .pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
-      .subscribe({
-        next:  (data) => { this.transactions = data ?? []; this.cdr.markForCheck(); },
-        error: ()     => { this.error = 'Unable to load loan transactions.'; this.cdr.markForCheck(); }
-      });
-  }
-
-  getTypeClass(type: string): string {
-    return `type--${type.toLowerCase()}`;
-  }
-}
+export class TransactionLoanPageComponent {}

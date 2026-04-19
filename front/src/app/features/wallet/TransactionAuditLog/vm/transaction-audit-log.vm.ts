@@ -4,7 +4,7 @@ import { TransactionAuditLogApi } from '../data-access/transaction-audit-log.api
 import { TransactionAuditLog } from '../models/transaction-audit-log.model';
 
 @Injectable({ providedIn: 'root' })
-export class TransactionAuditLogService {
+export class TransactionAuditLogVm {
   private readonly api = inject(TransactionAuditLogApi);
 
   findAll(): Observable<TransactionAuditLog[]> {

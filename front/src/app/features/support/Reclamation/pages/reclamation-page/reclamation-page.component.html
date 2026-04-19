@@ -1,40 +1,4 @@
-<section class="reclamation-page">
-  <header>
-    <h1>Reclamations</h1>
-    <p>Manage all customer complaints and support requests.</p>
-  </header>
-
-  <div class="alert error" *ngIf="error">{{ error }}</div>
-
-  <div class="table-responsive" *ngIf="!loading || reclamations.length > 0">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>User ID</th>
-          <th>Subject</th>
-          <th>Category</th>
-          <th>Status</th>
-          <th>Created</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let r of reclamations">
-          <td>{{ r.reclamationId }}</td>
-          <td>{{ r.userId }}</td>
-          <td>{{ r.subject }}</td>
-          <td><span [class]="getCategoryClass(r.category)">{{ r.category }}</span></td>
-          <td><span [class]="getStatusClass(r.status)">{{ r.status }}</span></td>
-          <td>{{ r.createdAt | date:'short' }}</td>
-          <td>
-            <button>View</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="reclamations.length === 0 && !loading">No reclamations found.</p>
-  </div>
-
-  <p *ngIf="loading && reclamations.length === 0">Loading...</p>
-</section>
+<div class="page-container">
+  <h1>Reclamation</h1>
+  <p>This is a placeholder for the Reclamation component.</p>
+</div>

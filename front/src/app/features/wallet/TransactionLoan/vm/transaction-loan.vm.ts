@@ -4,7 +4,7 @@ import { TransactionLoanApi } from '../data-access/transaction-loan.api';
 import { TransactionLoan } from '../models/transaction-loan.model';
 
 @Injectable({ providedIn: 'root' })
-export class TransactionLoanService {
+export class TransactionLoanVm {
   private readonly api = inject(TransactionLoanApi);
 
   findAll(): Observable<TransactionLoan[]> {

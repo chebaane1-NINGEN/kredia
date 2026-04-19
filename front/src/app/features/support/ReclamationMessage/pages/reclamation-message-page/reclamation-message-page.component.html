@@ -1,36 +1,4 @@
-<section class="reclamation-message-page">
-  <header>
-    <h1>Reclamation Messages</h1>
-    <p>View all messages exchanged on reclamation threads.</p>
-  </header>
-
-  <div class="alert error" *ngIf="error">{{ error }}</div>
-
-  <div class="table-responsive" *ngIf="!loading || messages.length > 0">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Reclamation ID</th>
-          <th>Sender</th>
-          <th>Type</th>
-          <th>Content</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let m of messages">
-          <td>{{ m.messageId }}</td>
-          <td>{{ m.reclamationId }}</td>
-          <td>{{ m.senderName }}</td>
-          <td><span [class]="getSenderClass(m.senderType)">{{ m.senderType }}</span></td>
-          <td>{{ m.content }}</td>
-          <td>{{ m.sentAt | date:'short' }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <p *ngIf="messages.length === 0 && !loading">No messages found.</p>
-  </div>
-
-  <p *ngIf="loading && messages.length === 0">Loading...</p>
-</section>
+<div class="page-container">
+  <h1>Reclamation Message</h1>
+  <p>This is a placeholder for the Reclamation Message component.</p>
+</div>

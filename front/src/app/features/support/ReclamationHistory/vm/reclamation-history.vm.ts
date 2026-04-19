@@ -4,7 +4,7 @@ import { ReclamationHistoryApi } from '../data-access/reclamation-history.api';
 import { ReclamationHistory } from '../models/reclamation-history.model';
 
 @Injectable({ providedIn: 'root' })
-export class ReclamationHistoryService {
+export class ReclamationHistoryVm {
   private readonly api = inject(ReclamationHistoryApi);
 
   findAll(): Observable<ReclamationHistory[]> {

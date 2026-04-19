@@ -4,7 +4,7 @@ import { InvestmentOrderApi } from '../data-access/investment-order.api';
 import { InvestmentOrder } from '../models/investment-order.model';
 
 @Injectable({ providedIn: 'root' })
-export class InvestmentOrderService {
+export class InvestmentOrderVm {
   private readonly api = inject(InvestmentOrderApi);
 
   findAll(): Observable<InvestmentOrder[]> {

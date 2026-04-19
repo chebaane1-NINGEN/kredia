@@ -2,11 +2,11 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit }
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { ChatbotService } from '../../services/chatbot.service';
+import { ChatbotVm } from '../../vm/chatbot.vm';
 import { ChatbotRecommendation } from '../../models/chatbot.model';
 import { AuthService } from '../../../../../core/services/auth.service';
-import { CreditService } from '../../../Credit/services/credit.service';
-import { EcheanceService } from '../../../Echeance/services/echeance.service';
+import { CreditVm } from '../../../Credit/vm/credit.vm';
+import { EcheanceVm } from '../../../Echeance/vm/echeance.vm';
 import { Credit } from '../../../Credit/models/credit.model';
 import { EcheancePaymentResponse } from '../../../Echeance/models/echeance.model';
 
@@ -18,7 +18,7 @@ import { EcheancePaymentResponse } from '../../../Echeance/models/echeance.model
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChatbotPageComponent {
-  private readonly vm         = inject(ChatbotService);
+  private readonly vm         = inject(ChatbotVm);
   private readonly cdr        = inject(ChangeDetectorRef);
   private readonly fb         = inject(FormBuilder);
 

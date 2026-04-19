@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { CreditService } from '../../services/credit.service';
+import { CreditVm } from '../../vm/credit.vm';
 import { DefaultPredictionResponse } from '../../models/credit.model';
 
 @Component({
@@ -13,7 +13,7 @@ import { DefaultPredictionResponse } from '../../models/credit.model';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CreditRiskPageComponent {
-  private readonly vm  = inject(CreditService);
+  private readonly vm  = inject(CreditVm);
   private readonly cdr = inject(ChangeDetectorRef);
 
   // ── État UI ────────────────────────────────────────────

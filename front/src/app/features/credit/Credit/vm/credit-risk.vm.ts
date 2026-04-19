@@ -4,7 +4,7 @@ import { CreditApi } from '../data-access/credit.api';
 import { DefaultPredictionResponse } from '../models/credit.model';
 
 @Injectable()
-export class CreditRiskService {
+export class CreditRiskVm {
   private readonly api = inject(CreditApi);
 
   // ── State ──────────────────────────────────────────────

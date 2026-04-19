@@ -4,7 +4,7 @@ import { NotificationApi } from '../data-access/notification.api';
 import { Notification } from '../models/notification.model';
 
 @Injectable({ providedIn: 'root' })
-export class NotificationService {
+export class NotificationVm {
   private readonly api = inject(NotificationApi);
 
   findAll(): Observable<Notification[]> {

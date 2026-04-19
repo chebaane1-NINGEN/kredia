@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { finalize } from 'rxjs';
-import { WalletService } from '../../services/wallet.service';
+import { WalletVm } from '../../vm/wallet.vm';
 import { Wallet } from '../../models/wallet.model';
 
 @Component({
@@ -12,7 +12,7 @@ import { Wallet } from '../../models/wallet.model';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WalletPageComponent implements OnInit {
-  private readonly vm  = inject(WalletService);
+  private readonly vm  = inject(WalletVm);
   private readonly cdr = inject(ChangeDetectorRef);
 
   wallets: Wallet[] = [];
