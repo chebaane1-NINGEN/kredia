@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { UserResponseDTO, UserRole, UserStatus } from '../types/user.types';
 import { userApi } from '../api/userApi';
 
+const BACKEND_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8086/api';
+const BACKEND_BASE_URL = BACKEND_API_BASE_URL.replace(/\/api\/?$/, '');
 const MAX_LOADING_TIME = 8000; // 8 seconds max loading time
 
 // RBAC Permissions Configuration
@@ -187,7 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGithub = async () => {
     setAuthError(null);
-    window.location.href = 'http://localhost:8086/oauth2/authorization/github';
+    window.location.href = `${BACKEND_BASE_URL}/oauth2/authorization/github`;
   };
 
   const hasRole = (role: UserRole) => currentUser?.role === role;

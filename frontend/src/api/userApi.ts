@@ -15,6 +15,9 @@ import {
   AuthResponseDTO
 } from '../types/user.types';
 
+const BACKEND_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8086/api';
+const BACKEND_BASE_URL = BACKEND_API_BASE_URL.replace(/\/api\/?$/, '');
+
 const createClient = (baseURL: string): AxiosInstance => {
   const instance = axios.create({
     baseURL,
@@ -78,8 +81,8 @@ const createClient = (baseURL: string): AxiosInstance => {
   return instance;
 };
 
-const api = createClient('http://localhost:8086/api/user');
-const authApi = createClient('http://localhost:8086/api/auth');
+const api = createClient(`${BACKEND_API_BASE_URL}/user`);
+const authApi = createClient(`${BACKEND_API_BASE_URL}/auth`);
 
 // Helper to extract data from the wrapper
 const extractData = <T>(response: { data: ApiResponse<T> }): T => response.data.data;

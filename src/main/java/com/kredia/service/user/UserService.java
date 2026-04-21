@@ -69,7 +69,7 @@ public interface UserService {
     // --- Agent Performance & Activity ---
     AgentPerformanceDTO agentDashboard(Long agentId);
     AgentPerformanceDTO agentPerformance(Long agentId);
-    Page<UserActivityResponseDTO> agentActivity(Long agentId, Pageable pageable);
+    Page<UserActivityResponseDTO> agentActivity(Long agentId, Optional<String> actionType, Optional<String> search, Pageable pageable);
 
     // --- Client Profile & Analytics ---
     UserResponseDTO clientProfile(Long clientId);

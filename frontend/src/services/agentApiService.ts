@@ -1,6 +1,6 @@
 import { UserResponseDTO, UserStatus } from '../types/user.types';
 
-const API_BASE_URL = 'http://localhost:8086/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8086/api';
 
 export interface AgentPerformanceDTO {
   totalClients: number;
@@ -9,6 +9,7 @@ export interface AgentPerformanceDTO {
   totalRejections: number;
   performanceScore: number;
   averageProcessingTime: number;
+  clientSatisfactionScore: number;
   last7DaysActivity: Array<{
     date: string;
     approvals: number;
@@ -30,6 +31,7 @@ export interface AgentActivityDTO {
   description: string;
   timestamp: string;
   userId: number;
+  targetUserId?: number;
   userEmail: string;
   userName: string;
   clientName?: string;
@@ -78,12 +80,11 @@ class AgentApiService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data.data;
+      const json = await response.json();
+      return json.data;
     } catch (error) {
       console.error('Error fetching agent clients:', error);
-      // Fallback to mock data for development
-      return this.getMockClients();
+      throw error;
     }
   }
 
@@ -154,7 +155,7 @@ class AgentApiService {
   // Get agent performance data
   async getAgentPerformance(): Promise<AgentPerformanceDTO> {
     try {
-const agentId = localStorage.getItem('kredia_user_id') || '1';
+      const agentId = localStorage.getItem('kredia_user_id') || '1';
       const response = await fetch(`${API_BASE_URL}/user/agent/${agentId}/performance`, {
         headers: this.getAuthHeaders()
       });
@@ -163,12 +164,48 @@ const agentId = localStorage.getItem('kredia_user_id') || '1';
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data.data;
+      const json = await response.json();
+      const data = json.data;
+
+      const approvals = data.approvalActionsCount ?? 0;
+      const rejections = data.rejectionActionsCount ?? 0;
+      const totalActions = data.totalActions ?? approvals + rejections;
+      const avgProcessingTimeHours = Math.round(((data.averageProcessingTimeSeconds ?? 0) / 3600) * 10) / 10;
+      const performanceScore = data.performanceScore ?? 0;
+
+      return {
+        totalClients: data.totalAssignedClients ?? 0,
+        activeClients: data.activeAssignedClients ?? 0,
+        totalApprovals: approvals,
+        totalRejections: rejections,
+        performanceScore,
+        averageProcessingTime: avgProcessingTimeHours,
+        clientSatisfactionScore: data.clientSatisfactionScore ?? 0,
+        last7DaysActivity: [],
+        monthlyPerformance: [
+          {
+            month: 'Current',
+            score: performanceScore,
+            approvals,
+            rejections
+          }
+        ],
+        actionBreakdown: [
+          {
+            action: 'Approvals',
+            count: approvals,
+            percentage: totalActions > 0 ? Math.round((approvals * 100) / totalActions) : 0
+          },
+          {
+            action: 'Rejections',
+            count: rejections,
+            percentage: totalActions > 0 ? Math.round((rejections * 100) / totalActions) : 0
+          }
+        ]
+      };
     } catch (error) {
       console.error('Error fetching agent performance:', error);
-      // Fallback to mock data
-      return this.getMockPerformance();
+      throw error;
     }
   }
 
@@ -196,115 +233,102 @@ const agentId = localStorage.getItem('kredia_user_id') || '1';
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data.data;
+      const json = await response.json();
+      const data = json.data;
+      return {
+        content: data.content.map((activity: any) => ({
+          id: activity.id,
+          actionType: activity.actionType,
+          description: activity.description,
+          timestamp: activity.timestamp,
+          userId: activity.userId,
+          userEmail: activity.userEmail || '',
+          userName: activity.userName || `User ${activity.userId}`,
+          clientName: activity.targetUserName || (activity.targetUserId ? `Client ${activity.targetUserId}` : ''),
+          ipAddress: activity.ipAddress || 'N/A'
+        })),
+        totalPages: data.totalPages,
+        totalElements: data.totalElements
+      };
     } catch (error) {
       console.error('Error fetching agent activities:', error);
-      // Fallback to mock data
-      return this.getMockActivities();
+      throw error;
+    }
+  }
+
+  // Send message to admin or another agent
+  async sendMessage(receiverId: number, content: string): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/messages`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: new URLSearchParams({
+          receiverId: receiverId.toString(),
+          content: content
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const json = await response.json();
+      return json.data;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  }
+
+  // Get conversation with specific user
+  async getConversation(otherUserId: number, page = 0, size = 50): Promise<{ content: any[], totalPages: number, totalElements: number }> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString()
+      });
+
+      const response = await fetch(`${API_BASE_URL}/messages/conversation/${otherUserId}?${params}`, {
+        headers: this.getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const json = await response.json();
+      const data = json.data;
+      return {
+        content: data.content || [],
+        totalPages: data.totalPages || 1,
+        totalElements: data.totalElements || 0
+      };
+    } catch (error) {
+      console.error('Error fetching conversation:', error);
+      throw error;
+    }
+  }
+
+  // Get all users for messaging (admins and agents)
+  async getMessageUsers(): Promise<any[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user?role=ADMIN&role=AGENT&size=100`, {
+        headers: this.getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const json = await response.json();
+      return json.data.content || [];
+    } catch (error) {
+      console.error('Error fetching message users:', error);
+      throw error;
     }
   }
 
   // Mock data for development
-  private getMockClients(): AgentClientsResponse {
-    const mockClients: UserResponseDTO[] = [
-      {
-        id: 1,
-        firstName: 'Mohamed',
-        lastName: 'Ben Ali',
-        email: 'mohamed.benali@client.com',
-        phoneNumber: '+21620000001',
-        role: 'CLIENT' as any,
-        status: UserStatus.ACTIVE,
-        createdAt: '2024-03-15T10:30:00Z',
-        updatedAt: '2024-04-01T14:20:00Z',
-        isDeleted: false,
-        isActive: true,
-        kycVerified: true
-      },
-      {
-        id: 2,
-        firstName: 'Fatima',
-        lastName: 'Trabelsi',
-        email: 'fatima.trabelsi@client.com',
-        phoneNumber: '+21620000002',
-        role: 'CLIENT' as any,
-        status: UserStatus.ACTIVE,
-        createdAt: '2024-03-18T09:15:00Z',
-        updatedAt: '2024-04-02T11:45:00Z',
-        isDeleted: false,
-        isActive: true,
-        kycVerified: true
-      }
-    ];
-
-    return {
-      content: mockClients,
-      totalPages: 1,
-      totalElements: mockClients.length,
-      size: 10,
-      number: 0
-    };
-  }
-
-  private getMockPerformance(): AgentPerformanceDTO {
-    return {
-      totalClients: 15,
-      activeClients: 12,
-      totalApprovals: 45,
-      totalRejections: 8,
-      performanceScore: 85,
-      averageProcessingTime: 24,
-      last7DaysActivity: [
-        { date: 'Mon', approvals: 8, rejections: 1, clientRegistrations: 2 },
-        { date: 'Tue', approvals: 6, rejections: 2, clientRegistrations: 1 },
-        { date: 'Wed', approvals: 9, rejections: 0, clientRegistrations: 3 },
-        { date: 'Thu', approvals: 7, rejections: 1, clientRegistrations: 1 },
-        { date: 'Fri', approvals: 10, rejections: 3, clientRegistrations: 2 },
-        { date: 'Sat', approvals: 3, rejections: 1, clientRegistrations: 0 },
-        { date: 'Sun', approvals: 2, rejections: 0, clientRegistrations: 1 }
-      ],
-      monthlyPerformance: [
-        { month: 'Jan', score: 78, approvals: 35, rejections: 10 },
-        { month: 'Feb', score: 82, approvals: 42, rejections: 9 },
-        { month: 'Mar', score: 85, approvals: 45, rejections: 8 },
-        { month: 'Apr', score: 88, approvals: 48, rejections: 6 }
-      ]
-    };
-  }
-
-  private getMockActivities(): { content: AgentActivityDTO[], totalPages: number, totalElements: number } {
-    const mockActivities: AgentActivityDTO[] = [
-      {
-        id: 1,
-        actionType: 'APPROVAL',
-        description: 'Approved loan application for Mohamed Ben Ali',
-        timestamp: '2024-04-07T09:30:00Z',
-        userId: 1,
-        userEmail: 'mohamed.benali@client.com',
-        userName: 'Mohamed Ben Ali',
-        clientName: 'Mohamed Ben Ali',
-        ipAddress: '192.168.1.100'
-      },
-      {
-        id: 2,
-        actionType: 'REJECTION',
-        description: 'Rejected loan application for Ahmed Gharbi',
-        timestamp: '2024-04-07T10:15:00Z',
-        userId: 3,
-        userEmail: 'ahmed.gharbi@client.com',
-        userName: 'Ahmed Gharbi',
-        clientName: 'Ahmed Gharbi',
-        ipAddress: '192.168.1.100'
-      }
-    ];
-
-    return {
-      content: mockActivities,
-      totalPages: 1,
-      totalElements: mockActivities.length
-    };
-  }
 }
 
 export const agentApiService = new AgentApiService();

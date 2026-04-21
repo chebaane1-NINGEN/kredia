@@ -345,7 +345,7 @@ const Login: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => window.location.href = 'http://localhost:8086/oauth2/authorization/github'}
+                onClick={() => window.location.href = `${import.meta.env.VITE_API_BASE_URL?.replace(/\/api\/?$/, '') ?? 'http://localhost:8086'}/oauth2/authorization/github`}
                 className="flex items-center justify-center gap-3 px-4 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors font-semibold text-slate-700"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">

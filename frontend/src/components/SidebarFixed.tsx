@@ -100,6 +100,11 @@ const SidebarFixed: React.FC<SidebarProps> = ({ isOpen, onToggle, role }) => {
       icon: History
     },
     {
+      to: '/agent/messages',
+      label: 'Messages',
+      icon: MessageSquare
+    },
+    {
       to: '/agent/profile',
       label: 'Profile',
       icon: User

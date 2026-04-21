@@ -41,6 +41,21 @@ public class UserActivityResponseDTO {
     public String getMetadata() { return metadata; }
     public void setMetadata(String metadata) { this.metadata = metadata; }
 
+    public String getIpAddress() { return ipAddress; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
+
+    public String getUserAgent() { return userAgent; }
+    public void setUserAgent(String userAgent) { this.userAgent = userAgent; }
+
+    public String getDevice() { return device; }
+    public void setDevice(String device) { this.device = device; }
+
+    public String getSeverity() { return severity; }
+    public void setSeverity(String severity) { this.severity = severity; }
+
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+
     public Instant getTimestamp() { return timestamp; }
     public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
 

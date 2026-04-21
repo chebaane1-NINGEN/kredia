@@ -3,9 +3,13 @@ package com.kredia.entity.user;
 public enum UserActivityActionType {
     LOGIN_SUCCESS,
     LOGIN_FAILED,
+    LOGIN,
+    FAILED_LOGIN,
     USER_CREATED,
+    CREATED,
     USER_UPDATED,
     USER_DELETED,
+    DELETED,
     ROLE_CHANGED,
     STATUS_CHANGED,
     PASSWORD_RESET_REQUEST,

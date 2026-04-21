@@ -17,18 +17,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
-
-interface AgentActivityDTO {
-  id: number;
-  actionType: string;
-  description: string;
-  timestamp: string;
-  userId: number;
-  userEmail: string;
-  userName: string;
-  clientName?: string;
-  ipAddress?: string;
-}
+import { agentApiService, AgentActivityDTO } from '../../services/agentApiService';
 
 interface AgentAuditResponse {
   content: AgentActivityDTO[];
@@ -62,107 +51,31 @@ const AgentAudit: React.FC = () => {
   const fetchActivities = async () => {
     try {
       setLoading(true);
-      
-      // Simuler les données d'audit de l'agent
-      const mockActivities: AgentActivityDTO[] = [
-        {
-          id: 1,
-          actionType: 'APPROVAL',
-          description: 'Approved loan application for Mohamed Ben Ali',
-          timestamp: '2024-04-07T09:30:00Z',
-          userId: 1,
-          userEmail: 'mohamed.benali@client.com',
-          userName: 'Mohamed Ben Ali',
-          clientName: 'Mohamed Ben Ali',
-          ipAddress: '192.168.1.100'
-        },
-        {
-          id: 2,
-          actionType: 'REJECTION',
-          description: 'Rejected loan application for Ahmed Gharbi - Insufficient documentation',
-          timestamp: '2024-04-07T10:15:00Z',
-          userId: 3,
-          userEmail: 'ahmed.gharbi@client.com',
-          userName: 'Ahmed Gharbi',
-          clientName: 'Ahmed Gharbi',
-          ipAddress: '192.168.1.100'
-        },
-        {
-          id: 3,
-          actionType: 'CLIENT_HANDLED',
-          description: 'Handled client query for Fatima Trabelsi',
-          timestamp: '2024-04-07T11:45:00Z',
-          userId: 2,
-          userEmail: 'fatima.trabelsi@client.com',
-          userName: 'Fatima Trabelsi',
-          clientName: 'Fatima Trabelsi',
-          ipAddress: '192.168.1.100'
-        },
-        {
-          id: 4,
-          actionType: 'STATUS_CHANGED',
-          description: 'Updated client status from INACTIVE to ACTIVE for Nadia Saidi',
-          timestamp: '2024-04-07T14:20:00Z',
-          userId: 4,
-          userEmail: 'nadia.saidi@client.com',
-          userName: 'Nadia Saidi',
-          clientName: 'Nadia Saidi',
-          ipAddress: '192.168.1.100'
-        },
-        {
-          id: 5,
-          actionType: 'APPROVAL',
-          description: 'Approved loan application for Ali Bouazizi',
-          timestamp: '2024-04-06T16:30:00Z',
-          userId: 5,
-          userEmail: 'ali.bouazizi@client.com',
-          userName: 'Ali Bouazizi',
-          clientName: 'Ali Bouazizi',
-          ipAddress: '192.168.1.100'
-        },
-        {
-          id: 6,
-          actionType: 'LOGIN',
-          description: 'Agent logged in successfully',
-          timestamp: '2024-04-07T08:00:00Z',
-          userId: 6,
-          userEmail: 'agent1@kredia.com',
-          userName: 'Test Agent',
-          ipAddress: '192.168.1.100'
-        },
-        {
-          id: 7,
-          actionType: 'DOCUMENT_PROCESSING',
-          description: 'Processed KYC documents for Mohamed Ben Ali',
-          timestamp: '2024-04-07T09:00:00Z',
-          userId: 1,
-          userEmail: 'mohamed.benali@client.com',
-          userName: 'Mohamed Ben Ali',
-          clientName: 'Mohamed Ben Ali',
-          ipAddress: '192.168.1.100'
-        }
-      ];
+      const response = await agentApiService.getAgentActivities(
+        page - 1,
+        pageSize,
+        actionType || undefined,
+        searchTerm || undefined
+      );
 
-      // Filtrer les activités selon les critères
-      let filteredActivities = mockActivities;
-      
-      if (actionType) {
-        filteredActivities = filteredActivities.filter(activity => activity.actionType === actionType);
-      }
-      
-      if (searchTerm) {
-        filteredActivities = filteredActivities.filter(activity =>
-          activity.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          activity.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          activity.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+      let loadedActivities = response.content;
+
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom).getTime();
+        loadedActivities = loadedActivities.filter(activity => new Date(activity.timestamp).getTime() >= fromDate);
       }
 
-      setActivities(filteredActivities);
-      setTotalPages(Math.ceil(filteredActivities.length / pageSize));
-      setTotalElements(filteredActivities.length);
+      if (dateTo) {
+        const toDate = new Date(dateTo).setHours(23, 59, 59, 999);
+        loadedActivities = loadedActivities.filter(activity => new Date(activity.timestamp).getTime() <= toDate);
+      }
+
+      setActivities(loadedActivities);
+      setTotalPages(response.totalPages);
+      setTotalElements(loadedActivities.length);
     } catch (error) {
       addToast('Failed to fetch audit activities', 'error');
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -421,9 +334,11 @@ const AgentAudit: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {activity.userName}
+                          {activity.userName || `User ${activity.userId}`}
                         </div>
-                        <div className="text-sm text-gray-500">{activity.userEmail}</div>
+                        <div className="text-sm text-gray-500">
+                          {activity.clientName || activity.userEmail || (activity.targetUserId ? `Client ${activity.targetUserId}` : 'N/A')}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">

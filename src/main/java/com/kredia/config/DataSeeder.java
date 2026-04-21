@@ -56,6 +56,13 @@ public class DataSeeder {
 
         @Transactional
         public void runSeeding() {
+            // Check if data already exists
+            long userCount = userRepository.count();
+            if (userCount > 0) {
+                log.info("Database already contains {} users, skipping seeding", userCount);
+                return;
+            }
+            
             // Force re-seeding to ensure 50+ users and realistic data
             log.info("Starting professional data seeding (50+ users)...");
             
@@ -265,10 +272,23 @@ public class DataSeeder {
             if (role == UserRole.AGENT) {
                 // Agent activities
                 for (int i = 0; i < 5 + random.nextInt(15); i++) {
+                    UserActivityActionType actionType;
+                    String description;
+                    int rand = random.nextInt(3);
+                    if (rand == 0) {
+                        actionType = UserActivityActionType.APPROVAL;
+                        description = "Approved application #" + (1000 + i);
+                    } else if (rand == 1) {
+                        actionType = UserActivityActionType.REJECTION;
+                        description = "Rejected application #" + (1000 + i);
+                    } else {
+                        actionType = UserActivityActionType.CLIENT_HANDLED;
+                        description = "Handled client query";
+                    }
                     UserActivity action = new UserActivity();
                     action.setUserId(userId);
-                    action.setActionType(random.nextBoolean() ? UserActivityActionType.APPROVAL : UserActivityActionType.CLIENT_HANDLED);
-                    action.setDescription(action.getActionType() == UserActivityActionType.APPROVAL ? "Approved application #" + (1000 + i) : "Handled client query");
+                    action.setActionType(actionType);
+                    action.setDescription(description);
                     action.setTimestamp(now.plus(random.nextInt(Math.max(1, (int)daysAgoOffset)), ChronoUnit.DAYS));
                     repo.save(action);
                 }

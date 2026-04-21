@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -52,6 +53,10 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     java.util.List<Object[]> countRegistrationsByDay();
 
     Page<User> findAllByRoleAndDeletedFalse(UserRole role, Pageable pageable);
+
+    List<User> findByAssignedAgentAndDeletedFalse(User assignedAgent);
+
+    Page<User> findByAssignedAgentAndDeletedFalse(User assignedAgent, Pageable pageable);
 
     long countByAssignedAgentAndDeletedFalse(User agent);
 

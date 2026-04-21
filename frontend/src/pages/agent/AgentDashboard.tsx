@@ -85,12 +85,12 @@ const AgentDashboard: React.FC = () => {
       const calculatedStats: AgentStats = {
         totalClients: performanceData.totalClients,
         activeClients: performanceData.activeClients,
-        pendingApplications: 5,
-        approvalsToday: 3,
-        rejectionsToday: 1,
+        pendingApplications: 0, // TODO: Implement pending applications count
+        approvalsToday: 0, // TODO: Implement today's approvals
+        rejectionsToday: 0, // TODO: Implement today's rejections
         avgProcessingTime: performanceData.averageProcessingTime,
         performanceScore: performanceData.performanceScore,
-        weeklyTrend: 12.5
+        weeklyTrend: 0 // TODO: Calculate from historical data
       };
       
       setStats(calculatedStats);

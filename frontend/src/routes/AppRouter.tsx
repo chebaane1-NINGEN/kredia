@@ -27,6 +27,7 @@ import AgentPerformance from '../pages/agent/AgentPerformance';
 import AgentAudit from '../pages/agent/AgentAudit';
 import AgentProfile from '../pages/agent/AgentProfile';
 import AgentClientCreate from '../pages/agent/AgentClientCreate';
+import AgentMessages from '../pages/agent/AgentMessages';
 import ClientDashboard from '../pages/client/ClientDashboard';
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: UserRole[] }) => {
@@ -112,6 +113,7 @@ export const AppRouter = () => {
         <Route path="clients/:id" element={<UserDetail />} />
         <Route path="performance" element={<AgentPerformance />} />
         <Route path="audit" element={<AgentAudit />} />
+        <Route path="messages" element={<AgentMessages />} />
         <Route path="profile" element={<AgentProfile />} />
       </Route>
       

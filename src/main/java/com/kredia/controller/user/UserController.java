@@ -271,9 +271,11 @@ public class UserController {
     @GetMapping("/agent/{agentId}/activity")
     public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> agentActivity(
             @PathVariable("agentId") Long agentId,
+            @RequestParam(name = "actionType", required = false) String actionType,
+            @RequestParam(name = "search", required = false) String search,
             @PageableDefault Pageable pageable
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.agentActivity(agentId, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(userService.agentActivity(agentId, Optional.ofNullable(actionType), Optional.ofNullable(search), pageable)));
     }
 
     @GetMapping("/client/{clientId}/profile")

@@ -112,6 +112,8 @@ public class AuthServiceImpl implements AuthService {
                     return new BusinessException("EMAIL_NOT_FOUND", "Email not found", HttpStatus.UNAUTHORIZED);
                 });
 
+        log.info("Found user: ID={}, Email={}, Role={}", user.getId(), user.getEmail(), user.getRole());
+
         if (!user.isEmailVerified()) {
             log.error("Login failed for {}: email not verified", user.getEmail());
             throw new BusinessException("EMAIL_NOT_VERIFIED", "Please verify your email before login", HttpStatus.FORBIDDEN);

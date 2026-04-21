@@ -662,28 +662,24 @@ public class UserServiceImpl implements UserService {
 
         List<UserActivity> acts = userActivityRepository.findByUserIdOrderByTimestampAsc(agentId);
 
-        // Calculate real metrics
         long approvals = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.APPROVAL).count();
         long rejections = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.REJECTION).count();
-        long clientsHandled = acts.stream().filter(a -> a.getActionType() == UserActivityActionType.CLIENT_HANDLED).count();
+        long clientsHandled = acts.stream()
+                .filter(a -> a.getActionType() == UserActivityActionType.CLIENT_HANDLED || a.getActionType() == UserActivityActionType.PROCESSING_COMPLETED)
+                .count();
+        long uniqueClientTargets = acts.stream()
+                .map(UserActivity::getTargetUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .count();
 
-        // Clients assigned to this agent
         long assignedClients = userRepository.countByAssignedAgentAndDeletedFalse(agent);
-
-        // Active clients assigned
         long activeClients = userRepository.countByAssignedAgentAndStatusAndDeletedFalse(agent, UserStatus.ACTIVE);
 
         long totalActions = approvals + rejections;
-        double performanceScore = 0.0;
-        if (totalActions > 0) {
-            performanceScore = (approvals * 100.0) / totalActions;
-        }
-
-        // Calculate average processing time from activities
+        double performanceScore = totalActions > 0 ? (approvals * 100.0) / totalActions : 0.0;
         double avgProcessingTimeSeconds = computeAverageProcessingTimeSeconds(acts);
-
-        // Calculate client satisfaction (mock for now - could be based on feedback)
-        double clientSatisfactionScore = Math.min(100.0, 70.0 + (performanceScore * 0.3));
+        double clientSatisfactionScore = Math.min(100.0, 65.0 + (performanceScore * 0.25));
 
         AgentPerformanceDTO dto = new AgentPerformanceDTO();
         dto.setAgentId(agentId);
@@ -691,7 +687,7 @@ public class UserServiceImpl implements UserService {
         dto.setRejectionActionsCount(rejections);
         dto.setTotalActions(totalActions);
         dto.setPerformanceScore(Math.round(performanceScore * 100.0) / 100.0);
-        dto.setNumberOfClientsHandled(clientsHandled);
+        dto.setNumberOfClientsHandled(uniqueClientTargets);
         dto.setTotalAssignedClients(assignedClients);
         dto.setActiveAssignedClients(activeClients);
         dto.setAverageProcessingTimeSeconds(Math.round(avgProcessingTimeSeconds * 100.0) / 100.0);
@@ -701,10 +697,32 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<UserActivityResponseDTO> agentActivity(Long agentId, Pageable pageable) {
+    public Page<UserActivityResponseDTO> agentActivity(Long agentId, Optional<String> actionType, Optional<String> search, Pageable pageable) {
         User agent = loadActor(agentId);
         validateRole(agent, UserRole.AGENT);
-        return userActivityRepository.findByUserIdOrderByTimestampAsc(agentId, pageable).map(this::mapActivity);
+
+        List<User> assignedClients = userRepository.findByAssignedAgentAndDeletedFalse(agent);
+        Set<Long> userIds = new HashSet<>();
+        userIds.add(agentId);
+        for (User client : assignedClients) {
+            if (client != null && client.getId() != null) {
+                userIds.add(client.getId());
+            }
+        }
+
+        UserActivityActionType parsedActionType = null;
+        if (actionType.isPresent() && !actionType.get().isBlank()) {
+            parsedActionType = parseActionType(actionType.get().trim());
+        }
+
+        String searchValue = search.filter(s -> !s.isBlank()).map(String::trim).orElse(null);
+
+        if (parsedActionType != null || searchValue != null) {
+            return userActivityRepository.findForAgentAuditFiltered(userIds, parsedActionType, searchValue, pageable)
+                    .map(this::mapActivity);
+        }
+
+        return userActivityRepository.findForAgentAudit(userIds, pageable).map(this::mapActivity);
     }
 
     @Override
@@ -897,10 +915,25 @@ public class UserServiceImpl implements UserService {
         UserActivityResponseDTO dto = new UserActivityResponseDTO();
         dto.setId(a.getId());
         dto.setUserId(a.getUserId());
+        dto.setTargetUserId(a.getTargetUserId());
         dto.setActionType(a.getActionType());
         dto.setDescription(a.getDescription());
+        dto.setMetadata(a.getMetadata());
+        dto.setIpAddress(a.getIpAddress());
+        dto.setUserAgent(a.getUserAgent());
+        dto.setDevice(a.getDevice());
+        dto.setSeverity(a.getSeverity());
+        dto.setLocation(a.getLocation());
         dto.setTimestamp(a.getTimestamp());
         return dto;
+    }
+
+    private UserActivityActionType parseActionType(String actionType) {
+        try {
+            return UserActivityActionType.valueOf(actionType.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     private boolean hasEverBeenSuspended(List<UserActivity> activities) {
