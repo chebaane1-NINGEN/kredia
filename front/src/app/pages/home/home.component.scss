@@ -511,6 +511,154 @@ $shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
 
 // ──────────────────────────────────────────────────
+// KPI SECTION
+// ──────────────────────────────────────────────────
+.kpi-section {
+  padding: clamp(56px, 6vw, 80px) clamp(20px, 4vw, 48px);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, rgba(99, 102, 241, 0.02) 100%);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+}
+
+.kpi-card {
+  background: $bg-white;
+  border: 1px solid $border-light;
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    border-color: $primary;
+    box-shadow: $shadow-lg;
+    transform: translateY(-4px);
+  }
+
+  .kpi-value {
+    display: block;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 800;
+    color: $primary;
+    line-height: 1;
+  }
+
+  .kpi-label {
+    display: block;
+    font-size: 0.95rem;
+    color: $text-secondary;
+    font-weight: 500;
+  }
+}
+
+// ──────────────────────────────────────────────────
+// AI COACH SECTION
+// ──────────────────────────────────────────────────
+.ai-coach-section {
+  padding: clamp(56px, 6vw, 80px) clamp(20px, 4vw, 48px);
+  background: $bg-white;
+}
+
+.ai-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+
+  @media (max-width: 968px) {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+.ai-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  h2 {
+    margin: 0;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 700;
+    color: $text-primary;
+    line-height: 1.2;
+  }
+
+  p {
+    margin: 0;
+    font-size: 1.05rem;
+    color: $text-secondary;
+    line-height: 1.6;
+  }
+}
+
+.ai-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  li {
+    font-size: 0.95rem;
+    color: $text-secondary;
+    padding-left: 28px;
+    position: relative;
+    line-height: 1.6;
+
+    &::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: $primary;
+      font-weight: 800;
+    }
+  }
+}
+
+.ai-preview-card {
+  background: $bg-light;
+  border: 1px solid $border-light;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  justify-content: space-around;
+  animation: fadeIn 0.6s ease-out 0.2s both;
+}
+
+.message {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  max-width: 90%;
+
+  &.message-assistant {
+    background: $primary-light;
+    color: $primary;
+    align-self: flex-start;
+  }
+
+  &.message-user {
+    background: $primary;
+    color: white;
+    align-self: flex-end;
+  }
+}
+
+// ──────────────────────────────────────────────────
 // TESTIMONIALS SECTION
 // ──────────────────────────────────────────────────
 .testimonials-section {
@@ -530,42 +678,71 @@ $shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   padding: 28px;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
 
   &:hover {
     border-color: $primary;
     box-shadow: $shadow-md;
   }
 
-  .testimonial-rating {
-    margin-bottom: 12px;
-    font-size: 0.9rem;
-    color: #fbbf24;
+  .testimonial-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    > div {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+
+      strong {
+        font-size: 0.95rem;
+        color: $text-primary;
+      }
+
+      span {
+        font-size: 0.85rem;
+        color: $text-muted;
+      }
+    }
   }
 
-  .testimonial-text {
-    margin: 12px 0;
+  .testimonial-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, $primary, $primary-dark);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  .testimonial-copy {
+    margin: 0 0 16px 0;
     font-size: 0.95rem;
     color: $text-secondary;
     line-height: 1.7;
     font-style: italic;
+    flex: 1;
   }
 
-  .testimonial-author {
-    margin-top: 16px;
+  .testimonial-rating {
+    margin-top: auto;
     padding-top: 16px;
     border-top: 1px solid $border-light;
+    font-size: 1rem;
+    color: #fbbf24;
+    letter-spacing: 0.05em;
   }
 
-  .author-name {
-    margin: 0;
-    font-weight: 600;
-    color: $text-primary;
-  }
-
-  .author-role {
-    margin: 4px 0 0;
-    font-size: 0.85rem;
-    color: $text-muted;
+  .star {
+    display: inline;
   }
 }
 
@@ -580,6 +757,48 @@ $shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
 .contact-inner {
   max-width: 720px;
   margin: 0 auto;
+}
+
+.contact-copy {
+  text-align: center;
+  margin-bottom: 40px;
+
+  h2 {
+    margin: 0 0 16px 0;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 700;
+    color: $text-primary;
+    line-height: 1.2;
+  }
+
+  > p {
+    margin: 0 0 24px 0;
+    font-size: 1.05rem;
+    color: $text-secondary;
+    line-height: 1.6;
+  }
+}
+
+.contact-info-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+
+  > div {
+    strong {
+      display: block;
+      font-size: 0.9rem;
+      color: $text-primary;
+      margin-bottom: 4px;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.95rem;
+      color: $text-secondary;
+    }
+  }
 }
 
 .contact-form {
