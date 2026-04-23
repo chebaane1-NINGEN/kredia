@@ -98,7 +98,14 @@ export const routes: Routes = [
     loadChildren: () => import('./features/wallet/VirtualCard/virtual-card.routes').then(m => m.routes)
   },
 
-  // ── Support ────────────────────────────────────────────
+  // ── Messaging ──────────────────────────────────────────
+  {
+    path: 'messages',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/messaging/messaging.routes').then(m => m.routes)
+  },
+
+  // ── Support ─────────────────────────────────────────────
   {
     path: 'support/notifications',
     canActivate: [authGuard],

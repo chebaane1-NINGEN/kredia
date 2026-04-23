@@ -26,12 +26,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<?> handleIllegalArgument(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error(ex.getMessage(), 400));
+        String msg = ex.getMessage();
+        int code = 400;
+        
+        if (msg.contains("Invalid email or password")) {
+            code = 401; // Unauthorized
+        }
+        
+        return ResponseEntity.status(code).body(error(msg, code));
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<?> handleIllegalState(IllegalStateException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error(ex.getMessage(), 403));
+        String msg = ex.getMessage();
+        int code = 403; // Forbidden
+        
+        if (msg.contains("not verified")) {
+            code = 403;
+        } else if (msg.contains("blocked") || msg.contains("suspended")) {
+            code = 403;
+        }
+        
+        return ResponseEntity.status(code).body(error(msg, code));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

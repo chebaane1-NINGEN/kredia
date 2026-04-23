@@ -83,19 +83,18 @@ export class AdminUsersPageComponent implements OnInit {
 
   updateStatus(user: UserResponse): void {
     if (!user.userId) return;
-
-    const action = user.status === 'ACTIVE' ? 'block' : 'activate';
-    const handler = action === 'block' ? this.api.blockUser(user.userId) : this.api.activateUser(user.userId);
-
+    const newStatus = user.status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE';
+    
     this.loading = true;
-    this.error = null;
     this.cdr.markForCheck();
 
-    handler.pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
+    const request = newStatus === 'BLOCKED' ? this.api.blockUser(user.userId) : this.api.activateUser(user.userId);
+    
+    request.pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: () => this.loadUsers(),
         error: () => {
-          this.error = `Impossible de ${action === 'block' ? 'bloquer' : 'débloquer'} cet utilisateur.`;
+          this.error = 'Erreur lors du changement de statut.';
           this.cdr.markForCheck();
         }
       });
@@ -170,18 +169,20 @@ export class AdminUsersPageComponent implements OnInit {
 
   bulkDelete(): void {
     if (this.selectedIds.size === 0) return;
-    if (!window.confirm(`Supprimer ${this.selectedIds.size} utilisateurs sélectionnés ?`)) return;
+    if (!confirm(`Supprimer ${this.selectedIds.size} utilisateur(s) ?`)) return;
 
     this.loading = true;
-    this.error = null;
     this.cdr.markForCheck();
 
     this.api.bulkDelete(Array.from(this.selectedIds))
       .pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
       .subscribe({
-        next: () => this.loadUsers(),
+        next: () => {
+          this.selectedIds.clear();
+          this.loadUsers();
+        },
         error: () => {
-          this.error = 'Erreur lors de la suppression en masse.';
+          this.error = 'Erreur lors de la suppression groupée.';
           this.cdr.markForCheck();
         }
       });
@@ -191,15 +192,17 @@ export class AdminUsersPageComponent implements OnInit {
     if (this.selectedIds.size === 0) return;
 
     this.loading = true;
-    this.error = null;
     this.cdr.markForCheck();
 
     this.api.bulkUpdateStatus(Array.from(this.selectedIds), status)
       .pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
       .subscribe({
-        next: () => this.loadUsers(),
+        next: () => {
+          this.selectedIds.clear();
+          this.loadUsers();
+        },
         error: () => {
-          this.error = 'Impossible de mettre à jour le statut en masse.';
+          this.error = 'Erreur lors de la mise à jour groupée.';
           this.cdr.markForCheck();
         }
       });

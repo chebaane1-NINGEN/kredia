@@ -74,6 +74,14 @@
         </ul>
       </li>
 
+      <!-- MESSAGES -->
+      <li>
+        <a routerLink="/messages" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">💬</span>
+          <span>Messages</span>
+        </a>
+      </li>
+
       <!-- SUPPORT -->
       <li [class.active-parent]="expandedMenus['support']">
         <a (click)="toggleMenu('support', $event)" class="nav-item parent-link">

@@ -98,6 +98,13 @@ export class AdminApi {
     );
   }
 
+  getAgentClients(page = 0, size = 10): Observable<PageResponse<UserResponse>> {
+    const params = new HttpParams().set('page', page.toString()).set('size', size.toString());
+    return this.http.get<ApiResponse<PageResponse<UserResponse>>>(`${API_BASE_URL}/api/user/agent/clients`, { params }).pipe(
+      map(response => response.data)
+    );
+  }
+
   assignClient(agentId: number, clientId: number): Observable<UserResponse> {
     const params = new HttpParams().set('agentId', agentId.toString()).set('clientId', clientId.toString());
     return this.http.post<ApiResponse<UserResponse>>(`${API_BASE_URL}/api/user/admin/assign`, null, { params }).pipe(

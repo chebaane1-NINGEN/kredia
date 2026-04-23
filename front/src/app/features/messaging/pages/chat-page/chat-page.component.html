@@ -1,0 +1,64 @@
+<section class="chat-page">
+  <div class="chat-sidebar panel">
+    <header>
+      <h3>Utilisateurs</h3>
+      <p>Sélectionnez quelqu'un pour discuter</p>
+    </header>
+    <div class="users-list">
+      <div *ngIf="loading" class="loading-state">Chargement...</div>
+      <div *ngFor="let user of users" 
+           class="user-item" 
+           [class.active]="selectedUser?.userId === user.userId"
+           (click)="selectUser(user)">
+        <div class="user-avatar">{{ user.firstName[0] }}{{ user.lastName[0] }}</div>
+        <div class="user-info">
+          <strong>{{ user.firstName }} {{ user.lastName }}</strong>
+          <span>{{ user.role }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-main panel">
+    <div *ngIf="selectedUser; else noSelection" class="chat-active">
+      <header class="chat-header">
+        <div class="user-avatar">{{ selectedUser.firstName[0] }}{{ selectedUser.lastName[0] }}</div>
+        <div class="user-info">
+          <h3>{{ selectedUser.firstName }} {{ selectedUser.lastName }}</h3>
+          <span class="status-badge" [class.online]="true">En ligne</span>
+        </div>
+      </header>
+
+      <div class="messages-container" #scrollContainer>
+        <div *ngIf="loadingMessages" class="loading-state">Chargement des messages...</div>
+        <div *ngFor="let msg of messages" class="message-wrapper" [class.me]="isMe(msg)">
+          <div class="message-bubble">
+            <p>{{ msg.content }}</p>
+            <span class="message-time">{{ msg.createdAt | date:'shortTime' }}</span>
+          </div>
+        </div>
+        <div *ngIf="!loadingMessages && messages.length === 0" class="empty-chat">
+          Aucun message dans cette conversation.
+        </div>
+      </div>
+
+      <div class="chat-footer">
+        <textarea [(ngModel)]="newMessage" 
+                  (keyup.enter)="sendMessage()" 
+                  placeholder="Écrivez votre message..." 
+                  [disabled]="loadingMessages"></textarea>
+        <button class="btn primary" (click)="sendMessage()" [disabled]="!newMessage.trim() || loadingMessages">
+          Envoyer
+        </button>
+      </div>
+    </div>
+
+    <ng-template #noSelection>
+      <div class="no-selection">
+        <div class="icon">💬</div>
+        <h2>Vos messages</h2>
+        <p>Sélectionnez un utilisateur dans la liste pour démarrer une conversation.</p>
+      </div>
+    </ng-template>
+  </div>
+</section>

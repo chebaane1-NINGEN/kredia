@@ -1,5 +1,6 @@
 package com.kredia.dto.user;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kredia.entity.user.UserRole;
 import com.kredia.entity.user.UserStatus;
 import com.kredia.entity.user.Gender;
@@ -8,6 +9,7 @@ import java.time.LocalDate;
 
 public class UserResponseDTO {
 
+    @JsonProperty("userId")
     private Long id;
     private String email;
     private String firstName;

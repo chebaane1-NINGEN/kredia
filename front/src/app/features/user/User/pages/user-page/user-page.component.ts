@@ -4,6 +4,8 @@ import { finalize } from 'rxjs';
 import { UserVm } from '../../vm/user.vm';
 import { User } from '../../models/user.model';
 
+import { AuthService } from '../../../../../core/services/auth.service';
+
 @Component({
   standalone: true,
   imports: [CommonModule],
@@ -14,6 +16,7 @@ import { User } from '../../models/user.model';
 export class UserPageComponent implements OnInit {
   private readonly vm  = inject(UserVm);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly auth = inject(AuthService);
 
   users: User[] = [];
   loading = false;
@@ -28,10 +31,11 @@ export class UserPageComponent implements OnInit {
     this.error   = null;
     this.cdr.markForCheck();
 
-    this.vm.findAll()
-      .pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
+    const request = this.auth.isAgent() ? this.vm.findAgentClients() : this.vm.findAll();
+
+    request.pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
       .subscribe({
-        next:  (data) => { this.users = data ?? []; this.cdr.markForCheck(); },
+        next:  (data: User[]) => { this.users = data ?? []; this.cdr.markForCheck(); },
         error: ()     => { this.error = 'Unable to load users.'; this.cdr.markForCheck(); }
       });
   }

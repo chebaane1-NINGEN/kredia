@@ -330,6 +330,7 @@ public class UserServiceImpl implements UserService {
         dto.setId(a.getId());
         dto.setUserId(a.getUserId());
         dto.setActionType(a.getActionType());
+        dto.setDescription(a.getDescription());
         dto.setTimestamp(a.getTimestamp());
         return dto;
     }
