@@ -103,21 +103,49 @@ $shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
   flex-direction: column;
   gap: 8px;
 
-  label {
-    font-weight: 600;
+  .field-label {
+    font-weight: 700;
     color: $text-primary;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+  }
+
+  .field-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .input-wrapper {
+    display: flex;
+    align-items: center;
+    position: relative;
+    border: 1.5px solid $border-light;
+    border-radius: 10px;
+    background: $bg-white;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .input-wrapper.input-error {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(254, 226, 226, 0.4);
+  }
+
+  .input-wrapper.input-valid {
+    border-color: rgba(16, 185, 129, 0.5);
+    background: rgba(236, 253, 245, 0.8);
   }
 
   .form-input {
-    padding: 10px 12px;
-    border: 1.5px solid $border-light;
-    border-radius: 6px;
+    flex: 1;
+    padding: 12px 12px 12px 14px;
+    border: none;
+    border-radius: 10px;
     font-size: 0.95rem;
     font-family: inherit;
-    transition: all 0.2s ease;
-    background: $bg-white;
     color: $text-primary;
+    background: transparent;
+    transition: none;
 
     &::placeholder {
       color: $text-muted;
@@ -125,14 +153,30 @@ $shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
 
     &:focus {
       outline: none;
-      border-color: $primary;
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+      box-shadow: none;
     }
 
     &:disabled {
       background-color: $bg-light;
       cursor: not-allowed;
     }
+  }
+
+  .password-toggle {
+    appearance: none;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0 14px;
+    color: $text-secondary;
+    font-size: 0.95rem;
+  }
+
+  .input-status {
+    position: absolute;
+    right: 12px;
+    color: #10b981;
+    font-weight: 700;
   }
 
   .field-error {

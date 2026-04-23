@@ -20,42 +20,51 @@
 
           <!-- Email Field -->
           <div class="form-field">
-            <label for="email">Email Address</label>
-            <input
-              id="email"
-              type="email"
-              formControlName="email"
-              placeholder="your@email.com"
-              class="form-input"
-              autocomplete="email"
-            />
-            <span class="field-error" *ngIf="form.get('email')?.hasError('required') && form.get('email')?.touched">
-              Email is required
-            </span>
-            <span class="field-error" *ngIf="form.get('email')?.hasError('email') && form.get('email')?.touched">
-              Please enter a valid email
+            <label for="email" class="field-label">Email Address</label>
+            <div class="input-wrapper" [class.input-error]="form.get('email')?.invalid && touched.email" [class.input-valid]="isFieldValid('email')">
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+                placeholder="your@email.com"
+                class="form-input"
+                autocomplete="email"
+                (blur)="markFieldTouched('email')"
+              />
+              <div class="input-status" *ngIf="isFieldValid('email')">✓</div>
+            </div>
+            <span class="field-error" *ngIf="getFieldError('email')">
+              {{ getFieldError('email') }}
             </span>
           </div>
 
           <!-- Password Field -->
           <div class="form-field">
-            <div class="form-field-row">
-              <label for="password">Password</label>
+            <div class="field-header">
+              <label for="password" class="field-label">Password</label>
               <a routerLink="/forgot-password" class="forgot-link">Forgot?</a>
             </div>
-            <input
-              id="password"
-              type="password"
-              formControlName="password"
-              placeholder="••••••••"
-              class="form-input"
-              autocomplete="current-password"
-            />
-            <span class="field-error" *ngIf="form.get('password')?.hasError('required') && form.get('password')?.touched">
-              Password is required
-            </span>
-            <span class="field-error" *ngIf="form.get('password')?.hasError('minlength') && form.get('password')?.touched">
-              Password must be at least 4 characters
+            <div class="input-wrapper" [class.input-error]="form.get('password')?.invalid && touched.password" [class.input-valid]="isFieldValid('password')">
+              <input
+                id="password"
+                [type]="showPassword ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="••••••••"
+                class="form-input"
+                autocomplete="current-password"
+                (blur)="markFieldTouched('password')"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="togglePasswordVisibility()"
+                title="Toggle password visibility"
+              >
+                {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+              </button>
+            </div>
+            <span class="field-error" *ngIf="getFieldError('password')">
+              {{ getFieldError('password') }}
             </span>
           </div>
 

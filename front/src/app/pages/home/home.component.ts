@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule, ViewportScroller } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -12,6 +13,8 @@ import { RouterModule } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HomeComponent {
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly scroller = inject(ViewportScroller);
 
@@ -73,6 +76,20 @@ export class HomeComponent {
     return this.contactForm.controls;
   }
 
+  get isLoggedIn(): boolean {
+    return this.auth.isLoggedIn();
+  }
+
+  get dashboardRoute(): string {
+    return this.auth.isAdmin()
+      ? '/admin'
+      : this.auth.isAgent()
+      ? '/agent/dashboard'
+      : this.auth.isClient()
+      ? '/credit/list'
+      : '/login';
+  }
+
   scrollToTop(event: Event): void {
     event.preventDefault();
     this.scroller.scrollToPosition([0, 0]);
@@ -84,6 +101,10 @@ export class HomeComponent {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  }
+
+  navigateToDashboard(): void {
+    this.router.navigateByUrl(this.dashboardRoute);
   }
 
   submitContact(): void {

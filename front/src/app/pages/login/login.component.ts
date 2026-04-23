@@ -22,15 +22,50 @@ export class LoginComponent {
 
   loading = false;
   error: string | null = null;
+  showPassword = false;
+  touched = { email: false, password: false };
 
   readonly form = this.fb.nonNullable.group({
     email:    ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(4)]]
   });
 
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  markFieldTouched(field: 'email' | 'password'): void {
+    this.touched[field] = true;
+    this.cdr.markForCheck();
+  }
+
+  getFieldError(field: 'email' | 'password'): string | null {
+    const control = this.form.get(field);
+    if (!control || !this.touched[field] || !control.errors) {
+      return null;
+    }
+
+    if (field === 'email') {
+      if (control.hasError('required')) return 'Email is required';
+      if (control.hasError('email')) return 'Please enter a valid email';
+    }
+
+    if (field === 'password') {
+      if (control.hasError('required')) return 'Password is required';
+      if (control.hasError('minlength')) return 'Password must be at least 4 characters';
+    }
+
+    return null;
+  }
+
+  isFieldValid(field: 'email' | 'password'): boolean {
+    const control = this.form.get(field);
+    return this.touched[field] && control?.valid === true;
+  }
+
   submit(): void {
     if (this.form.invalid) {
-      this.form.markAllAsTouched();
+      this.touched = { email: true, password: true };
       this.cdr.markForCheck();
       return;
     }
@@ -45,7 +80,7 @@ export class LoginComponent {
         this.loading = false;
 
         if (!saved) {
-          this.error = 'Token introuvable. Veuillez réessayer.';
+          this.error = 'Token not found. Please try again.';
           this.cdr.markForCheck();
           return;
         }
@@ -58,10 +93,12 @@ export class LoginComponent {
           err?.error?.message ??
           err?.error?.error ??
           (err?.status === 0
-            ? 'Impossible de joindre le serveur.'
+            ? 'Unable to reach the server. Please check your connection.'
             : err?.status === 401
-            ? 'Email ou mot de passe incorrect.'
-            : `Erreur ${err?.status ?? ''} — réessayez.`);
+            ? 'Invalid email or password.'
+            : err?.status === 403
+            ? 'CORS blocked. Backend server may not be configured properly.'
+            : `Error ${err?.status ?? 'unknown'} — please try again.`);
         this.cdr.markForCheck();
       }
     });
