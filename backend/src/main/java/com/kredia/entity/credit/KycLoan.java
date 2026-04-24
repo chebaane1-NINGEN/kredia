@@ -23,8 +23,12 @@ public class KycLoan {
     private Long kycLoanId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "credit_id", nullable = false)
+    @JoinColumn(name = "credit_id", nullable = true)
     private Credit credit;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "demande_id", nullable = true)
+    private DemandeCredit demande;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

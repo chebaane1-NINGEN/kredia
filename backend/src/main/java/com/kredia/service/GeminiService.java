@@ -226,15 +226,15 @@ public class GeminiService {
      */
     private String buildVerificationPrompt(String documentType) {
         return String.format(
-                "Tu es un expert en vérification de documents KYC pour une banque. " +
-                        "Analyse ce document de type '%s' et vérifie:\n" +
-                        "1. Le document est-il lisible et de bonne qualité?\n" +
-                        "2. Contient-il les informations nécessaires (nom, montant, date, etc.)?\n" +
-                        "3. Le document semble-t-il authentique?\n\n" +
-                        "Réponds UNIQUEMENT par:\n" +
-                        "- 'APPROVED: [raison courte]' si le document est valide\n" +
-                        "- 'REJECTED: [raison courte]' si le document est invalide\n\n" +
-                        "Sois strict mais raisonnable dans ton évaluation.",
+                "You are a KYC document verification expert for a bank. " +
+                        "Analyze this document of type '%s' and verify:\n" +
+                        "1. Is the document readable and of good quality?\n" +
+                        "2. Does it contain the necessary information (name, amount, date, etc.)?\n" +
+                        "3. Does the document appear authentic?\n\n" +
+                        "Reply ONLY with:\n" +
+                        "- 'APPROVED: [short reason]' if the document is valid\n" +
+                        "- 'REJECTED: [short reason]' if the document is invalid\n\n" +
+                        "Be strict but reasonable in your evaluation. Answer in English.",
                 documentType
         );
     }

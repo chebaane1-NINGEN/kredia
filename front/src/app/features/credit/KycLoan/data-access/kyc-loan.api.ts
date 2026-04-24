@@ -50,4 +50,14 @@ export class KycLoanApi {
   getByUserId(userId: number): Observable<KycLoanResponse[]> {
     return this.http.get<KycLoanResponse[]>(`${BASE}/by-user/${userId}`);
   }
+
+  /** Get all docs for a demande */
+  getByDemandeId(demandeId: number): Observable<KycLoanResponse[]> {
+    return this.http.get<KycLoanResponse[]>(`${BASE}/by-demande/${demandeId}`);
+  }
+
+  /** Fix credit_id for all KYC loans with null credit */
+  fixCreditLinks(): Observable<string> {
+    return this.http.post(`${BASE}/fix-credit-links`, {}, { responseType: 'text' });
+  }
 }

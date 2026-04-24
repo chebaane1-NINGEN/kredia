@@ -1,47 +1,238 @@
 <div class="page-container">
+
+  <!-- ── Header ──────────────────────────────────────── -->
   <div class="header">
-    <h1>Liste des crédits</h1>
-    <button (click)="loadCredits()" class="btn btn--secondary" [disabled]="loading">
-      {{ loading ? 'Chargement...' : 'Actualiser' }}
-    </button>
+    <h1>
+      <ng-container *ngIf="auth.isClient()">My Credit Applications</ng-container>
+      <ng-container *ngIf="!auth.isClient()">
+        {{ viewMode === 'PENDING' ? 'Pending Applications' : 'Active Credits' }}
+      </ng-container>
+    </h1>
+
+    <div class="header-actions">
+      <!-- Client: new application button -->
+      <a
+        *ngIf="auth.isClient()"
+        [routerLink]="['/credit/create']"
+        class="btn btn--request"
+        id="btn-new-application"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        New Application
+      </a>
+
+      <!-- Admin/Agent: toggle views -->
+      <ng-container *ngIf="!auth.isClient()">
+        <button
+          (click)="setViewMode('ALL')"
+          [class.active]="viewMode === 'ALL'"
+          class="btn btn--secondary"
+        >
+          All Credits
+        </button>
+        <button (click)="loadCredits()" class="btn btn--secondary" [disabled]="loading" style="margin-left: 8px;">
+          {{ loading ? 'Loading...' : '↻ Refresh' }}
+        </button>
+        <button
+          (click)="setViewMode('PENDING')"
+          [class.active]="viewMode === 'PENDING'"
+          class="btn btn--secondary"
+          style="margin-left: 8px;"
+        >
+          Pending Applications
+        </button>
+      </ng-container>
+    </div>
   </div>
 
-  <div *ngIf="error" class="alert alert--error">
-    {{ error }}
-  </div>
+  <!-- ── Error ────────────────────────────────────────── -->
+  <div *ngIf="error" class="alert alert--error">{{ error }}</div>
 
-  <div *ngIf="loading" class="loader">
-    Chargement des données...
-  </div>
+  <!-- ── Loader ───────────────────────────────────────── -->
+  <div *ngIf="loading" class="loader">Loading data...</div>
 
-  <table *ngIf="!loading && credits.length > 0" class="credit-table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Montant</th>
-        <th>Taux</th>
-        <th>Statut</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let credit of credits">
-        <td>{{ credit.creditId }}</td>
-        <td>{{ credit.amount | currency:'EUR' }}</td>
-        <td>{{ credit.interestRate }}%</td>
-        <td>
-          <span [class]="getStatusClass(credit.status)">{{ credit.status }}</span>
-        </td>
-        <td class="actions">
-          <button (click)="downloadExcel(credit.creditId!)" title="Export Excel">📊</button>
-          <button (click)="downloadPdf(credit.creditId!)" title="Export PDF">PDF</button>
-          <a [routerLink]="['/credit', credit.creditId]" class="btn btn--small">Détails</a>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- CLIENT VIEW: list of client applications          -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <ng-container *ngIf="auth.isClient() && !loading">
+    <table *ngIf="clientDemandes.length > 0" class="credit-table">
+      <thead>
+        <tr>
+          <th>Application #</th>
+          <th>Amount</th>
+          <th>Term</th>
+          <th>Repayment Type</th>
+          <th>Start Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let d of clientDemandes">
+          <td>#{{ d.creditId }}</td>
+          <td>{{ d.amount | number:'1.2-2' }}</td>
+          <td>{{ d.termMonths }} months</td>
+          <td>{{ getRepaymentLabel(d.repaymentType) }}</td>
+          <td>{{ d.startDate }}</td>
+          <td>
+            <span [class]="'badge ' + getStatusClass(d.status)">
+              {{ getStatusLabel(d.status) }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
 
-  <div *ngIf="!loading && credits.length === 0" class="empty-state">
-    Aucun crédit trouvé.
+    <div *ngIf="clientDemandes.length === 0" class="empty-state">
+      <p>You have not submitted any credit application yet.</p>
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- ADMIN/AGENT VIEW: pending applications            -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!auth.isClient() && viewMode === 'PENDING' && !loading">
+    <table *ngIf="demandes.length > 0" class="credit-table">
+      <thead>
+        <tr>
+          <th>Application #</th>
+          <th>Client (ID)</th>
+          <th>Amount</th>
+          <th>Term</th>
+          <th>Repayment Type</th>
+          <th>Monthly Income</th>
+          <th>Dependents</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let d of demandes">
+          <td>#{{ d.creditId }}</td>
+          <td>{{ d.userId }}</td>
+          <td>{{ d.amount | number:'1.2-2' }}</td>
+          <td>{{ d.termMonths }} months</td>
+          <td>{{ getRepaymentLabel(d.repaymentType) }}</td>
+          <td>{{ d.income | number:'1.2-2' }}</td>
+          <td>{{ d.dependents }}</td>
+          <td>
+            <span [class]="'badge ' + getStatusClass(d.status)">
+              {{ getStatusLabel(d.status) }}
+            </span>
+          </td>
+          <td class="actions">
+            <button
+              *ngIf="d.status === 'PENDING'"
+              (click)="approveCredit(d.creditId!)"
+              class="btn btn--approve"
+            >✅ Approve</button>
+            <button
+              *ngIf="d.status === 'PENDING'"
+              (click)="rejectCredit(d.creditId!)"
+              class="btn btn--reject"
+            >❌ Reject</button>
+            <button class="btn btn--small btn--details" (click)="openKycDetails(d.creditId!)">
+              🔍 KYC Docs
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="demandes.length === 0" class="empty-state">
+      No pending applications.
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- ADMIN/AGENT VIEW: all active credits              -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <ng-container *ngIf="!auth.isClient() && viewMode === 'ALL' && !loading">
+    <table *ngIf="credits.length > 0" class="credit-table">
+      <thead>
+        <tr>
+          <th>Credit ID</th>
+          <th>Client (ID)</th>
+          <th>Amount</th>
+          <th>Rate</th>
+          <th>Term</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let credit of credits">
+          <td>#{{ credit.creditId }}</td>
+          <td>{{ credit.userId }}</td>
+          <td>{{ credit.amount | number:'1.2-2' }}</td>
+          <td>{{ credit.interestRate != null ? credit.interestRate + '%' : '12%' }}</td>
+          <td>{{ credit.termMonths }} months</td>
+          <td>
+            <span [class]="'badge ' + getStatusClass(credit.status)">
+              {{ getStatusLabel(credit.status) }}
+            </span>
+          </td>
+          <td class="actions">
+            <button (click)="downloadExcel(credit.creditId!)" title="Export Excel" class="btn btn--small btn--excel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+              Excel
+            </button>
+            <button (click)="downloadPdf(credit.creditId!)" title="Export PDF" class="btn btn--small btn--pdf">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              PDF
+            </button>
+            <a [routerLink]="['/credit/echeances']" [queryParams]="{ creditId: credit.creditId }" class="btn btn--small btn--installments">Installments</a>
+            <a [routerLink]="['/credit/risk']" [queryParams]="{ creditId: credit.creditId }" class="btn btn--small btn--risk">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Risk Scan
+            </a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="credits.length === 0" class="empty-state">
+      No active credits found.
+    </div>
+  </ng-container>
+
+</div>
+
+<!-- ── KYC Docs Modal ──────────────────────────────── -->
+<div class="modal-overlay" *ngIf="kycModalOpen" (click)="closeKycModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>🗂️ KYC Documents — Application #{{ kycModalDemandeId }}</h2>
+      <button class="modal-close" (click)="closeKycModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div *ngIf="kycModalLoading" class="modal-loading">Loading...</div>
+      <div *ngIf="!kycModalLoading && kycModalDocs.length === 0" class="modal-empty">
+        No KYC documents submitted for this application.
+      </div>
+      <table *ngIf="!kycModalLoading && kycModalDocs.length > 0" class="credit-table">
+        <thead>
+          <tr><th>#</th><th>Type</th><th>Status</th><th>Date</th><th>Document</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let doc of kycModalDocs">
+            <td>{{ doc.kycLoanId }}</td>
+            <td>{{ doc.documentType }}</td>
+            <td>
+              <span [class]="'badge status--' + doc.verifiedStatus.toLowerCase()">
+                {{ doc.verifiedStatus }}
+              </span>
+            </td>
+            <td>{{ doc.submittedAt | date:'MM/dd/yy HH:mm' }}</td>
+            <td>
+              <a *ngIf="doc.documentPath" [href]="doc.documentPath" target="_blank" class="btn btn--small">
+                🔗 View
+              </a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>

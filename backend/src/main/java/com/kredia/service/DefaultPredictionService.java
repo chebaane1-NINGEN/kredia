@@ -61,6 +61,67 @@ public class DefaultPredictionService {
         );
 
         String url = mlServiceUrl + "/predict/" + creditId;
-        return restTemplate.postForObject(url, request, DefaultPredictionResponse.class);
+        DefaultPredictionResponse raw = restTemplate.postForObject(url, request, DefaultPredictionResponse.class);
+        return translateResponse(raw);
+    }
+
+    /** Translate French ML output to English */
+    private DefaultPredictionResponse translateResponse(DefaultPredictionResponse raw) {
+        if (raw == null) return null;
+
+        String riskLabel = translateRiskLabel(raw.riskLabel());
+        String recommendation = translateRecommendation(raw.recommendation());
+
+        return new DefaultPredictionResponse(
+                raw.creditId(),
+                raw.defaultProbability(),
+                riskLabel,
+                raw.riskLevel(),   // LOW / MEDIUM / HIGH — already English
+                recommendation
+        );
+    }
+
+    private String translateRiskLabel(String label) {
+        if (label == null) return label;
+        return switch (label.toUpperCase().replace(" ", "_")) {
+            case "RISQUE_FAIBLE",  "FAIBLE"  -> "LOW_RISK";
+            case "RISQUE_MOYEN",   "MOYEN"   -> "MEDIUM_RISK";
+            case "RISQUE_ELEVE",   "ELEVE",
+                 "RISQUE_ÉLEVÉ",   "ÉLEVÉ"   -> "HIGH_RISK";
+            case "RISQUE_CRITIQUE","CRITIQUE" -> "CRITICAL_RISK";
+            default -> label;
+        };
+    }
+
+    private String translateRecommendation(String rec) {
+        if (rec == null) return rec;
+        String t = rec.trim();
+
+        // Exact matches first
+        if (t.equals("Crédit approuvable. Profil financier sain."))
+            return "Approvable credit. Healthy financial profile.";
+        if (t.equals("Crédit approuvable avec surveillance."))
+            return "Approvable credit with monitoring.";
+        if (t.equals("Crédit risqué. Analyse approfondie recommandée."))
+            return "Risky credit. In-depth analysis recommended.";
+        if (t.equals("Crédit très risqué. Refus recommandé."))
+            return "Very risky credit. Rejection recommended.";
+        if (t.equals("Profil à risque élevé. Refus fortement recommandé."))
+            return "High-risk profile. Rejection strongly recommended.";
+
+        // Fallback: keyword-based translation (handles minor variations)
+        String lower = t.toLowerCase();
+        if (lower.contains("approuvable") && lower.contains("sain"))
+            return "Approvable credit. Healthy financial profile.";
+        if (lower.contains("approuvable") && lower.contains("surveillance"))
+            return "Approvable credit with monitoring.";
+        if (lower.contains("risqué") && lower.contains("approfondie"))
+            return "Risky credit. In-depth analysis recommended.";
+        if (lower.contains("très risqué") || (lower.contains("risqué") && lower.contains("refus")))
+            return "Very risky credit. Rejection recommended.";
+        if (lower.contains("risque élevé") || lower.contains("risque eleve") || lower.contains("fortement"))
+            return "High-risk profile. Rejection strongly recommended.";
+
+        return rec; // return as-is if nothing matched
     }
 }

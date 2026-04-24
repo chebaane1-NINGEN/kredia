@@ -14,4 +14,8 @@ public interface KycLoanRepository extends JpaRepository<KycLoan, Long> {
     List<KycLoan> findByCreditCreditId(Long creditId);
 
     List<KycLoan> findByUser_Id(Long userId);
+
+    List<KycLoan> findByDemande_Id(Long demandeId);
+
+    List<KycLoan> findByUser_IdAndCreditIsNull(Long userId);
 }

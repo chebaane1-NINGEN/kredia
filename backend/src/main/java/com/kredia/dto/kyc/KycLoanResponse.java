@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public record KycLoanResponse(
         Long kycLoanId,
         Long creditId,
+        Long demandeId,
         Long userId,
         DocumentTypeLoan documentType,
         String documentPath,

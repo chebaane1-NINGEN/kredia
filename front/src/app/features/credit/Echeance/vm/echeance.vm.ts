@@ -19,6 +19,14 @@ export class EcheanceVm {
     return this.api.getByUserId(userId);
   }
 
+  getByCreditId(creditId: number): Observable<EcheancePaymentResponse[]> {
+    return this.api.getByCreditId(creditId);
+  }
+
+  getByUserIdAndCreditId(userId: number, creditId: number): Observable<EcheancePaymentResponse[]> {
+    return this.api.getByUserIdAndCreditId(userId, creditId);
+  }
+
   pay(echeanceId: number, amount: number): Observable<EcheancePaymentResponse> {
     return this.api.pay(echeanceId, amount);
   }

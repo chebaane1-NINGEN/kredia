@@ -14,8 +14,7 @@ export const routes: Routes = [
   {
     path: 'credit',
     canActivate: [authGuard],
-    canActivateChild: [authGuard],
-    loadChildren: () => import('./features/credit/Credit/credit.routes').then(m => m.routes)
+    loadChildren: () => import('./features/credit/credit.module').then(m => m.CreditModule)
   },
 
   // ── User ───────────────────────────────────────────────

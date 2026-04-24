@@ -16,9 +16,9 @@ export class CreditFormVm {
 
   // ── Form ───────────────────────────────────────────────
   readonly repaymentTypes = [
-    { value: 'AMORTISSEMENT_CONSTANT', label: 'Amortissement constant' },
-    { value: 'MENSUALITE_CONSTANTE',   label: 'Mensualité constante'   },
-    { value: 'IN_FINE',                label: 'In fine'                }
+    { value: 'AMORTISSEMENT_CONSTANT', label: 'Constant Amortization' },
+    { value: 'MENSUALITE_CONSTANTE',   label: 'Constant Monthly Payment'   },
+    { value: 'IN_FINE',                label: 'In Fine'                }
   ] as const;
 
   readonly statuses = [
@@ -47,7 +47,7 @@ export class CreditFormVm {
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error.set('Veuillez remplir tous les champs obligatoires.');
+      this.error.set('Please fill in all required fields.');
       return;
     }
 
@@ -61,14 +61,14 @@ export class CreditFormVm {
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
         next: () => {
-          this.success.set('Crédit créé avec succès.');
+          this.success.set('Credit created successfully.');
           this.form.reset({ repaymentType: 'MENSUALITE_CONSTANTE', status: 'PENDING', dependents: 0 });
         },
         error: (err) => {
           if (err?.name === 'TimeoutError') {
-            this.error.set('Le serveur met trop de temps à répondre. Vérifiez que le backend est bien lancé.');
+            this.error.set('The server is taking too long to respond. Check that the backend is running.');
           } else {
-            this.error.set(err?.error?.message ?? 'Erreur lors de la création du crédit.');
+            this.error.set(err?.error?.message ?? 'Error creating the credit.');
           }
         }
       });

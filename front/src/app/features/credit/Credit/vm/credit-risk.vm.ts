@@ -17,7 +17,7 @@ export class CreditRiskVm {
   predict(): void {
     const id = this.creditId();
     if (!id) {
-      this.error.set('Veuillez saisir un ID de crédit.');
+      this.error.set('Please enter a credit ID.');
       return;
     }
 
@@ -32,7 +32,7 @@ export class CreditRiskVm {
         error: (err) => this.error.set(
           typeof err.error === 'string'
             ? err.error
-            : (err.error?.message ?? 'Erreur lors de la prédiction. Vérifiez que le microservice ML est actif.')
+            : (err.error?.message ?? 'Error during prediction. Check that the ML microservice is active.')
         )
       });
   }

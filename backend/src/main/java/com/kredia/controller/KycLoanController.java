@@ -102,4 +102,18 @@ public class KycLoanController {
     public ResponseEntity<List<KycLoanResponse>> getDocumentsByUser(@PathVariable Long userId) {
         return new ResponseEntity<>(kycLoanService.getDocumentsByUser(userId), HttpStatus.OK);
     }
+
+    @GetMapping("/by-demande/{demandeId}")
+    public ResponseEntity<List<KycLoanResponse>> getDocumentsByDemande(@PathVariable Long demandeId) {
+        return new ResponseEntity<>(kycLoanService.getDocumentsByDemande(demandeId), HttpStatus.OK);
+    }
+
+    /**
+     * Admin utility: fix credit_id for all KYC loans linked to approved demandes
+     */
+    @PostMapping("/fix-credit-links")
+    public ResponseEntity<String> fixCreditLinks() {
+        int updated = kycLoanService.fixCreditLinksForApprovedDemandes();
+        return ResponseEntity.ok("Updated " + updated + " KYC loan(s)");
+    }
 }

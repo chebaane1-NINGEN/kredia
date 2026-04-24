@@ -9,6 +9,15 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .credit-table {
@@ -40,15 +49,7 @@
 .actions {
   display: flex;
   gap: 0.5rem;
-  
-  button {
-    cursor: pointer;
-    background: none;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    padding: 0.25rem 0.5rem;
-    &:hover { background: #f3f4f6; }
-  }
+  align-items: center;
 }
 
 .btn {
@@ -58,7 +59,195 @@
   font-weight: 500;
   cursor: pointer;
   border: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 
-  &--secondary { background: #6b7280; color: white; }
-  &--small { font-size: 0.875rem; background: #6366f1; color: white; }
+  &--secondary {
+    background: #6b7280;
+    color: white;
+    &:hover { opacity: 0.88; }
+  }
+
+  &--small {
+    font-size: 0.875rem;
+    background: #6366f1;
+    color: white !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    &:hover { opacity: 0.88; }
+  }
+
+  &--excel {
+    background: #16a34a !important;
+    color: white !important;
+    border: none;
+    svg { stroke: white; }
+    &:hover { background: #15803d !important; }
+  }
+
+  &--pdf {
+    background: #dc2626 !important;
+    color: white !important;
+    border: none;
+    svg { stroke: white; }
+    &:hover { background: #b91c1c !important; }
+  }
+
+  &--installments {
+    background: #6366f1 !important;
+    color: white !important;
+    border: none;
+    &:hover { background: #4f46e5 !important; }
+  }
+
+  &--risk {
+    background: #f59e0b !important;
+    color: white !important;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    svg { stroke: white; }
+    &:hover { background: #d97706 !important; }
+  }
+
+  &--approve {
+    background: transparent;
+    color: #10b981;
+    border: 1.5px solid #10b981;
+    border-radius: 8px;
+    padding: 5px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    &:hover { background: #10b981; color: white; }
+  }
+
+  &--reject {
+    background: transparent;
+    color: #ef4444;
+    border: 1.5px solid #ef4444;
+    border-radius: 8px;
+    padding: 5px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    &:hover { background: #ef4444; color: white; }
+  }
+  &--request {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    letter-spacing: 0.01em;
+
+    svg {
+      flex-shrink: 0;
+      fill: none;
+    }
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.45);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .btn--request {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ── KYC Modal ──────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 18px;
+  width: 90%;
+  max-width: 780px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(34, 51, 68, 0.08);
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a2b3c;
+    margin: 0;
+  }
+}
+
+.modal-close {
+  background: rgba(34, 51, 68, 0.07);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #1a2b3c;
+  transition: background 0.2s;
+  &:hover { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+}
+
+.modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.modal-loading, .modal-empty {
+  text-align: center;
+  padding: 32px;
+  color: rgba(34, 51, 68, 0.5);
+  font-size: 0.95rem;
+}
+
+.btn--details {
+  background: #6366f1 !important;
+  color: white !important;
+  border: none;
+  &:hover { background: #4f46e5 !important; }
 }

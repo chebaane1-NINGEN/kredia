@@ -57,6 +57,18 @@
   .kyc-layout { grid-template-columns: 1fr; }
 }
 
+/* ─── Vertical Layout (for Admin/Agent) ─── */
+.kyc-layout-vertical {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 860px) {
+  .kyc-layout-vertical { grid-template-columns: 1fr; }
+}
+
 /* ─── Cards ─── */
 .kyc-card {
   background: #ffffff;
@@ -630,3 +642,133 @@
 
 .client-info-banner__icon { font-size: 1.1rem; flex-shrink: 0; }
 
+
+/* ─── Bottom row: Verification Result (left) + Submitted Docs (right) ─── */
+.kyc-bottom-row {
+  display: grid;
+  grid-template-columns: 1fr;   /* full width for the docs table */
+  gap: 24px;
+  margin-top: 0;
+}
+
+@media (max-width: 860px) {
+  .kyc-bottom-row { grid-template-columns: 1fr; }
+}
+
+/* ── AI Analysis Result ──────────────────────────────── */
+.ai-message {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #1d4ed8;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.ai-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(34, 51, 68, 0.8);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(34, 51, 68, 0.08);
+}
+
+/* ── Manual Decision Override ────────────────────────── */
+.manual-decision {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(34, 51, 68, 0.15);
+}
+
+.manual-decision__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(34, 51, 68, 0.55);
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── KYC Filter Bar ──────────────────────────────────── */
+.kyc-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: #f8f9fb;
+  border: 1px solid rgba(34, 51, 68, 0.08);
+  border-radius: 14px;
+}
+
+.kyc-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kyc-filter-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(34, 51, 68, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.kyc-filter-btn {
+  padding: 5px 12px;
+  border: 1.5px solid rgba(34, 51, 68, 0.15);
+  border-radius: 20px;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(34, 51, 68, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: #00c070;
+    color: #00995a;
+    background: rgba(0, 192, 112, 0.05);
+  }
+
+  &.active {
+    border-color: #00c070;
+    background: rgba(0, 192, 112, 0.1);
+    color: #007a48;
+  }
+}
+
+/* ── Clickable table rows ────────────────────────────── */
+.doc-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(0, 192, 112, 0.04);
+  }
+
+  &--selected {
+    background: rgba(0, 192, 112, 0.08) !important;
+    border-left: 3px solid #00c070;
+  }
+}

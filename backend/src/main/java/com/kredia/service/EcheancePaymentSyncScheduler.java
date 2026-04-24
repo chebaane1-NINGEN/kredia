@@ -19,7 +19,7 @@ public class EcheancePaymentSyncScheduler {
     private final EcheanceRepository echeanceRepository;
     private final EcheanceService echeanceService;
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(fixedDelay = 20000) // every 20 seconds
     public void syncEcheancesWithTransactions() {
         List<Echeance> pendingEcheances = echeanceRepository.findPendingEcheancesWithTransaction();
         

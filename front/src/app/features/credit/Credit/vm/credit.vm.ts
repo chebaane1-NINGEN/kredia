@@ -1,11 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CreditApi } from '../data-access/credit.api';
-import { Credit, DefaultPredictionResponse } from '../models/credit.model';
+import { Credit, DemandeCredit, DefaultPredictionResponse } from '../models/credit.model';
 
 /**
- * VM (Service) — couche données pour Credit.
- * Expose des Observables. Aucun état UI.
+ * VM (Service) — data layer for Credit.
+ * Exposes Observables. No UI state.
  */
 @Injectable({ providedIn: 'root' })
 export class CreditVm {
@@ -19,8 +19,32 @@ export class CreditVm {
     return this.api.findByUserId(userId);
   }
 
+  /** Submit a credit application (client) */
+  createDemande(demande: DemandeCredit): Observable<DemandeCredit> {
+    return this.api.createDemande(demande);
+  }
+
+  /** @deprecated */
   create(credit: Credit): Observable<Credit> {
     return this.api.create(credit);
+  }
+
+  /** Pending applications for admin/agent */
+  getPendingDemandes(): Observable<DemandeCredit[]> {
+    return this.api.getPendingDemandes();
+  }
+
+  /** Applications submitted by a client */
+  findDemandesByUserId(userId: number): Observable<DemandeCredit[]> {
+    return this.api.findDemandesByUserId(userId);
+  }
+
+  approveCredit(id: number): Observable<Credit> {
+    return this.api.approveCredit(id);
+  }
+
+  rejectCredit(id: number): Observable<DemandeCredit> {
+    return this.api.rejectCredit(id);
   }
 
   predictDefault(id: number): Observable<DefaultPredictionResponse> {

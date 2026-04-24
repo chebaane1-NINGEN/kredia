@@ -1,12 +1,10 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { KycLoanVm } from '../../vm/kyc-loan.vm';
 import { DocumentTypeLoan, KycLoanResponse, VerifiedStatus } from '../../models/kyc-loan.model';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CreditVm } from '../../../Credit/vm/credit.vm';
-import { Credit } from '../../../Credit/models/credit.model';
+import { Credit, DemandeCredit } from '../../../Credit/models/credit.model';
 
 export interface DocEntry {
   documentType: DocumentTypeLoan;
@@ -20,8 +18,7 @@ export interface DocEntry {
  * Délègue les appels données au service KycLoanVm.
  */
 @Component({
-  standalone: true,
-  imports: [CommonModule, FormsModule],
+  standalone: false,
   templateUrl: './kyc-loan-page.component.html',
   styleUrl: './kyc-loan-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -48,14 +45,15 @@ export class KycLoanPageComponent implements OnInit {
   verifyResult: KycLoanResponse | null = null;
   uploadedDocs: KycLoanResponse[] = [];
   clientCredits: Credit[] = [];
+  clientDemandes: DemandeCredit[] = [];
 
   // ── Données statiques de présentation ─────────────────
   readonly docTypes: DocEntry[] = [
-    { documentType: 'ID_PROOF',       label: "Carte / Pièce d'identité", icon: '🪪' },
-    { documentType: 'INCOME_PROOF',   label: 'Justificatif de revenus',  icon: '💰' },
-    { documentType: 'SPOUSE_INCOME',  label: 'Revenus du conjoint',       icon: '👫' },
-    { documentType: 'BANK_STATEMENT', label: 'Relevé bancaire',           icon: '🏦' },
-    { documentType: 'OTHER',          label: 'Autre document',            icon: '📎' }
+    { documentType: 'ID_PROOF',       label: 'ID Card / Passport',   icon: '🪪' },
+    { documentType: 'INCOME_PROOF',   label: 'Proof of Income',      icon: '💰' },
+    { documentType: 'SPOUSE_INCOME',  label: "Spouse's Income",      icon: '👫' },
+    { documentType: 'BANK_STATEMENT', label: 'Bank Statement',       icon: '🏦' },
+    { documentType: 'OTHER',          label: 'Other Document',       icon: '📎' }
   ];
 
   ngOnInit(): void {
@@ -65,24 +63,34 @@ export class KycLoanPageComponent implements OnInit {
       this.loadClientDocs();
       this.autoSelectCredit();
     } else if (!this.auth.isClient()) {
-      // Pour l'Admin, on charge l'intégralité des documents déposés
+      // For Admin: load all submitted documents
       this.loadAllDocs();
     }
   }
 
-  // ── Auto-Sélect. Crédit (CLIENT) ──────────────────────
+  // ── Auto-Select Credit (CLIENT) ──────────────────────
   autoSelectCredit(): void {
+    // Load active/completed credits
     this.creditVm.findByUserId(this.userId).subscribe({
       next: (credits) => {
         this.clientCredits = credits || [];
-        if (this.clientCredits.length > 0) {
-          this.creditId = this.clientCredits[0].creditId ?? 1;
+        this.cdr.markForCheck();
+      }
+    });
+
+    // Load pending/approved/rejected demandes
+    this.creditVm.findDemandesByUserId(this.userId).subscribe({
+      next: (demandes) => {
+        this.clientDemandes = demandes || [];
+        // Auto-select first available option
+        const allOptions = [...this.clientCredits, ...this.clientDemandes];
+        if (allOptions.length > 0) {
+          this.creditId = (this.clientCredits[0]?.creditId ?? this.clientDemandes[0]?.creditId) ?? 1;
           this.hasCreditsError = false;
-          this.cdr.markForCheck();
         } else {
           this.hasCreditsError = true;
-          this.cdr.markForCheck();
         }
+        this.cdr.markForCheck();
       }
     });
   }
@@ -108,13 +116,11 @@ export class KycLoanPageComponent implements OnInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        this.error = "Erreur chargement tous les docs : " + this.extractError(err);
+        this.error = 'Error loading documents: ' + this.extractError(err);
         this.cdr.markForCheck();
       }
     });
-  }
-
-  // ── Drag & Drop ────────────────────────────────────────
+  }  // ── Drag & Drop ────────────────────────────────────────
   onDragOver(event: DragEvent): void {
     event.preventDefault();
     this.dragOver = true;
@@ -233,9 +239,74 @@ export class KycLoanPageComponent implements OnInit {
       });
   }
 
-  // ── Helpers de présentation ────────────────────────────
+  // ── Filters ───────────────────────────────────────────
+  statusFilter: string  = 'ALL';
+  typeFilter: string    = 'ALL';
+  creditFilter: string  = 'ALL';
+  demandeFilter: string = 'ALL';
+
+  readonly statusOptions = [
+    { value: 'ALL',      label: 'All' },
+    { value: 'PENDING',  label: '⏳ Pending' },
+    { value: 'APPROVED', label: '✅ Approved' },
+    { value: 'REJECTED', label: '❌ Rejected' },
+  ];
+
+  readonly typeOptions = [
+    { value: 'ALL',           label: 'All Types' },
+    { value: 'ID_PROOF',      label: '🪪 ID Card' },
+    { value: 'INCOME_PROOF',  label: '💰 Income' },
+    { value: 'SPOUSE_INCOME', label: '👫 Spouse' },
+    { value: 'BANK_STATEMENT',label: '🏦 Bank Statement' },
+    { value: 'OTHER',         label: '📎 Other' },
+  ];
+
+  get uniqueCreditIds(): number[] {
+    return [...new Set(this.uploadedDocs.filter(d => d.creditId != null).map(d => d.creditId as number))]
+      .sort((a, b) => a - b);
+  }
+
+  get uniqueDemandeIds(): number[] {
+    return [...new Set(this.uploadedDocs.filter(d => d.demandeId != null).map(d => d.demandeId as number))]
+      .sort((a, b) => a - b);
+  }
+
+  get filteredDocs(): KycLoanResponse[] {
+    return this.uploadedDocs.filter(doc => {
+      const matchStatus  = this.statusFilter  === 'ALL' || doc.verifiedStatus === this.statusFilter;
+      const matchType    = this.typeFilter    === 'ALL' || doc.documentType   === this.typeFilter;
+      const matchCredit  = this.creditFilter  === 'ALL' || doc.creditId  === +this.creditFilter;
+      const matchDemande = this.demandeFilter === 'ALL' || doc.demandeId === +this.demandeFilter;
+      return matchStatus && matchType && matchCredit && matchDemande;
+    });
+  }
+
+  get pendingRejectedDemandes(): DemandeCredit[] {
+    return this.clientDemandes.filter(d => d.status === 'PENDING');
+  }
+
+  setStatusFilter(v: string): void { this.statusFilter = v; this.cdr.markForCheck(); }
+  setTypeFilter(v: string):   void { this.typeFilter   = v; this.cdr.markForCheck(); }
+  setCreditFilter(v: string): void { this.creditFilter = v; this.cdr.markForCheck(); }
+  setDemandeFilter(v: string): void { this.demandeFilter = v; this.cdr.markForCheck(); }
+
+  selectDoc(doc: KycLoanResponse): void {
+    this.verifyResult = doc;
+    this.uploadedDoc  = null;
+    this.cdr.markForCheck();
+  }
+
+  fixCreditLinks(): void {
+    this.vm.fixCreditLinks().subscribe({
+      next: (msg) => {
+        alert(msg);
+        this.loadAllDocs();
+      },
+      error: () => alert('Error fixing credit links.')
+    });
+  }
   statusLabel(status: VerifiedStatus): string {
-    return { APPROVED: 'Approuvé ✅', REJECTED: 'Rejeté ❌', PENDING: 'En attente ⏳' }[status];
+    return { APPROVED: 'Approved ✅', REJECTED: 'Rejected ❌', PENDING: 'Pending ⏳' }[status];
   }
 
   statusClass(status: VerifiedStatus): string {
@@ -254,12 +325,12 @@ export class KycLoanPageComponent implements OnInit {
 
   private extractError(err: any): string {
     if (err instanceof ProgressEvent || err?.error instanceof ProgressEvent)
-      return 'Impossible de contacter le serveur. Vérifiez que le backend est lancé sur le port 8081.';
+      return 'Unable to reach the server. Please check that the backend is running on port 8081.';
     if (err?.error && typeof err.error === 'object')
       return err.error.message ?? err.error.error ?? JSON.stringify(err.error);
     if (err?.error && typeof err.error === 'string') return err.error;
     if (err?.message && typeof err.message === 'string') return err.message;
-    return "Une erreur inattendue s'est produite.";
+    return 'An unexpected error occurred.';
   }
 }
 

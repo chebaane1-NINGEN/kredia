@@ -2,10 +2,15 @@ package com.kredia.service;
 
 import com.kredia.entity.credit.Credit;
 import com.kredia.entity.credit.Echeance;
+import com.kredia.entity.credit.KycLoan;
 import com.kredia.entity.user.User;
+import com.kredia.enums.CreditStatus;
 import com.kredia.enums.EcheanceStatus;
 import com.kredia.enums.RepaymentType;
 import com.kredia.repository.CreditRepository;
+import com.kredia.entity.credit.DemandeCredit;
+import com.kredia.repository.DemandeCreditRepository;
+import com.kredia.repository.KycLoanRepository;
 import com.kredia.repository.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,12 +34,18 @@ public class CreditService {
     private final CreditRepository creditRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final DemandeCreditRepository demandeCreditRepository;
+    private final KycLoanRepository kycLoanRepository;
 
     @Autowired
-    public CreditService(CreditRepository creditRepository, UserRepository userRepository, EmailService emailService) {
+    public CreditService(CreditRepository creditRepository, UserRepository userRepository,
+                         EmailService emailService, DemandeCreditRepository demandeCreditRepository,
+                         KycLoanRepository kycLoanRepository) {
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.demandeCreditRepository = demandeCreditRepository;
+        this.kycLoanRepository = kycLoanRepository;
     }
 
     public Credit createCredit(Credit credit) {
@@ -43,6 +54,7 @@ public class CreditService {
                 .orElseThrow(() -> new RuntimeException("User not found with id " + userId));
         credit.setUser(user);
 
+        // Generation of amortizations (echeances)
         List<Echeance> echeances;
         if (credit.getRepaymentType() == RepaymentType.MENSUALITE_CONSTANTE) {
             echeances = generateAnnuiteConstante(credit);
@@ -51,21 +63,98 @@ public class CreditService {
         } else {
             echeances = generateAmortissementConstant(credit);
         }
+
         LocalDate today = LocalDate.now();
-        java.math.BigDecimal penaltyRate = new java.math.BigDecimal("0.05");
+        BigDecimal penaltyRate = new BigDecimal("0.05");
 
         for (Echeance e : echeances) {
             if (e.getDueDate().isBefore(today)) {
                 e.setStatus(EcheanceStatus.OVERDUE);
-                java.math.BigDecimal penalty = e.getAmountDue().multiply(penaltyRate);
+                BigDecimal penalty = e.getAmountDue().multiply(penaltyRate);
                 e.setAmountDue(e.getAmountDue().add(penalty).setScale(2, RoundingMode.HALF_EVEN));
-                emailService.sendEcheanceOverdueEmail(user, e);
+                emailService.sendEcheanceOverdueEmail(credit.getUser(), e);
             }
         }
-
         credit.setEcheances(echeances);
-
         return creditRepository.save(credit);
+    }
+
+    public DemandeCredit createDemande(DemandeCredit demande) {
+        Long userId = demande.getUser().getUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id " + userId));
+        demande.setUser(user);
+        demande.setStatus(com.kredia.enums.CreditStatus.PENDING);
+        return demandeCreditRepository.save(demande);
+    }
+
+    public List<DemandeCredit> getPendingCredits() {
+        return demandeCreditRepository.findByStatus(com.kredia.enums.CreditStatus.PENDING);
+    }
+
+    public List<DemandeCredit> getDemandeCreditsByUserId(Long userId) {
+        return demandeCreditRepository.findByUser_Id(userId);
+    }
+
+    public Credit approveRequest(Long id) {
+        DemandeCredit demande = demandeCreditRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Demande not found with id " + id));
+
+        if (demande.getStatus() != com.kredia.enums.CreditStatus.PENDING) {
+            throw new RuntimeException("Uniquement les demandes en attente peuvent être approuvées");
+        }
+
+        // 1. Create official Credit from Demande
+        Credit credit = new Credit();
+        credit.setUser(demande.getUser());
+        credit.setAmount(demande.getAmount());
+        credit.setInterestRate(12.0f);
+        credit.setTermMonths(demande.getTermMonths());
+        credit.setStartDate(demande.getStartDate());
+        credit.setEndDate(demande.getEndDate());
+        credit.setRepaymentType(demande.getRepaymentType());
+        credit.setIncome(demande.getIncome());
+        credit.setDependents(demande.getDependents());
+        credit.setStatus(com.kredia.enums.CreditStatus.ACTIVE);
+
+        // 2. Mark demande as APPROVED
+        demande.setStatus(com.kredia.enums.CreditStatus.APPROVED);
+        demandeCreditRepository.save(demande);
+
+        // 3. Save official credit (this will trigger amortization generation)
+        Credit savedCredit = createCredit(credit);
+
+        // 4. Link the official credit back to the demande
+        demande.setCredit(savedCredit);
+        demandeCreditRepository.save(demande);
+
+        // 5. Update all KYC loans linked to this demande or this user with null credit_id
+        List<KycLoan> kycByDemande = kycLoanRepository.findByDemande_Id(demande.getId());
+        List<KycLoan> kycByUser    = kycLoanRepository.findByUser_IdAndCreditIsNull(demande.getUser().getUserId());
+
+        // Merge both lists (avoid duplicates)
+        List<KycLoan> allKyc = new ArrayList<>(kycByDemande);
+        kycByUser.stream()
+                .filter(k -> allKyc.stream().noneMatch(e -> e.getKycLoanId().equals(k.getKycLoanId())))
+                .forEach(allKyc::add);
+
+        for (KycLoan kyc : allKyc) {
+            kyc.setCredit(savedCredit);
+            kyc.setDemande(demande);
+            kycLoanRepository.save(kyc);
+        }
+
+        return savedCredit;
+    }
+
+    public DemandeCredit rejectRequest(Long id) {
+        DemandeCredit demande = demandeCreditRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Demande not found with id " + id));
+        if (demande.getStatus() != com.kredia.enums.CreditStatus.PENDING) {
+            throw new RuntimeException("Uniquement les demandes en attente peuvent être refusées");
+        }
+        demande.setStatus(com.kredia.enums.CreditStatus.REJECTED);
+        return demandeCreditRepository.save(demande);
     }
 
     private List<Echeance> generateAmortissementConstant(Credit credit) {

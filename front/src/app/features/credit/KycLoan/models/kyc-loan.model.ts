@@ -9,7 +9,8 @@ export type VerifiedStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface KycLoanResponse {
   kycLoanId: number;
-  creditId: number;
+  creditId: number | null;
+  demandeId: number | null;
   userId: number;
   documentType: DocumentTypeLoan;
   documentPath: string;

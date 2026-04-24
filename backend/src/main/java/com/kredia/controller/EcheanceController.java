@@ -47,8 +47,18 @@ public class EcheanceController {
     }
 
     @GetMapping("/by-user/{userId}")
-    public ResponseEntity<List<EcheancePaymentResponse>> getEcheancesByUserId(@PathVariable Long userId) {
-        return new ResponseEntity<>(echeanceService.getEcheancesByUserId(userId), HttpStatus.OK);
+    public ResponseEntity<List<EcheancePaymentResponse>> getEcheancesByUserId(
+            @PathVariable Long userId,
+            @RequestParam(required = false) Long creditId) {
+        List<EcheancePaymentResponse> result = creditId != null
+                ? echeanceService.getEcheancesByCreditId(creditId)
+                : echeanceService.getEcheancesByUserId(userId);
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    @GetMapping("/by-credit/{creditId}")
+    public ResponseEntity<List<EcheancePaymentResponse>> getEcheancesByCreditId(@PathVariable Long creditId) {
+        return new ResponseEntity<>(echeanceService.getEcheancesByCreditId(creditId), HttpStatus.OK);
     }
 }
 

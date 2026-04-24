@@ -130,4 +130,12 @@ export class AuthService {
     const role = this.getCurrentUserRole();
     return role === 'ADMIN' || role === 'SUPER_ADMIN';
   }
+
+  isAgent(): boolean {
+    return this.getCurrentUserRole() === 'AGENT';
+  }
+
+  isAdminOrAgent(): boolean {
+    return this.isAdmin() || this.isAgent();
+  }
 }

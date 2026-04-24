@@ -1,61 +1,60 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { CreditVm } from '../../vm/credit.vm';
-import { Credit } from '../../models/credit.model';
+import { DemandeCredit, RepaymentType } from '../../models/credit.model';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 @Component({
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  standalone: false,
   templateUrl: './credit-page.component.html',
   styleUrl: './credit-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CreditPageComponent {
-  private readonly vm  = inject(CreditVm);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly fb  = inject(FormBuilder);
+export class CreditPageComponent implements OnInit {
+  private readonly vm   = inject(CreditVm);
+  private readonly cdr  = inject(ChangeDetectorRef);
+  private readonly fb   = inject(FormBuilder);
+  private readonly auth = inject(AuthService);
 
-  // ── État UI ────────────────────────────────────────────
   submitting = false;
   success: string | null = null;
   error: string | null = null;
 
-  // ── Données statiques de présentation ─────────────────
   readonly repaymentTypes = [
-    { value: 'AMORTISSEMENT_CONSTANT', label: 'Amortissement constant' },
-    { value: 'MENSUALITE_CONSTANTE',   label: 'Mensualité constante'   },
-    { value: 'IN_FINE',                label: 'In fine'                }
-  ];
-
-  readonly statuses = [
-    { value: 'PENDING',   label: 'Pending'   },
-    { value: 'APPROVED',  label: 'Approved'  },
-    { value: 'REJECTED',  label: 'Rejected'  },
-    { value: 'ACTIVE',    label: 'Active'    },
-    { value: 'COMPLETED', label: 'Completed' },
-    { value: 'DEFAULTED', label: 'Defaulted' }
+    { value: 'AMORTISSEMENT_CONSTANT' as RepaymentType, label: 'Constant Amortization' },
+    { value: 'MENSUALITE_CONSTANTE'   as RepaymentType, label: 'Constant Monthly Payment' },
+    { value: 'IN_FINE'                as RepaymentType, label: 'In Fine'                  }
   ];
 
   readonly form = this.fb.nonNullable.group({
-    userId:        [0,                      [Validators.required, Validators.min(1)]],
     amount:        [0,                      [Validators.required, Validators.min(0.01)]],
-    interestRate:  [0,                      [Validators.required, Validators.min(0.01)]],
     termMonths:    [0,                      [Validators.required, Validators.min(1)]],
     startDate:     ['',                     Validators.required],
     endDate:       ['',                     Validators.required],
-    repaymentType: ['MENSUALITE_CONSTANTE', Validators.required],
-    status:        ['PENDING',              Validators.required],
-    income:        [0,                      [Validators.required, Validators.min(0)]],
+    repaymentType: ['MENSUALITE_CONSTANTE' as RepaymentType, Validators.required],
+    income:        [0,                      [Validators.required, Validators.min(0.01)]],
     dependents:    [0,                      [Validators.required, Validators.min(0)]]
   });
 
-  // ── Actions ────────────────────────────────────────────
+  ngOnInit(): void {
+    if (!this.auth.getCurrentUserId()) {
+      this.error = 'You must be logged in to submit an application.';
+      this.cdr.markForCheck();
+    }
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error = 'Veuillez remplir tous les champs obligatoires.';
+      this.error = 'Please fill in all required fields.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const userId = this.auth.getCurrentUserId();
+    if (!userId) {
+      this.error = 'Session expired. Please log in again.';
       this.cdr.markForCheck();
       return;
     }
@@ -65,18 +64,31 @@ export class CreditPageComponent {
     this.submitting = true;
     this.cdr.markForCheck();
 
-    this.vm.create(this.form.getRawValue() as Credit)
+    const raw = this.form.getRawValue();
+    const payload: DemandeCredit = {
+      amount:        raw.amount,
+      termMonths:    raw.termMonths,
+      startDate:     raw.startDate,
+      endDate:       raw.endDate,
+      repaymentType: raw.repaymentType,
+      income:        raw.income,
+      dependents:    raw.dependents,
+      userId,
+      status: 'PENDING'
+    };
+
+    this.vm.createDemande(payload)
       .pipe(finalize(() => { this.submitting = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: () => {
-          this.success = 'Crédit créé avec succès.';
-          this.form.reset({ repaymentType: 'MENSUALITE_CONSTANTE', status: 'PENDING', dependents: 0 });
+          this.success = 'Your credit application has been submitted successfully. Our team will review it shortly.';
+          this.form.reset({ repaymentType: 'MENSUALITE_CONSTANTE' as RepaymentType, dependents: 0 });
           this.cdr.markForCheck();
         },
         error: (err) => {
           this.error = err?.name === 'TimeoutError'
-            ? 'Le serveur met trop de temps à répondre.'
-            : (err?.error?.message ?? 'Erreur lors de la création du crédit.');
+            ? 'The server is taking too long to respond. Please check that the backend is running.'
+            : (err?.error?.message ?? 'Error submitting the application.');
           this.cdr.markForCheck();
         }
       });

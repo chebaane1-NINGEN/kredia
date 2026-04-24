@@ -259,6 +259,20 @@ public class EcheanceService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    @Transactional
+    public List<EcheancePaymentResponse> getEcheancesByCreditId(Long creditId) {
+        List<Echeance> echeances = echeanceRepository.findByCreditCreditId(creditId);
+        echeances.forEach(this::checkAndUpdateStatus);
+
+        // Recharger après mise à jour
+        echeances = echeanceRepository.findByCreditCreditId(creditId);
+
+        return echeances.stream()
+                .sorted(java.util.Comparator.comparingInt(Echeance::getEcheanceNumber))
+                .map(this::buildPaymentResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     private EcheancePaymentResponse buildPaymentResponse(Echeance echeance) {
         java.math.BigDecimal amountPaid = echeance.getAmountPaid() != null ? echeance.getAmountPaid()
                 : java.math.BigDecimal.ZERO;

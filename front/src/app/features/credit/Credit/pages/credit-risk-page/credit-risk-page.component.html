@@ -1,30 +1,96 @@
 <div class="page-container">
-  <h1>Analyse du risque de défaut</h1>
-  <p>Entrez l'ID du crédit pour prédire la probabilité de défaut de paiement.</p>
 
-  <div class="form-group">
-    <label for="creditId">ID du crédit</label>
-    <input type="number" id="creditId" [(ngModel)]="creditId" placeholder="Ex: 123" class="input">
-    <div class="actions">
+  <div class="page-header">
+    <div>
+      <h1>Default Risk Analysis</h1>
+      <p *ngIf="creditId">Credit #{{ creditId }}</p>
+      <p *ngIf="!creditId">Enter a credit ID to run the prediction.</p>
+    </div>
+  </div>
+
+  <!-- Manual input (only shown when no creditId in URL) -->
+  <div class="form-group" *ngIf="!creditId">
+    <label for="creditIdInput">Credit ID</label>
+    <input type="number" id="creditIdInput" [(ngModel)]="creditId" placeholder="e.g. 73" class="input" />
+    <div class="form-actions">
       <button (click)="predict()" [disabled]="loading" class="btn btn--primary">
-        {{ loading ? 'Analyse...' : 'Prédire' }}
+        {{ loading ? 'Analysing...' : 'Run Prediction' }}
       </button>
-      <button (click)="reset()" class="btn btn--ghost">Reset</button>
     </div>
   </div>
 
-  <div *ngIf="error" class="alert alert--error">
+  <!-- Loading spinner -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Running risk analysis for Credit #{{ creditId }}...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error && !loading" class="alert alert--error">
     {{ error }}
+    <button (click)="predict()" class="btn btn--retry">Retry</button>
   </div>
 
-  <div *ngIf="result" class="result-card">
-    <h3>Résultat de la prédiction</h3>
-    <div class="prob-gauge" [style.background]="getProbabilityColor()">
-      {{ (result.default_probability * 100).toFixed(1) }}%
+  <!-- Result card -->
+  <div *ngIf="result && !loading" class="result-card">
+
+    <div class="result-header">
+      <h2>Risk Scan Result — Credit #{{ creditId }}</h2>
     </div>
-    <div class="risk-level">
-      Niveau de risque : <span [class]="getRiskLabelClass()">{{ result.risk_level }}</span>
+
+    <!-- Gauge + details -->
+    <div class="gauge-section">
+
+      <!-- Circular gauge filled by risk level -->
+      <div class="gauge-ring" [class]="'gauge-ring--' + result.risk_level.toLowerCase()">
+        <svg class="gauge-svg" viewBox="0 0 120 120">
+          <!-- Background track -->
+          <circle cx="60" cy="60" r="50" class="gauge-track"/>
+          <!-- Filled arc -->
+          <circle cx="60" cy="60" r="50" class="gauge-fill"
+            [style.stroke-dasharray]="getGaugeDash()"
+            [style.stroke]="getGaugeColor()"/>
+        </svg>
+        <div class="gauge-ring__inner">
+          <span class="gauge-ring__value" [style.color]="getGaugeColor()">
+            {{ (result.default_probability * 100).toFixed(1) }}%
+          </span>
+          <span class="gauge-ring__label">DEFAULT RISK</span>
+        </div>
+      </div>
+
+      <div class="gauge-details">
+        <div class="detail-row">
+          <span class="detail-label">Risk Level</span>
+          <span class="risk-badge" [class]="getRiskLabelClass()">{{ result.risk_level }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Risk Score</span>
+          <span class="detail-value">{{ getRiskScoreLabel(result.risk_label) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Probability</span>
+          <span class="detail-value" [style.color]="getGaugeColor()">
+            <strong>{{ (result.default_probability * 100).toFixed(2) }}%</strong>
+          </span>
+        </div>
+      </div>
     </div>
-    <p class="description">{{ result.recommendation }}</p>
+
+    <!-- Recommendation -->
+    <div class="recommendation">
+      <h3>Recommendation</h3>
+      <p>{{ translateRecommendation(result.recommendation) }}</p>
+    </div>
+
+    <!-- Actions -->
+    <div class="result-actions">
+      <button (click)="predict()" class="btn btn--primary" [disabled]="loading">
+        ↻ Run Again
+      </button>
+      <a [routerLink]="['/credit/list']" class="btn btn--secondary">Back to Credits</a>
+    </div>
+
   </div>
+
 </div>

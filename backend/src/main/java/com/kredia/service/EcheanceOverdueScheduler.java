@@ -26,7 +26,7 @@ public class EcheanceOverdueScheduler {
     private final CreditRepository creditRepository;
     private final EmailService emailService;
 
-    @Scheduled(fixedDelay = 10000)
+    @Scheduled(fixedDelay = 30000) // every 30 seconds
     @Transactional
     public void markOverdueEcheances() {
         LocalDate today = LocalDate.now();

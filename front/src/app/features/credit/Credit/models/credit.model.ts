@@ -1,15 +1,33 @@
+export type RepaymentType = 'AMORTISSEMENT_CONSTANT' | 'MENSUALITE_CONSTANTE' | 'IN_FINE';
+export type CreditStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE' | 'COMPLETED' | 'DEFAULTED';
+
 export interface Credit {
   creditId?: number;
   userId?: number;
   amount: number;
-  interestRate: number;
+  interestRate?: number;
   startDate: string;
   endDate: string;
   termMonths: number;
-  repaymentType: 'AMORTISSEMENT_CONSTANT' | 'MENSUALITE_CONSTANTE' | 'IN_FINE';
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ACTIVE' | 'COMPLETED' | 'DEFAULTED';
+  repaymentType: RepaymentType;
+  status?: CreditStatus;
   income: number;
   dependents: number;
+  createdAt?: string;
+}
+
+/** Credit application submitted by the client (before approval) */
+export interface DemandeCredit {
+  creditId?: number;   // mapped from backend @JsonProperty("creditId")
+  userId?: number;
+  amount: number;
+  termMonths: number;
+  startDate: string;
+  endDate: string;
+  repaymentType: RepaymentType;
+  income: number;
+  dependents: number;
+  status?: CreditStatus;
   createdAt?: string;
 }
 

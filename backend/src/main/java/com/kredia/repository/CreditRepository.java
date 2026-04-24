@@ -14,4 +14,6 @@ public interface CreditRepository extends JpaRepository<Credit, Long> {
     boolean existsByUser_IdAndStatusIn(Long userId, Collection<CreditStatus> statuses);
 
     List<Credit> findByUser_Id(Long userId);
+
+    List<Credit> findByStatus(CreditStatus status);
 }

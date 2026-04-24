@@ -1,6 +1,7 @@
 package com.kredia.entity.credit;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kredia.enums.EcheanceStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -27,6 +28,12 @@ public class Echeance {
     @JoinColumn(name = "credit_id", nullable = false)
     @JsonIgnore
     private Credit credit;
+
+    /** Exposé en JSON pour le frontend (groupement par crédit) */
+    @JsonProperty("creditId")
+    public Long getCreditId() {
+        return credit != null ? credit.getCreditId() : null;
+    }
 
     @Column(name = "echeance_number", nullable = false)
     private Integer echeanceNumber;

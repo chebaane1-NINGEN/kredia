@@ -44,4 +44,12 @@ export class KycLoanVm {
   getByUserId(userId: number): Observable<KycLoanResponse[]> {
     return this.api.getByUserId(userId);
   }
+
+  getByDemandeId(demandeId: number): Observable<KycLoanResponse[]> {
+    return this.api.getByDemandeId(demandeId);
+  }
+
+  fixCreditLinks(): Observable<string> {
+    return this.api.fixCreditLinks();
+  }
 }

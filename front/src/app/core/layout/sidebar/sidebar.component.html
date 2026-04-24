@@ -44,10 +44,9 @@
           <span class="chevron" [class.rotated]="expandedMenus['credit']">▼</span>
         </a>
         <ul class="sub" [class.expanded]="expandedMenus['credit']">
-          <li><a routerLink="/credit/list" routerLinkActive="active">Crédits</a></li>
-          <li><a routerLink="/credit/echeances" routerLinkActive="active">Échéances</a></li>
+          <li><a routerLink="/credit/list" routerLinkActive="active">Credits</a></li>
+          <li><a routerLink="/credit/echeances" routerLinkActive="active">Installments</a></li>
           <li><a routerLink="/credit/kyc" routerLinkActive="active">KYC Loan</a></li>
-          <li *ngIf="!authService.isClient()"><a routerLink="/credit/risk" routerLinkActive="active">Risk Scan</a></li>
           <li *ngIf="authService.isClient()"><a routerLink="/credit/chatbot" routerLinkActive="active">Chatbot</a></li>
         </ul>
       </li>

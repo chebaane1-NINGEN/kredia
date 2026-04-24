@@ -66,11 +66,9 @@ public class EmailService {
             log.info("Email d'exécution d'ordre envoyé à {} pour l'ordre {} - MessageId: {}", 
                     user.getEmail(), order.getOrderId(), result.getMessageId());
         } catch (ApiException e) {
-            log.error("Erreur lors de l'envoi de l'email via Brevo à {}: Code={}, Body={}", 
-                    user.getEmail(), e.getCode(), e.getResponseBody(), e);
+            handleBrevoError(user.getEmail(), e);
         } catch (Exception e) {
-            log.error("Erreur inattendue lors de l'envoi de l'email à {}: {}", 
-                    user.getEmail(), e.getMessage(), e);
+            log.warn("Email skipped for {}: {}", user.getEmail(), e.getMessage());
         }
     }
 
@@ -220,11 +218,9 @@ public class EmailService {
             log.info("Email de paiement d'échéance envoyé à {} pour l'échéance {} - MessageId: {}", 
                     user.getEmail(), echeance.getEcheanceId(), result.getMessageId());
         } catch (ApiException e) {
-            log.error("Erreur lors de l'envoi de l'email via Brevo à {}: Code={}, Body={}", 
-                    user.getEmail(), e.getCode(), e.getResponseBody(), e);
+            handleBrevoError(user.getEmail(), e);
         } catch (Exception e) {
-            log.error("Erreur inattendue lors de l'envoi de l'email à {}: {}", 
-                    user.getEmail(), e.getMessage(), e);
+            log.warn("Email skipped for {}: {}", user.getEmail(), e.getMessage());
         }
     }
 
@@ -352,11 +348,9 @@ public class EmailService {
             log.info("Email de paiement partiel envoyé à {} pour l'échéance {} - MessageId: {}", 
                     user.getEmail(), echeance.getEcheanceId(), result.getMessageId());
         } catch (ApiException e) {
-            log.error("Erreur lors de l'envoi de l'email via Brevo à {}: Code={}, Body={}", 
-                    user.getEmail(), e.getCode(), e.getResponseBody(), e);
+            handleBrevoError(user.getEmail(), e);
         } catch (Exception e) {
-            log.error("Erreur inattendue lors de l'envoi de l'email à {}: {}", 
-                    user.getEmail(), e.getMessage(), e);
+            log.warn("Email skipped for {}: {}", user.getEmail(), e.getMessage());
         }
     }
 
@@ -458,9 +452,9 @@ public class EmailService {
             log.info("Email de retard envoyé à {} pour l'échéance {} - MessageId: {}", 
                     user.getEmail(), echeance.getEcheanceId(), result.getMessageId());
         } catch (ApiException e) {
-            log.error("Erreur Brevo pour OVERDUE {}: Code={}, Body={}", user.getEmail(), e.getCode(), e.getResponseBody(), e);
+            handleBrevoError(user.getEmail(), e);
         } catch (Exception e) {
-            log.error("Erreur inattendue OVERDUE {}: {}", user.getEmail(), e.getMessage(), e);
+            log.warn("Email skipped for {}: {}", user.getEmail(), e.getMessage());
         }
     }
 
@@ -553,9 +547,13 @@ public class EmailService {
             log.info("Email de rejet chronologique envoyé à {} pour l'échéance {} - MessageId: {}", 
                     user.getEmail(), echeance.getEcheanceId(), result.getMessageId());
         } catch (ApiException e) {
-            log.error("Erreur Brevo pour REJET CHRONOLOGIQUE {}: Code={}, Body={}", user.getEmail(), e.getCode(), e.getResponseBody(), e);
+            if (e.getCode() == 403) {
+                log.warn("Brevo email not activated (403) - skipping email for {}", user.getEmail());
+            } else {
+                log.error("Erreur Brevo pour REJET CHRONOLOGIQUE {}: Code={}, Body={}", user.getEmail(), e.getCode(), e.getResponseBody());
+            }
         } catch (Exception e) {
-            log.error("Erreur inattendue REJET CHRONOLOGIQUE {}: {}", user.getEmail(), e.getMessage(), e);
+            log.warn("Email skipped for {}: {}", user.getEmail(), e.getMessage());
         }
     }
 
@@ -610,5 +608,13 @@ public class EmailService {
             """,
                 userName, echeance.getEcheanceNumber()
         );
+    }
+
+    private void handleBrevoError(String email, ApiException e) {
+        if (e.getCode() == 403) {
+            log.warn("Brevo not activated (403) - email skipped for {}", email);
+        } else {
+            log.error("Brevo error for {}: Code={}, Body={}", email, e.getCode(), e.getResponseBody());
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.kredia.controller;
 
 import com.kredia.entity.credit.Credit;
+import com.kredia.entity.credit.DemandeCredit;
 import jakarta.validation.Valid;
 import com.kredia.service.CreditService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,9 +35,9 @@ public class CreditController {
     }
 
     @PostMapping
-    public ResponseEntity<Credit> createCredit(@Valid @RequestBody Credit credit) {
-        Credit createdCredit = creditService.createCredit(credit);
-        return new ResponseEntity<>(createdCredit, HttpStatus.CREATED);
+    public ResponseEntity<DemandeCredit> createDemande(@Valid @RequestBody DemandeCredit demandeCredit) {
+        DemandeCredit created = creditService.createDemande(demandeCredit);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
@@ -52,10 +53,40 @@ public class CreditController {
         return new ResponseEntity<>(credits, HttpStatus.OK);
     }
 
+    @GetMapping("/pending")
+    public ResponseEntity<List<DemandeCredit>> getPendingCredits() {
+        List<DemandeCredit> credits = creditService.getPendingCredits();
+        return new ResponseEntity<>(credits, HttpStatus.OK);
+    }
+
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<Credit> approveCreditRequest(@PathVariable Long id) {
+        try {
+            return new ResponseEntity<>(creditService.approveRequest(id), HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<DemandeCredit> rejectCreditRequest(@PathVariable Long id) {
+        try {
+            return new ResponseEntity<>(creditService.rejectRequest(id), HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @GetMapping("/by-user/{userId}")
     public ResponseEntity<List<Credit>> getCreditsByUserId(@PathVariable Long userId) {
         List<Credit> credits = creditService.getCreditsByUserId(userId);
         return new ResponseEntity<>(credits, HttpStatus.OK);
+    }
+
+    @GetMapping("/demandes/by-user/{userId}")
+    public ResponseEntity<List<DemandeCredit>> getDemandeCreditsByUserId(@PathVariable Long userId) {
+        List<DemandeCredit> demandes = creditService.getDemandeCreditsByUserId(userId);
+        return new ResponseEntity<>(demandes, HttpStatus.OK);
     }
 
     @PutMapping("/{id}")
