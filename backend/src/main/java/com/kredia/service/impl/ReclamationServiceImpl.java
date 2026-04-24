@@ -24,6 +24,8 @@ import com.kredia.service.ml.MlRiskClient;
 import com.kredia.service.ml.RiskFeatureExtractorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +45,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
 @Transactional
 public class ReclamationServiceImpl implements ReclamationService {
@@ -56,6 +57,8 @@ public class ReclamationServiceImpl implements ReclamationService {
             ReclamationStatus.REOPENED
     );
 
+    private static final Logger log = LoggerFactory.getLogger(ReclamationServiceImpl.class);
+
     private final ReclamationRepository reclamationRepository;
     private final ReclamationHistoryRepository historyRepository;
     private final ReclamationMessageRepository messageRepository;
@@ -64,6 +67,24 @@ public class ReclamationServiceImpl implements ReclamationService {
     private final RiskFeatureExtractorService riskFeatureExtractorService;
     private final MlRiskClient mlRiskClient;
     private final CloudinaryService cloudinaryService;
+
+    public ReclamationServiceImpl(ReclamationRepository reclamationRepository,
+                                 ReclamationHistoryRepository historyRepository,
+                                 ReclamationMessageRepository messageRepository,
+                                 ReclamationAttachmentRepository attachmentRepository,
+                                 ReclamationTriggerService triggerService,
+                                 RiskFeatureExtractorService riskFeatureExtractorService,
+                                 MlRiskClient mlRiskClient,
+                                 CloudinaryService cloudinaryService) {
+        this.reclamationRepository = reclamationRepository;
+        this.historyRepository = historyRepository;
+        this.messageRepository = messageRepository;
+        this.attachmentRepository = attachmentRepository;
+        this.triggerService = triggerService;
+        this.riskFeatureExtractorService = riskFeatureExtractorService;
+        this.mlRiskClient = mlRiskClient;
+        this.cloudinaryService = cloudinaryService;
+    }
 
     @Override
     public ReclamationResponse create(ReclamationCreateRequest request) {

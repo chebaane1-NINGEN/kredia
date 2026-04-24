@@ -26,8 +26,9 @@ export class LoginComponent {
   touched = { email: false, password: false };
 
   readonly form = this.fb.nonNullable.group({
-    email:    ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(4)]]
+    email:      ['', [Validators.required, Validators.email]],
+    password:   ['', [Validators.required, Validators.minLength(4)]],
+    rememberMe: [false]
   });
 
   togglePasswordVisibility(): void {

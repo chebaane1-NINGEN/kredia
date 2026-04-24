@@ -14,11 +14,15 @@ import java.util.List;
 import java.util.Random;
 
 @Service
-@RequiredArgsConstructor
 public class PaypalService {
 
     private final VirtualCardRepository virtualCardRepository;
     private final WalletRepository walletRepository;
+
+    public PaypalService(VirtualCardRepository virtualCardRepository, WalletRepository walletRepository) {
+        this.virtualCardRepository = virtualCardRepository;
+        this.walletRepository = walletRepository;
+    }
 
     @Transactional
     public VirtualCard generateVirtualCard(Long walletId) {

@@ -3,19 +3,12 @@ package com.kredia.entity.credit;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.kredia.enums.EcheanceStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "echeance")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Echeance {
 
     @Id
@@ -58,4 +51,101 @@ public class Echeance {
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
+
+    // Getters and Setters
+    public Long getEcheanceId() {
+        return echeanceId;
+    }
+
+    public void setEcheanceId(Long echeanceId) {
+        this.echeanceId = echeanceId;
+    }
+
+    public Credit getCredit() {
+        return credit;
+    }
+
+    public void setCredit(Credit credit) {
+        this.credit = credit;
+    }
+
+    public Integer getEcheanceNumber() {
+        return echeanceNumber;
+    }
+
+    public void setEcheanceNumber(Integer echeanceNumber) {
+        this.echeanceNumber = echeanceNumber;
+    }
+
+    public BigDecimal getCapitalDebut() {
+        return capitalDebut;
+    }
+
+    public void setCapitalDebut(BigDecimal capitalDebut) {
+        this.capitalDebut = capitalDebut;
+    }
+
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public BigDecimal getAmountDue() {
+        return amountDue;
+    }
+
+    public void setAmountDue(BigDecimal amountDue) {
+        this.amountDue = amountDue;
+    }
+
+    public BigDecimal getPrincipalDue() {
+        return principalDue;
+    }
+
+    public void setPrincipalDue(BigDecimal principalDue) {
+        this.principalDue = principalDue;
+    }
+
+    public BigDecimal getInterestDue() {
+        return interestDue;
+    }
+
+    public void setInterestDue(BigDecimal interestDue) {
+        this.interestDue = interestDue;
+    }
+
+    public BigDecimal getRemainingBalance() {
+        return remainingBalance;
+    }
+
+    public void setRemainingBalance(BigDecimal remainingBalance) {
+        this.remainingBalance = remainingBalance;
+    }
+
+    public BigDecimal getAmountPaid() {
+        return amountPaid;
+    }
+
+    public void setAmountPaid(BigDecimal amountPaid) {
+        this.amountPaid = amountPaid;
+    }
+
+    public EcheanceStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(EcheanceStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
+    }
 }

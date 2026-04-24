@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,12 +46,19 @@ public class DataSeeder {
     }
 
     @Component
-    @RequiredArgsConstructor
     static class DataSeederService {
         private final UserRepository userRepository;
         private final UserActivityRepository userActivityRepository;
         private final PasswordEncoder passwordEncoder;
         private final jakarta.persistence.EntityManager entityManager;
+
+        public DataSeederService(UserRepository userRepository, UserActivityRepository userActivityRepository,
+                               PasswordEncoder passwordEncoder, jakarta.persistence.EntityManager entityManager) {
+            this.userRepository = userRepository;
+            this.userActivityRepository = userActivityRepository;
+            this.passwordEncoder = passwordEncoder;
+            this.entityManager = entityManager;
+        }
 
         @Transactional
         public void runSeeding() {

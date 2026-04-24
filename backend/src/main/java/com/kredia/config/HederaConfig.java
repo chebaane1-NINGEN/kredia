@@ -3,14 +3,16 @@ package com.kredia.config;
 import com.hedera.hashgraph.sdk.AccountId;
 import com.hedera.hashgraph.sdk.Client;
 import com.hedera.hashgraph.sdk.PrivateKey;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-@Slf4j
 @Configuration
 public class HederaConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(HederaConfig.class);
 
     @Value("${hedera.accountId}")
     private String accountId;

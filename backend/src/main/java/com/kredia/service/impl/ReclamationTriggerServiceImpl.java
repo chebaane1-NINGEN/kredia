@@ -10,17 +10,24 @@ import com.kredia.service.ReclamationTriggerService;
 import com.kredia.util.NotificationFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class ReclamationTriggerServiceImpl implements ReclamationTriggerService {
+
+    private static final Logger log = LoggerFactory.getLogger(ReclamationTriggerServiceImpl.class);
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+
+    public ReclamationTriggerServiceImpl(NotificationRepository notificationRepository, UserRepository userRepository) {
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
+    }
 
     private static final Long SUPERVISOR_ID = 999L;
 

@@ -13,11 +13,15 @@ import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/statistics")
-@RequiredArgsConstructor
 public class StatisticsController {
 
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
+
+    public StatisticsController(TransactionRepository transactionRepository, WalletRepository walletRepository) {
+        this.transactionRepository = transactionRepository;
+        this.walletRepository = walletRepository;
+    }
 
     @GetMapping("/dashboard")
     public Map<String, Object> getDashboardStatistics() {

@@ -9,10 +9,13 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 @Service
-@RequiredArgsConstructor
 public class RiskFeatureExtractorImpl implements RiskFeatureExtractor {
 
     private final ReclamationRepository reclamationRepository;
+
+    public RiskFeatureExtractorImpl(ReclamationRepository reclamationRepository) {
+        this.reclamationRepository = reclamationRepository;
+    }
 
     // In Step 6 we will read real Wallet/Credit data from your team modules
     // For now we keep wallet/credit features as 0 or false (POC)

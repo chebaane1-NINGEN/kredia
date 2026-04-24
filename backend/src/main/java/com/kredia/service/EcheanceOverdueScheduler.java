@@ -17,7 +17,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class EcheanceOverdueScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(EcheanceOverdueScheduler.class);
@@ -25,6 +24,12 @@ public class EcheanceOverdueScheduler {
     private final EcheanceRepository echeanceRepository;
     private final CreditRepository creditRepository;
     private final EmailService emailService;
+
+    public EcheanceOverdueScheduler(EcheanceRepository echeanceRepository, CreditRepository creditRepository, EmailService emailService) {
+        this.echeanceRepository = echeanceRepository;
+        this.creditRepository = creditRepository;
+        this.emailService = emailService;
+    }
 
     @Scheduled(fixedDelay = 10000)
     @Transactional

@@ -5,10 +5,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.kredia.enums.TransactionStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,9 +25,6 @@ import java.util.List;
     @JsonSubTypes.Type(value = Transaction.class, name = "TRANSACTION"),
     @JsonSubTypes.Type(value = TransactionLoan.class, name = "TRANSACTION_LOAN")
 })
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Transaction {
     
     @Id
@@ -71,5 +64,78 @@ public class Transaction {
         if (transactionDate == null) {
             transactionDate = LocalDateTime.now();
         }
+    }
+
+    // Getters and Setters
+    public Long getTransactionId() {
+        return transactionId;
+    }
+
+    public void setTransactionId(Long transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public Wallet getSourceWallet() {
+        return sourceWallet;
+    }
+
+    public void setSourceWallet(Wallet sourceWallet) {
+        this.sourceWallet = sourceWallet;
+    }
+
+    public Wallet getDestinationWallet() {
+        return destinationWallet;
+    }
+
+    public void setDestinationWallet(Wallet destinationWallet) {
+        this.destinationWallet = destinationWallet;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public TransactionStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(TransactionStatus status) {
+        this.status = status;
+    }
+
+    public String getReference() {
+        return reference;
+    }
+
+    public void setReference(String reference) {
+        this.reference = reference;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public LocalDateTime getTransactionDate() {
+        return transactionDate;
+    }
+
+    public void setTransactionDate(LocalDateTime transactionDate) {
+        this.transactionDate = transactionDate;
+    }
+
+    public List<TransactionAuditLog> getAuditLogs() {
+        return auditLogs;
+    }
+
+    public void setAuditLogs(List<TransactionAuditLog> auditLogs) {
+        this.auditLogs = auditLogs;
     }
 }

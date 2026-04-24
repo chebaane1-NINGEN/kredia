@@ -21,6 +21,7 @@ export class SidebarComponent implements OnInit {
 
   expandedMenus: { [key: string]: boolean } = {
     admin: true,
+    agent: false,
     credit: true,
     wallet: false,
     support: false,

@@ -14,10 +14,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/reclamations")
-@RequiredArgsConstructor
 public class ReclamationController {
 
     private final ReclamationService reclamationService;
+
+    public ReclamationController(ReclamationService reclamationService) {
+        this.reclamationService = reclamationService;
+    }
 
     @PostMapping
     public ReclamationResponse create(@Valid @RequestBody ReclamationCreateRequest request) {

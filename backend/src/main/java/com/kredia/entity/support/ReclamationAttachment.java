@@ -1,8 +1,6 @@
 package com.kredia.entity.support;
 
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,11 +9,6 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_att_reclamation_uploaded", columnList = "reclamation_id,uploaded_at")
         }
 )
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class ReclamationAttachment {
 
     @Id
@@ -48,5 +41,139 @@ public class ReclamationAttachment {
     @PrePersist
     void onCreate() {
         uploadedAt = LocalDateTime.now();
+    }
+
+    // Getters and Setters
+    public Long getAttachmentId() {
+        return attachmentId;
+    }
+
+    public void setAttachmentId(Long attachmentId) {
+        this.attachmentId = attachmentId;
+    }
+
+    public Reclamation getReclamation() {
+        return reclamation;
+    }
+
+    public void setReclamation(Reclamation reclamation) {
+        this.reclamation = reclamation;
+    }
+
+    public Long getUploadedByUserId() {
+        return uploadedByUserId;
+    }
+
+    public void setUploadedByUserId(Long uploadedByUserId) {
+        this.uploadedByUserId = uploadedByUserId;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public String getFileUrl() {
+        return fileUrl;
+    }
+
+    public void setFileUrl(String fileUrl) {
+        this.fileUrl = fileUrl;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
+    }
+
+    public Long getSizeBytes() {
+        return sizeBytes;
+    }
+
+    public void setSizeBytes(Long sizeBytes) {
+        this.sizeBytes = sizeBytes;
+    }
+
+    public LocalDateTime getUploadedAt() {
+        return uploadedAt;
+    }
+
+    public void setUploadedAt(LocalDateTime uploadedAt) {
+        this.uploadedAt = uploadedAt;
+    }
+
+    // Builder pattern
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private Long attachmentId;
+        private Reclamation reclamation;
+        private Long uploadedByUserId;
+        private String fileName;
+        private String fileUrl;
+        private String contentType;
+        private Long sizeBytes;
+        private LocalDateTime uploadedAt;
+
+        public Builder attachmentId(Long attachmentId) {
+            this.attachmentId = attachmentId;
+            return this;
+        }
+
+        public Builder reclamation(Reclamation reclamation) {
+            this.reclamation = reclamation;
+            return this;
+        }
+
+        public Builder uploadedByUserId(Long uploadedByUserId) {
+            this.uploadedByUserId = uploadedByUserId;
+            return this;
+        }
+
+        public Builder fileName(String fileName) {
+            this.fileName = fileName;
+            return this;
+        }
+
+        public Builder fileUrl(String fileUrl) {
+            this.fileUrl = fileUrl;
+            return this;
+        }
+
+        public Builder contentType(String contentType) {
+            this.contentType = contentType;
+            return this;
+        }
+
+        public Builder sizeBytes(Long sizeBytes) {
+            this.sizeBytes = sizeBytes;
+            return this;
+        }
+
+        public Builder uploadedAt(LocalDateTime uploadedAt) {
+            this.uploadedAt = uploadedAt;
+            return this;
+        }
+
+        public ReclamationAttachment build() {
+            ReclamationAttachment attachment = new ReclamationAttachment();
+            attachment.attachmentId = this.attachmentId;
+            attachment.reclamation = this.reclamation;
+            attachment.uploadedByUserId = this.uploadedByUserId;
+            attachment.fileName = this.fileName;
+            attachment.fileUrl = this.fileUrl;
+            attachment.contentType = this.contentType;
+            attachment.sizeBytes = this.sizeBytes;
+            attachment.uploadedAt = this.uploadedAt;
+            return attachment;
+        }
     }
 }

@@ -3,7 +3,8 @@ package com.kredia.service;
 import com.kredia.entity.credit.Echeance;
 import com.kredia.entity.investment.InvestmentOrder;
 import com.kredia.entity.user.User;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -19,8 +20,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 
 @Service
-@Slf4j
 public class EmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
     private final TransactionalEmailsApi apiInstance;
 

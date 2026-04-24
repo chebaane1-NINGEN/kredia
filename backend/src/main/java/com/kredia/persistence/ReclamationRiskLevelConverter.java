@@ -3,13 +3,15 @@ package com.kredia.persistence;
 import com.kredia.enums.ReclamationRiskLevel;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Locale;
 
-@Slf4j
 @Converter
 public class ReclamationRiskLevelConverter implements AttributeConverter<ReclamationRiskLevel, String> {
+
+    private static final Logger log = LoggerFactory.getLogger(ReclamationRiskLevelConverter.class);
 
     @Override
     public String convertToDatabaseColumn(ReclamationRiskLevel attribute) {

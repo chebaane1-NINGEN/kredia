@@ -15,13 +15,19 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class RiskFeatureExtractorServiceImpl implements RiskFeatureExtractorService {
 
     private final ReclamationRepository reclamationRepository;
     private final WalletRepository walletRepository;
     private final CreditRepository creditRepository;
     private final EcheanceRepository echeanceRepository;
+
+    public RiskFeatureExtractorServiceImpl(ReclamationRepository reclamationRepository, WalletRepository walletRepository, CreditRepository creditRepository, EcheanceRepository echeanceRepository) {
+        this.reclamationRepository = reclamationRepository;
+        this.walletRepository = walletRepository;
+        this.creditRepository = creditRepository;
+        this.echeanceRepository = echeanceRepository;
+    }
 
     @Override
     public RiskFeaturesDto extract(Long userId, String subject, String description, String status, String priority) {

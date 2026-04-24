@@ -12,7 +12,21 @@ const checkAuth = (state?: RouterStateSnapshot): boolean => {
   }
 
   const url = state?.url ?? '';
+
+  // Check admin routes
   if (url.startsWith('/admin') && !auth.isAdmin()) {
+    router.navigate(['/']);
+    return false;
+  }
+
+  // Check agent routes
+  if (url.startsWith('/agent') && !auth.isAgent()) {
+    router.navigate(['/']);
+    return false;
+  }
+
+  // Check client routes
+  if (url.startsWith('/client') && !auth.isClient()) {
     router.navigate(['/']);
     return false;
   }

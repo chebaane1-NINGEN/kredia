@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Set;
 
 @Component
-@RequiredArgsConstructor
 public class ReclamationSlaScheduler {
 
     private static final List<ReclamationStatus> SLA_TRACKED_STATUSES = List.of(
@@ -31,6 +30,12 @@ public class ReclamationSlaScheduler {
     private final ReclamationRepository reclamationRepository;
     private final ReclamationHistoryRepository historyRepository;
     private final ReclamationTriggerService triggerService;
+
+    public ReclamationSlaScheduler(ReclamationRepository reclamationRepository, ReclamationHistoryRepository historyRepository, ReclamationTriggerService triggerService) {
+        this.reclamationRepository = reclamationRepository;
+        this.historyRepository = historyRepository;
+        this.triggerService = triggerService;
+    }
 
     @Scheduled(fixedRate = 60000)
     @Transactional

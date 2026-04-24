@@ -10,6 +10,8 @@ import com.kredia.repository.user.UserRepository;
 import com.kredia.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,13 +20,19 @@ import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/order-execution")
-@RequiredArgsConstructor
-@Slf4j
 public class OrderExecutionController {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderExecutionController.class);
 
     private final EmailService emailService;
     private final InvestmentOrderRepository orderRepository;
     private final UserRepository userRepository;
+
+    public OrderExecutionController(EmailService emailService, InvestmentOrderRepository orderRepository, UserRepository userRepository) {
+        this.emailService = emailService;
+        this.orderRepository = orderRepository;
+        this.userRepository = userRepository;
+    }
 
     @PostMapping("/notify")
     public ResponseEntity<String> notifyOrderExecution(@RequestBody OrderExecutionNotificationDTO notification) {

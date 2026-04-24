@@ -7,22 +7,13 @@ import com.kredia.enums.CreditStatus;
 import com.kredia.enums.RepaymentType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.kredia.entity.user.User;
-
 @Entity
 @Table(name = "credit")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Credit {
 
     @Id
@@ -106,5 +97,126 @@ public class Credit {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    // Getters and Setters
+    public Long getCreditId() {
+        return creditId;
+    }
+
+    public void setCreditId(Long creditId) {
+        this.creditId = creditId;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public Float getAmount() {
+        return amount;
+    }
+
+    public void setAmount(Float amount) {
+        this.amount = amount;
+    }
+
+    public Float getInterestRate() {
+        return interestRate;
+    }
+
+    public void setInterestRate(Float interestRate) {
+        this.interestRate = interestRate;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public Integer getTermMonths() {
+        return termMonths;
+    }
+
+    public void setTermMonths(Integer termMonths) {
+        this.termMonths = termMonths;
+    }
+
+    public RepaymentType getRepaymentType() {
+        return repaymentType;
+    }
+
+    public void setRepaymentType(RepaymentType repaymentType) {
+        this.repaymentType = repaymentType;
+    }
+
+    public BigDecimal getMonthlyPayment() {
+        return monthlyPayment;
+    }
+
+    public void setMonthlyPayment(BigDecimal monthlyPayment) {
+        this.monthlyPayment = monthlyPayment;
+    }
+
+    public CreditStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(CreditStatus status) {
+        this.status = status;
+    }
+
+    public BigDecimal getIncome() {
+        return income;
+    }
+
+    public void setIncome(BigDecimal income) {
+        this.income = income;
+    }
+
+    public Integer getDependents() {
+        return dependents;
+    }
+
+    public void setDependents(Integer dependents) {
+        this.dependents = dependents;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public List<Echeance> getEcheances() {
+        return echeances;
+    }
+
+    public void setEcheances(List<Echeance> echeances) {
+        this.echeances = echeances;
+    }
+
+    public List<KycLoan> getKycLoanDocuments() {
+        return kycLoanDocuments;
+    }
+
+    public void setKycLoanDocuments(List<KycLoan> kycLoanDocuments) {
+        this.kycLoanDocuments = kycLoanDocuments;
     }
 }

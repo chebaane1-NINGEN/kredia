@@ -11,13 +11,17 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class EcheancePaymentSyncScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(EcheancePaymentSyncScheduler.class);
 
     private final EcheanceRepository echeanceRepository;
     private final EcheanceService echeanceService;
+
+    public EcheancePaymentSyncScheduler(EcheanceRepository echeanceRepository, EcheanceService echeanceService) {
+        this.echeanceRepository = echeanceRepository;
+        this.echeanceService = echeanceService;
+    }
 
     @Scheduled(fixedDelay = 5000)
     public void syncEcheancesWithTransactions() {

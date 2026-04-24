@@ -1,136 +1,154 @@
-<div class="auth-page login-page">
-  <div class="auth-container">
-    <div class="auth-card">
-      <div class="auth-header">
-        <span class="brand-logo">●</span>
-        <h1>Sign in to KREDIA</h1>
-        <p class="auth-tagline">Access your financial dashboard</p>
-      </div>
+<div class="min-h-screen bg-gray-50 flex">
+  <!-- Left Panel: Content -->
+  <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 text-white p-12 flex-col justify-center">
+    <div class="max-w-md">
+      <button class="text-blue-200 hover:text-white mb-8 flex items-center transition-colors" routerLink="/">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Back to Kredia
+      </button>
 
-      <form [formGroup]="form" (ngSubmit)="submit()" class="auth-form">
-          <!-- Error Alert -->
-          <div class="alert alert-error" *ngIf="error" role="alert">
-            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      <h1 class="text-4xl font-bold mb-6">Welcome back to Kredia</h1>
+
+      <div class="space-y-4 mb-8">
+        <div class="flex items-center">
+          <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-4">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            <span>{{ error }}</span>
           </div>
-
-          <!-- Email Field -->
-          <div class="form-field">
-            <label for="email" class="field-label">Email Address</label>
-            <div class="input-wrapper" [class.input-error]="form.get('email')?.invalid && touched.email" [class.input-valid]="isFieldValid('email')">
-              <input
-                id="email"
-                type="email"
-                formControlName="email"
-                placeholder="your@email.com"
-                class="form-input"
-                autocomplete="email"
-                (blur)="markFieldTouched('email')"
-              />
-              <div class="input-status" *ngIf="isFieldValid('email')">✓</div>
-            </div>
-            <span class="field-error" *ngIf="getFieldError('email')">
-              {{ getFieldError('email') }}
-            </span>
+          <div>
+            <h3 class="font-semibold">Smart Risk Analysis</h3>
+            <p class="text-blue-200 text-sm">AI-powered credit scoring and risk assessment</p>
           </div>
-
-          <!-- Password Field -->
-          <div class="form-field">
-            <div class="field-header">
-              <label for="password" class="field-label">Password</label>
-              <a routerLink="/forgot-password" class="forgot-link">Forgot?</a>
-            </div>
-            <div class="input-wrapper" [class.input-error]="form.get('password')?.invalid && touched.password" [class.input-valid]="isFieldValid('password')">
-              <input
-                id="password"
-                [type]="showPassword ? 'text' : 'password'"
-                formControlName="password"
-                placeholder="••••••••"
-                class="form-input"
-                autocomplete="current-password"
-                (blur)="markFieldTouched('password')"
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                (click)="togglePasswordVisibility()"
-                title="Toggle password visibility"
-              >
-                {{ showPassword ? '👁️' : '👁️‍🗨️' }}
-              </button>
-            </div>
-            <span class="field-error" *ngIf="getFieldError('password')">
-              {{ getFieldError('password') }}
-            </span>
-          </div>
-
-          <!-- Remember Me -->
-          <div class="remember-me">
-            <input id="remember" type="checkbox" />
-            <label for="remember">Keep me signed in</label>
-          </div>
-
-          <!-- Submit Button -->
-          <button
-            type="submit"
-            class="btn-primary btn-full"
-            [disabled]="loading || form.invalid"
-            [class.btn-loading]="loading"
-          >
-            <span *ngIf="!loading">Sign in</span>
-            <span *ngIf="loading">
-              <span class="spinner"></span> Signing in...
-            </span>
-          </button>
-        </form>
-
-        <!-- Divider -->
-        <div class="auth-divider">
-          <span>or continue with</span>
         </div>
 
-        <!-- OAuth Buttons -->
-        <div class="oauth-buttons">
-          <button
-            type="button"
-            class="oauth-btn oauth-google"
-            (click)="loginWithProvider('google')"
-            title="Sign in with Google"
-          >
-            <span>G</span>
-            <span>Google</span>
-          </button>
-          <button
-            type="button"
-            class="oauth-btn oauth-github"
-            (click)="loginWithProvider('github')"
-            title="Sign in with GitHub"
-          >
-            <span>⚙</span>
-            <span>GitHub</span>
-          </button>
+        <div class="flex items-center">
+          <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mr-4">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-semibold">Secure Access</h3>
+            <p class="text-blue-200 text-sm">Bank-grade security with OAuth2 and encryption</p>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
 
-        <!-- Footer Link -->
-        <div class="auth-footer">
-          <p>Don't have an account? <a routerLink="/register" class="link-primary">Sign up</a></p>
+  <!-- Right Panel: Login Form -->
+  <div class="w-full lg:w-1/2 flex items-center justify-center p-8">
+    <div class="w-full max-w-md space-y-8">
+      <div class="text-center lg:text-left">
+        <h2 class="text-3xl font-bold text-gray-900">Sign in to your account</h2>
+        <p class="mt-2 text-gray-600">Access your Kredia dashboard</p>
+      </div>
+
+      <!-- Error Alert -->
+      <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg" *ngIf="error" role="alert">
+        {{ error }}
+      </div>
+
+      <!-- OAuth Buttons -->
+      <div class="space-y-3">
+        <button type="button" class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-700 hover:bg-gray-50 transition-colors" (click)="loginWithProvider('google')">
+          <svg class="w-5 h-5 mr-3" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        <button type="button" class="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-700 hover:bg-gray-50 transition-colors" (click)="loginWithProvider('github')">
+          <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          Continue with GitHub
+        </button>
+      </div>
+
+      <div class="relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-gray-300"></div>
+        </div>
+        <div class="relative flex justify-center text-sm">
+          <span class="px-2 bg-gray-50 text-gray-500">Or continue with email</span>
         </div>
       </div>
 
-    <!-- VISUAL SIDE (RIGHT) -->
-    <div class="auth-visual">
-      <div class="visual-container">
-        <div class="visual-gradient"></div>
-        <div class="visual-content">
-          <div class="visual-icon">🔐</div>
-          <h2>Secure & Fast</h2>
-          <p>Enterprise-grade security with instant access</p>
+      <!-- Login Form -->
+      <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Enter your email"
+            (blur)="markFieldTouched('email')"
+          />
+          <p class="mt-1 text-sm text-red-600" *ngIf="getFieldError('email')">{{ getFieldError('email') }}</p>
         </div>
-      </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+          <div class="relative">
+            <input
+              id="password"
+              [type]="showPassword ? 'text' : 'password'"
+              formControlName="password"
+              autocomplete="current-password"
+              class="mt-1 block w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter your password"
+              (blur)="markFieldTouched('password')"
+            />
+            <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center" (click)="togglePasswordVisibility()">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" *ngIf="!showPassword">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" *ngIf="showPassword">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
+              </svg>
+            </button>
+          </div>
+          <p class="mt-1 text-sm text-red-600" *ngIf="getFieldError('password')">{{ getFieldError('password') }}</p>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <input id="remember-me" type="checkbox" formControlName="rememberMe" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+            <label for="remember-me" class="ml-2 block text-sm text-gray-900">Remember me</label>
+          </div>
+
+          <div class="text-sm">
+            <a href="#" class="font-medium text-blue-600 hover:text-blue-500">Forgot your password?</a>
+          </div>
+        </div>
+
+        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed" [disabled]="loading || form.invalid">
+          <span *ngIf="!loading">Sign In</span>
+          <span *ngIf="loading" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Signing In...
+          </span>
+        </button>
+      </form>
+
+      <p class="text-center text-sm text-gray-600">
+        Don't have an account?
+        <a routerLink="/register" class="font-medium text-blue-600 hover:text-blue-500">Create one here</a>
+      </p>
     </div>
   </div>
 </div>

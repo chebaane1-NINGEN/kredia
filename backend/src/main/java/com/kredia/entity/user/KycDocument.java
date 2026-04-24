@@ -3,17 +3,10 @@ package com.kredia.entity.user;
 import com.kredia.enums.DocumentType;
 import com.kredia.enums.KycStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "kyc_document")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class KycDocument {
     
     @Id
@@ -45,5 +38,62 @@ public class KycDocument {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    // Getters and Setters
+    public Long getKycId() {
+        return kycId;
+    }
+
+    public void setKycId(Long kycId) {
+        this.kycId = kycId;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public DocumentType getDocumentType() {
+        return documentType;
+    }
+
+    public void setDocumentType(DocumentType documentType) {
+        this.documentType = documentType;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    public KycStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(KycStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getVerifiedAt() {
+        return verifiedAt;
+    }
+
+    public void setVerifiedAt(LocalDateTime verifiedAt) {
+        this.verifiedAt = verifiedAt;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }
