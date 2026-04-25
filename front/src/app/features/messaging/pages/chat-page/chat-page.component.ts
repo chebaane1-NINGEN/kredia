@@ -34,7 +34,7 @@ export class ChatPageComponent implements OnInit {
   loadUsers(): void {
     this.loading = true;
     this.cdr.markForCheck();
-    this.adminApi.findUsers(undefined, undefined, undefined, 0, 100).subscribe({
+    this.adminApi.findUsers(undefined, undefined, undefined, undefined, undefined, 0, 100).subscribe({
       next: (data: PageResponse<UserResponse>) => {
         const myId = this.auth.getCurrentUserId();
         let filteredUsers = (data.content ?? []).filter(u => u.userId !== myId);

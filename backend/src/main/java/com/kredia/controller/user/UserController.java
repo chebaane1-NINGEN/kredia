@@ -8,6 +8,7 @@ import com.kredia.dto.user.ClientRiskScoreDTO;
 import com.kredia.dto.user.UserActivityResponseDTO;
 import com.kredia.dto.user.ClientProfileUpdateDTO;
 import com.kredia.dto.user.AdminUserUpdateDTO;
+import com.kredia.dto.user.UserResponseDTO;
 import com.kredia.dto.user.UserRequestDTO;
 import com.kredia.dto.user.UserResponseDTO;
 import com.kredia.dto.user.UserRoleChangeRequestDTO;
@@ -19,6 +20,7 @@ import com.kredia.service.user.UserService;
 import com.kredia.entity.user.UserRole;
 import com.kredia.entity.user.UserStatus;
 import jakarta.validation.Valid;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -28,6 +30,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,8 +61,8 @@ public class UserController {
             @RequestParam(name = "email", required = false) String email,
             @RequestParam(name = "status", required = false) UserStatus status,
             @RequestParam(name = "role", required = false) UserRole role,
-            @RequestParam(name = "createdFrom", required = false) Instant createdFrom,
-            @RequestParam(name = "createdTo", required = false) Instant createdTo,
+            @RequestParam(name = "createdFrom", required = false) String createdFrom,
+            @RequestParam(name = "createdTo", required = false) String createdTo,
             @PageableDefault Pageable pageable
     ) {
         return ResponseEntity.ok(ApiResponse.ok(
@@ -67,11 +71,41 @@ public class UserController {
                         Optional.ofNullable(email),
                         Optional.ofNullable(status),
                         Optional.ofNullable(role),
-                        Optional.ofNullable(createdFrom),
-                        Optional.ofNullable(createdTo),
+                        parseStartOfDay(createdFrom),
+                        parseEndOfDay(createdTo),
                         pageable
                 )
         ));
+    }
+
+    private Optional<Instant> parseStartOfDay(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            if (value.contains("T")) {
+                return Optional.of(Instant.parse(value));
+            }
+            LocalDate date = LocalDate.parse(value);
+            return Optional.of(date.atStartOfDay(ZoneOffset.UTC).toInstant());
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    private Optional<Instant> parseEndOfDay(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            if (value.contains("T")) {
+                return Optional.of(Instant.parse(value));
+            }
+            LocalDate date = LocalDate.parse(value);
+            return Optional.of(date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().minusNanos(1));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
     }
 
     @GetMapping("/{id}")
@@ -210,6 +244,62 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.adminStats(actorId)));
     }
 
+    @GetMapping("/admin/export/csv")
+    public ResponseEntity<byte[]> exportUsersCsv(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @RequestParam(name = "email", required = false) String email,
+            @RequestParam(name = "status", required = false) UserStatus status,
+            @RequestParam(name = "role", required = false) UserRole role,
+            @RequestParam(name = "createdFrom", required = false) String createdFrom,
+            @RequestParam(name = "createdTo", required = false) String createdTo
+    ) {
+        byte[] data = userService.exportUsersCsv(actorId, Optional.ofNullable(email), Optional.ofNullable(status), Optional.ofNullable(role), parseStartOfDay(createdFrom), parseEndOfDay(createdTo));
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=users_" + Instant.now().toString().replaceAll(":", "-") + ".csv")
+                .header("Content-Type", "text/csv; charset=UTF-8")
+                .body(data);
+    }
+
+    @GetMapping("/admin/export/excel")
+    public ResponseEntity<byte[]> exportUsersExcel(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @RequestParam(name = "email", required = false) String email,
+            @RequestParam(name = "status", required = false) UserStatus status,
+            @RequestParam(name = "role", required = false) UserRole role,
+            @RequestParam(name = "createdFrom", required = false) String createdFrom,
+            @RequestParam(name = "createdTo", required = false) String createdTo
+    ) {
+        byte[] data = userService.exportUsersExcel(actorId, Optional.ofNullable(email), Optional.ofNullable(status), Optional.ofNullable(role), parseStartOfDay(createdFrom), parseEndOfDay(createdTo));
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=users_" + Instant.now().toString().replaceAll(":", "-") + ".xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(data);
+    }
+
+    @PostMapping("/admin/export/csv/selected")
+    public ResponseEntity<byte[]> exportSelectedUsersCsv(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @RequestBody List<Long> userIds
+    ) {
+        byte[] data = userService.exportSelectedUsersCsv(actorId, userIds);
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=selected_users_" + Instant.now().toString().replaceAll(":", "-") + ".csv")
+                .header("Content-Type", "text/csv; charset=UTF-8")
+                .body(data);
+    }
+
+    @PostMapping("/admin/export/excel/selected")
+    public ResponseEntity<byte[]> exportSelectedUsersExcel(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @RequestBody List<Long> userIds
+    ) {
+        byte[] data = userService.exportSelectedUsersExcel(actorId, userIds);
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=selected_users_" + Instant.now().toString().replaceAll(":", "-") + ".xlsx")
+                .header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                .body(data);
+    }
+
     @GetMapping("/admin/agents")
     public ResponseEntity<ApiResponse<Page<UserResponseDTO>>> adminAgent(
             @RequestHeader("X-Actor-Id") Long actorId,
@@ -237,12 +327,24 @@ public class UserController {
     }
 
     @GetMapping("/admin/activities")
-    public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> adminActivityByRole(
+    public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> adminActivities(
             @RequestHeader("X-Actor-Id") Long actorId,
             @RequestParam(name = "role", required = false) UserRole role,
+            @RequestParam(name = "actionType", required = false) String actionType,
+            @RequestParam(name = "userId", required = false) Long userId,
+            @RequestParam(name = "from", required = false) String from,
+            @RequestParam(name = "to", required = false) String to,
             @PageableDefault Pageable pageable
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.adminActivityByRole(actorId, Optional.ofNullable(role), pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(userService.adminActivities(
+                actorId,
+                Optional.ofNullable(role),
+                Optional.ofNullable(actionType),
+                Optional.ofNullable(userId),
+                parseStartOfDay(from),
+                parseEndOfDay(to),
+                pageable
+        )));
     }
 
     @GetMapping("/admin/audit/{userId}")
@@ -311,5 +413,34 @@ public class UserController {
             @RequestParam("status") KycStatus status
     ) {
         return ResponseEntity.ok(ApiResponse.ok(kycDocumentService.verifyDocument(actorId, docId, status)));
+    }
+
+    // Agent client approval/rejection workflow
+    @PostMapping("/agent/client/{clientId}/approve")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> approveClient(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("clientId") Long clientId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.approveClient(actorId, clientId)));
+    }
+
+    @PostMapping("/agent/client/{clientId}/reject")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> rejectClient(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("clientId") Long clientId,
+            @RequestBody Map<String, String> request
+    ) {
+        String reason = request.get("reason");
+        return ResponseEntity.ok(ApiResponse.ok(userService.rejectClient(actorId, clientId, reason)));
+    }
+
+    @PostMapping("/agent/client/{clientId}/suspend")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> suspendClient(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("clientId") Long clientId,
+            @RequestBody Map<String, String> request
+    ) {
+        String reason = request.get("reason");
+        return ResponseEntity.ok(ApiResponse.ok(userService.suspendClient(actorId, clientId, reason)));
     }
 }

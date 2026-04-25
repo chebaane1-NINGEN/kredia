@@ -39,7 +39,17 @@ export class AdminAuditPageComponent implements OnInit {
     this.error = null;
     this.cdr.markForCheck();
 
-    this.api.getActivities(this.roleFilter || undefined, this.page, this.size)
+    const userId = this.searchUserId ? Number(this.searchUserId) : undefined;
+
+    this.api.getActivities(
+      this.roleFilter || undefined,
+      this.actionType || undefined,
+      userId,
+      this.fromDate || undefined,
+      this.toDate || undefined,
+      this.page,
+      this.size
+    )
       .pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: result => {

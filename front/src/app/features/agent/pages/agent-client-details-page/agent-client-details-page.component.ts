@@ -73,4 +73,75 @@ export class AgentClientDetailsPageComponent implements OnInit {
       default: return '⚪';
     }
   }
+
+  approveClient(): void {
+    if (!this.client?.userId) return;
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    this.api.approveClient(this.client.userId)
+      .pipe(finalize(() => {
+        this.loading = false;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: (updatedClient) => {
+          this.client = { ...this.client!, ...updatedClient };
+          // Reload to get updated activities
+          this.loadClientDetails(this.client.userId);
+        },
+        error: (err) => {
+          this.error = 'Failed to approve client';
+          console.error('Approve client error:', err);
+        }
+      });
+  }
+
+  rejectClient(): void {
+    if (!this.client?.userId) return;
+    const reason = prompt('Reason for rejection (optional):');
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    this.api.rejectClient(this.client.userId, reason || undefined)
+      .pipe(finalize(() => {
+        this.loading = false;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: (updatedClient) => {
+          this.client = { ...this.client!, ...updatedClient };
+          // Reload to get updated activities
+          this.loadClientDetails(this.client.userId);
+        },
+        error: (err) => {
+          this.error = 'Failed to reject client';
+          console.error('Reject client error:', err);
+        }
+      });
+  }
+
+  suspendClient(): void {
+    if (!this.client?.userId) return;
+    const reason = prompt('Reason for suspension (optional):');
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    this.api.suspendClient(this.client.userId, reason || undefined)
+      .pipe(finalize(() => {
+        this.loading = false;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: (updatedClient) => {
+          this.client = { ...this.client!, ...updatedClient };
+          // Reload to get updated activities
+          this.loadClientDetails(this.client.userId);
+        },
+        error: (err) => {
+          this.error = 'Failed to suspend client';
+          console.error('Suspend client error:', err);
+        }
+      });
+  }
 }

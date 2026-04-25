@@ -22,6 +22,8 @@ export class AdminApi {
     query?: string,
     role?: UserRole,
     status?: UserStatus,
+    createdFrom?: string,
+    createdTo?: string,
     page = 0,
     size = 10
   ): Observable<PageResponse<UserResponse>> {
@@ -32,6 +34,8 @@ export class AdminApi {
     if (query) params = params.set('email', query);
     if (role) params = params.set('role', role);
     if (status) params = params.set('status', status);
+    if (createdFrom) params = params.set('createdFrom', createdFrom);
+    if (createdTo) params = params.set('createdTo', createdTo);
 
     return this.http.get<ApiResponse<PageResponse<UserResponse>>>(`${API_BASE_URL}/api/user`, { params }).pipe(
       map(response => response.data)
@@ -73,6 +77,44 @@ export class AdminApi {
     return this.http.patch<ApiResponse<void>>(`${API_BASE_URL}/api/user/admin/bulk-status`, ids, { params }).pipe(
       map(() => undefined)
     );
+  }
+
+  createUser(payload: UserResponse): Observable<UserResponse> {
+    return this.http.post<ApiResponse<UserResponse>>(`${API_BASE_URL}/api/user`, payload).pipe(
+      map(response => response.data)
+    );
+  }
+
+  exportUsersCsv(query?: string, role?: UserRole, status?: UserStatus, createdFrom?: string, createdTo?: string): Observable<Blob> {
+    let params = new HttpParams();
+    if (query) params = params.set('email', query);
+    if (role) params = params.set('role', role);
+    if (status) params = params.set('status', status);
+    if (createdFrom) params = params.set('createdFrom', createdFrom);
+    if (createdTo) params = params.set('createdTo', createdTo);
+    return this.http.get(`${API_BASE_URL}/api/user/admin/export/csv`, { params, responseType: 'blob' });
+  }
+
+  exportUsersExcel(query?: string, role?: UserRole, status?: UserStatus, createdFrom?: string, createdTo?: string): Observable<Blob> {
+    let params = new HttpParams();
+    if (query) params = params.set('email', query);
+    if (role) params = params.set('role', role);
+    if (status) params = params.set('status', status);
+    if (createdFrom) params = params.set('createdFrom', createdFrom);
+    if (createdTo) params = params.set('createdTo', createdTo);
+    return this.http.get(`${API_BASE_URL}/api/user/admin/export/excel`, { params, responseType: 'blob' });
+  }
+
+  exportSelectedCsv(ids: number[]): Observable<Blob> {
+    return this.http.post(`${API_BASE_URL}/api/user/admin/export/csv/selected`, ids, {
+      responseType: 'blob'
+    });
+  }
+
+  exportSelectedExcel(ids: number[]): Observable<Blob> {
+    return this.http.post(`${API_BASE_URL}/api/user/admin/export/excel/selected`, ids, {
+      responseType: 'blob'
+    });
   }
 
   getAdminStats(): Observable<AdminStats> {
@@ -119,9 +161,21 @@ export class AdminApi {
     );
   }
 
-  getActivities(role?: UserRole, page = 0, size = 20): Observable<PageResponse<UserActivity>> {
+  getActivities(
+    role?: UserRole,
+    actionType?: string,
+    userId?: number,
+    from?: string,
+    to?: string,
+    page = 0,
+    size = 20
+  ): Observable<PageResponse<UserActivity>> {
     let params = new HttpParams().set('page', page.toString()).set('size', size.toString());
     if (role) params = params.set('role', role);
+    if (actionType) params = params.set('actionType', actionType);
+    if (userId !== undefined) params = params.set('userId', userId.toString());
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
     return this.http.get<ApiResponse<PageResponse<UserActivity>>>(`${API_BASE_URL}/api/user/admin/activities`, { params }).pipe(
       map(response => response.data)
     );

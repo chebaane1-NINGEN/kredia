@@ -109,4 +109,26 @@ export class AgentApi {
       map(response => response.data)
     );
   }
+
+  // Client workflow actions
+  approveClient(clientId: number): Observable<AgentClient> {
+    console.debug('[AgentApi] approveClient', clientId);
+    return this.http.post<ApiResponse<AgentClient>>(`${API_BASE_URL}/api/user/agent/client/${clientId}/approve`, {}).pipe(
+      map(response => response.data)
+    );
+  }
+
+  rejectClient(clientId: number, reason?: string): Observable<AgentClient> {
+    console.debug('[AgentApi] rejectClient', clientId, reason);
+    return this.http.post<ApiResponse<AgentClient>>(`${API_BASE_URL}/api/user/agent/client/${clientId}/reject`, { reason }).pipe(
+      map(response => response.data)
+    );
+  }
+
+  suspendClient(clientId: number, reason?: string): Observable<AgentClient> {
+    console.debug('[AgentApi] suspendClient', clientId, reason);
+    return this.http.post<ApiResponse<AgentClient>>(`${API_BASE_URL}/api/user/agent/client/${clientId}/suspend`, { reason }).pipe(
+      map(response => response.data)
+    );
+  }
 }

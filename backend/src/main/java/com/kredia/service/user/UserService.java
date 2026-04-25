@@ -64,7 +64,11 @@ public interface UserService {
     Page<UserResponseDTO> adminClient(Long actorId, Pageable pageable);
     Page<UserResponseDTO> agentClients(Long actorId, Optional<String> email, Optional<UserStatus> status, Pageable pageable);
     Page<UserActivityResponseDTO> adminAudit(Long actorId, Long userId, Pageable pageable);
-    Page<UserActivityResponseDTO> adminActivityByRole(Long actorId, Optional<UserRole> role, Pageable pageable);
+    Page<UserActivityResponseDTO> adminActivities(Long actorId, Optional<UserRole> role, Optional<String> actionType, Optional<Long> userId, Optional<Instant> from, Optional<Instant> to, Pageable pageable);
+    byte[] exportUsersCsv(Long actorId, Optional<String> email, Optional<UserStatus> status, Optional<UserRole> role, Optional<Instant> createdFrom, Optional<Instant> createdTo);
+    byte[] exportUsersExcel(Long actorId, Optional<String> email, Optional<UserStatus> status, Optional<UserRole> role, Optional<Instant> createdFrom, Optional<Instant> createdTo);
+    byte[] exportSelectedUsersCsv(Long actorId, List<Long> ids);
+    byte[] exportSelectedUsersExcel(Long actorId, List<Long> ids);
 
     // --- Agent Performance & Activity ---
     AgentPerformanceDTO agentDashboard(Long agentId);
@@ -76,4 +80,9 @@ public interface UserService {
     Page<UserActivityResponseDTO> clientActivity(Long clientId, Pageable pageable);
     ClientRiskScoreDTO clientRiskScore(Long clientId);
     ClientEligibilityDTO clientEligibility(Long clientId);
+
+    // --- Agent Client Workflow ---
+    UserResponseDTO approveClient(Long agentId, Long clientId);
+    UserResponseDTO rejectClient(Long agentId, Long clientId, String reason);
+    UserResponseDTO suspendClient(Long agentId, Long clientId, String reason);
 }

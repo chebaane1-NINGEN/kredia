@@ -75,6 +75,34 @@
       </div>
     </div>
 
+    <!-- Client Actions -->
+    <div class="actions-section">
+      <h2>Client Actions</h2>
+      <div class="actions-grid">
+        <button
+          (click)="approveClient()"
+          [disabled]="client.status === 'ACTIVE' || loading"
+          class="action-btn approve-btn"
+        >
+          ✅ Approve Client
+        </button>
+        <button
+          (click)="rejectClient()"
+          [disabled]="client.status === 'BLOCKED' || loading"
+          class="action-btn reject-btn"
+        >
+          ❌ Reject Client
+        </button>
+        <button
+          (click)="suspendClient()"
+          [disabled]="client.status === 'SUSPENDED' || loading"
+          class="action-btn suspend-btn"
+        >
+          ⚠️ Suspend Client
+        </button>
+      </div>
+    </div>
+
     <!-- Activity History -->
     <div class="activity-section">
       <h2>Activity History</h2>

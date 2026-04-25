@@ -1,0 +1,139 @@
+<section class="admin-agent-performance-page">
+  <div class="topbar">
+    <div class="topbar__title">
+      <p class="eyebrow">Agent Management</p>
+      <h1>Agent Performance Dashboard</h1>
+      <p class="description">Monitor agent performance, approval rates, and client handling metrics.</p>
+    </div>
+    <div class="topbar__actions">
+      <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()" class="period-select">
+        <option value="last7">Last 7 days</option>
+        <option value="last30">Last 30 days</option>
+        <option value="last90">Last 90 days</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading agent performance data...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-state">
+    <div class="error-icon">⚠️</div>
+    <h3>Failed to Load Data</h3>
+    <p>{{ error }}</p>
+    <button class="btn primary" (click)="loadAgents()">Retry</button>
+  </div>
+
+  <!-- Performance Overview -->
+  <div *ngIf="!loading && !error" class="performance-overview">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <h3>{{ agents.length }}</h3>
+          <p>Total Agents</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="stat-content">
+          <h3>{{ getAverageScore() }}%</h3>
+          <p>Average Performance</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <h3>{{ getTotalApprovals() }}</h3>
+          <p>Total Approvals</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👨‍💼</div>
+        <div class="stat-content">
+          <h3>{{ getTotalClientsHandled() }}</h3>
+          <p>Clients Handled</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Performers -->
+    <div class="panel">
+      <div class="panel-header">
+        <h2>🏆 Top Performers</h2>
+      </div>
+      <div class="top-performers">
+        <div *ngFor="let item of getTopPerformers(); let i = index" class="performer-card">
+          <div class="rank">#{{ i + 1 }}</div>
+          <div class="agent-info">
+            <div class="agent-avatar">{{ item.agent.firstName?.charAt(0) }}{{ item.agent.lastName?.charAt(0) }}</div>
+            <div class="agent-details">
+              <h4>{{ item.agent.firstName }} {{ item.agent.lastName }}</h4>
+              <p>{{ item.agent.email }}</p>
+            </div>
+          </div>
+          <div class="performance-metrics">
+            <div class="metric">
+              <span class="metric-label">Score</span>
+              <span class="metric-value">{{ item.performance.performanceScore }}%</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Clients</span>
+              <span class="metric-value">{{ item.performance.numberOfClientsHandled }}</span>
+            </div>
+          </div>
+          <div class="performance-badge" [ngClass]="getPerformanceBadge(item.performance.performanceScore).class">
+            {{ getPerformanceBadge(item.performance.performanceScore).label }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agent Performance Table -->
+    <div class="panel">
+      <div class="panel-header">
+        <h2>📊 Agent Performance Details</h2>
+      </div>
+      <div class="performance-table">
+        <div class="table-header">
+          <div class="col-agent">Agent</div>
+          <div class="col-metric">Approvals</div>
+          <div class="col-metric">Rejections</div>
+          <div class="col-metric">Clients</div>
+          <div class="col-metric">Score</div>
+          <div class="col-metric">Avg Time</div>
+          <div class="col-status">Status</div>
+        </div>
+        <div *ngFor="let item of agentPerformances" class="table-row">
+          <div class="col-agent">
+            <div class="agent-info">
+              <div class="agent-avatar">{{ item.agent.firstName?.charAt(0) }}{{ item.agent.lastName?.charAt(0) }}</div>
+              <div class="agent-details">
+                <h4>{{ item.agent.firstName }} {{ item.agent.lastName }}</h4>
+                <p>{{ item.agent.email }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-metric">{{ item.performance.approvalActionsCount }}</div>
+          <div class="col-metric">{{ item.performance.rejectionActionsCount }}</div>
+          <div class="col-metric">{{ item.performance.numberOfClientsHandled }}</div>
+          <div class="col-metric">
+            <span class="score" [ngClass]="getScoreClass(item.performance.performanceScore)">
+              {{ item.performance.performanceScore }}%
+            </span>
+          </div>
+          <div class="col-metric">{{ formatTime(item.performance.averageProcessingTimeSeconds) }}</div>
+          <div class="col-status">
+            <span class="status-badge" [ngClass]="getPerformanceBadge(item.performance.performanceScore).class">
+              {{ getPerformanceBadge(item.performance.performanceScore).label }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

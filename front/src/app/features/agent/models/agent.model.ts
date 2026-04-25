@@ -38,26 +38,6 @@ export interface AgentClient {
   gender: string;
 }
 
-export interface AgentProfile {
-  userId: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  role: string;
-  createdAt: string;
-  lastLogin?: string;
-  profilePicture?: string;
-  department?: string;
-  manager?: string;
-}
-
-export interface ClientDetails extends AgentClient {
-  activities: AgentActivity[];
-  riskScore?: number;
-  eligibility?: string;
-}
-
 export interface ClientDetails extends AgentClient {
   activities: AgentActivity[];
   riskScore?: number;
