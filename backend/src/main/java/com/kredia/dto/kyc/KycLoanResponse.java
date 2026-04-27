@@ -14,5 +14,6 @@ public record KycLoanResponse(
         String documentPath,
         LocalDateTime submittedAt,
         KycStatus verifiedStatus,
-        String verificationMessage
+        String verificationMessage,
+        String aiEvaluation
 ) {}

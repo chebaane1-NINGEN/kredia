@@ -222,3 +222,52 @@ button[disabled] {
     color: #0050a0;
   }
 }
+
+/* ── Fee Display ────────────────────────────────────────── */
+.fee-display {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+
+  .fee-summary {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    p {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #475569;
+    }
+    strong {
+      color: #0f172a;
+      font-weight: 700;
+    }
+  }
+
+  .fee-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px dashed #cbd5e1;
+    cursor: pointer;
+    user-select: none;
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #0284c7;
+      cursor: pointer;
+    }
+
+    span {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+  }
+}

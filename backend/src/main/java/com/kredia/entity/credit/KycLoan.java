@@ -48,6 +48,9 @@ public class KycLoan {
     @Column(name = "verified_status", nullable = false)
     private KycStatus verifiedStatus ;
 
+    @Column(name = "ai_evaluation", columnDefinition = "TEXT")
+    private String aiEvaluation;
+
     @PrePersist
     protected void onCreate() {
         submittedAt = LocalDateTime.now();

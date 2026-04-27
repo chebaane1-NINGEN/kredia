@@ -1,0 +1,3 @@
+ALTER TABLE demande_credit
+ADD COLUMN application_fee FLOAT DEFAULT 0,
+ADD COLUMN is_fee_paid BOOLEAN DEFAULT FALSE;

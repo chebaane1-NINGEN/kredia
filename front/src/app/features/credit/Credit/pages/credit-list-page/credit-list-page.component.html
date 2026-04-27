@@ -66,6 +66,7 @@
           <th>Repayment Type</th>
           <th>Start Date</th>
           <th>Status</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -79,6 +80,11 @@
             <span [class]="'badge ' + getStatusClass(d.status)">
               {{ getStatusLabel(d.status) }}
             </span>
+          </td>
+          <td>
+            <button *ngIf="d.status === 'REJECTED'" 
+                    class="btn btn--small btn--reject-reason" 
+                    (click)="showDemandeReason(d)">View Reason</button>
           </td>
         </tr>
       </tbody>
@@ -99,6 +105,8 @@
           <th>Application #</th>
           <th>Client (ID)</th>
           <th>Amount</th>
+          <th>Frais Dossier</th>
+          <th>Statut Paiement</th>
           <th>Term</th>
           <th>Repayment Type</th>
           <th>Monthly Income</th>
@@ -112,6 +120,11 @@
           <td>#{{ d.creditId }}</td>
           <td>{{ d.userId }}</td>
           <td>{{ d.amount | number:'1.2-2' }}</td>
+          <td>{{ d.applicationFee | number:'1.2-2' }} DT</td>
+          <td>
+            <span *ngIf="d.isFeePaid" class="badge status--active">✅ Payé</span>
+            <span *ngIf="!d.isFeePaid" class="badge status--rejected">❌ Non payé</span>
+          </td>
           <td>{{ d.termMonths }} months</td>
           <td>{{ getRepaymentLabel(d.repaymentType) }}</td>
           <td>{{ d.income | number:'1.2-2' }}</td>
@@ -226,13 +239,33 @@
             </td>
             <td>{{ doc.submittedAt | date:'MM/dd/yy HH:mm' }}</td>
             <td>
-              <a *ngIf="doc.documentPath" [href]="doc.documentPath" target="_blank" class="btn btn--small">
+              <a [routerLink]="['/credit/kyc']" 
+                 [queryParams]="{ demandeId: kycModalDemandeId, kycLoanId: doc.kycLoanId }" 
+                 class="btn btn--small">
                 🔗 View
               </a>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Demande Rejection Reason Modal ──────────────────────────────── -->
+<div class="modal-overlay" *ngIf="selectedReasonDemande" (click)="closeDemandeReason()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>❌ Rejection Reason</h2>
+      <button class="modal-close" (click)="closeDemandeReason()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div *ngIf="rejectionReasonLoading" class="modal-loading">Loading...</div>
+      <div *ngIf="!rejectionReasonLoading">
+        <p style="font-size: 1.05rem; font-weight: 600; color: #b91c1c;">
+          {{ rejectionReasonText }}
+        </p>
+      </div>
     </div>
   </div>
 </div>

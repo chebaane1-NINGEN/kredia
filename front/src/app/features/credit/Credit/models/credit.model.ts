@@ -29,6 +29,8 @@ export interface DemandeCredit {
   dependents: number;
   status?: CreditStatus;
   createdAt?: string;
+  applicationFee?: number;
+  isFeePaid?: boolean;
 }
 
 export interface DefaultPredictionResponse {

@@ -1,14 +1,17 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './pages/home/home.component';
 import { LoginComponent } from './pages/login/login.component';
+import { PublicSimulateurComponent } from './pages/public-simulateur/public-simulateur.component';
 import { authGuard, authChildGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
 
   // ── Public ─────────────────────────────────────────────
-  { path: '',      component: HomeComponent, pathMatch: 'full' },
-  { path: 'home',  component: HomeComponent },
-  { path: 'login', component: LoginComponent },
+  { path: '',           component: HomeComponent, pathMatch: 'full' },
+  { path: 'home',       component: HomeComponent },
+  { path: 'login',      component: LoginComponent },
+  { path: 'simulateur', component: PublicSimulateurComponent },
+
 
   // ── Credit ─────────────────────────────────────────────
   {

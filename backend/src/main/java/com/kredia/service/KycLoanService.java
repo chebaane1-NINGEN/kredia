@@ -267,13 +267,9 @@ public class KycLoanService {
             );
             log.info("Gemini response for evaluation: {}", geminiResponse);
 
-            // Update status based on AI response — do NOT touch credit_id here
-            String responseUpper = geminiResponse.toUpperCase();
-            if (responseUpper.contains("APPROVED") || responseUpper.contains("VERIFIED")) {
-                kycLoan.setVerifiedStatus(KycStatus.APPROVED);
-            } else if (responseUpper.contains("REJECTED")) {
-                kycLoan.setVerifiedStatus(KycStatus.REJECTED);
-            }
+            // We only return the result for the admin to read.
+            // We do NOT update the DB status automatically to keep the decision manual.
+            kycLoan.setAiEvaluation(geminiResponse);
             kycLoanRepository.save(kycLoan);
 
             return toResponse(kycLoan, geminiResponse);
@@ -293,7 +289,8 @@ public class KycLoanService {
                 kycLoan.getDocumentPath(),
                 kycLoan.getSubmittedAt(),
                 kycLoan.getVerifiedStatus(),
-                message
+                message,
+                kycLoan.getAiEvaluation()
         );
     }
 }

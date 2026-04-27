@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 import { KycLoanVm } from '../../vm/kyc-loan.vm';
 import { DocumentTypeLoan, KycLoanResponse, VerifiedStatus } from '../../models/kyc-loan.model';
@@ -28,6 +29,7 @@ export class KycLoanPageComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   readonly auth        = inject(AuthService);
   private readonly creditVm = inject(CreditVm);
+  private readonly route = inject(ActivatedRoute);
 
   // ── État UI ────────────────────────────────────────────
   // Pour CLIENT : userId est lu depuis le JWT. Pour admin, on garde la saisie manuelle.
@@ -56,6 +58,8 @@ export class KycLoanPageComponent implements OnInit {
     { documentType: 'OTHER',          label: 'Other Document',       icon: '📎' }
   ];
 
+  pendingSelectionKycLoanId: number | null = null;
+
   ngOnInit(): void {
     const tokenUserId = this.auth.getCurrentUserId();
     if (this.auth.isClient() && tokenUserId) {
@@ -65,6 +69,29 @@ export class KycLoanPageComponent implements OnInit {
     } else if (!this.auth.isClient()) {
       // For Admin: load all submitted documents
       this.loadAllDocs();
+    }
+
+    // Handle query params
+    this.route.queryParams.subscribe(params => {
+      if (params['demandeId']) {
+        this.demandeFilter = params['demandeId'];
+        this.cdr.markForCheck();
+      }
+      if (params['kycLoanId']) {
+        this.pendingSelectionKycLoanId = +params['kycLoanId'];
+        this.trySelectPendingDoc();
+      }
+    });
+  }
+
+  trySelectPendingDoc(): void {
+    if (this.pendingSelectionKycLoanId && this.uploadedDocs.length > 0) {
+      const doc = this.uploadedDocs.find(d => d.kycLoanId === this.pendingSelectionKycLoanId);
+      if (doc) {
+        this.selectDoc(doc);
+        this.pendingSelectionKycLoanId = null;
+        this.cdr.markForCheck();
+      }
     }
   }
 
@@ -100,6 +127,7 @@ export class KycLoanPageComponent implements OnInit {
     this.vm.getByUserId(this.userId).subscribe({
       next: (docs) => {
         this.uploadedDocs = docs ?? [];
+        this.trySelectPendingDoc();
         this.cdr.markForCheck();
       },
       error: () => {
@@ -113,6 +141,7 @@ export class KycLoanPageComponent implements OnInit {
     this.vm.getAll().subscribe({
       next: (docs) => {
         this.uploadedDocs = docs ?? [];
+        this.trySelectPendingDoc();
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -293,6 +322,18 @@ export class KycLoanPageComponent implements OnInit {
   selectDoc(doc: KycLoanResponse): void {
     this.verifyResult = doc;
     this.uploadedDoc  = null;
+    this.cdr.markForCheck();
+  }
+
+  selectedReasonDoc: KycLoanResponse | null = null;
+
+  showReason(doc: KycLoanResponse): void {
+    this.selectedReasonDoc = doc;
+    this.cdr.markForCheck();
+  }
+
+  closeReason(): void {
+    this.selectedReasonDoc = null;
     this.cdr.markForCheck();
   }
 

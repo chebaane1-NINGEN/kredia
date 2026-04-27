@@ -17,6 +17,10 @@ import { ChatbotPageComponent }    from './Chatbot/pages/chatbot-page/chatbot-pa
 // ── Pages KycLoan ──────────────────────────────────────
 import { KycLoanPageComponent }    from './KycLoan/pages/kyc-loan-page/kyc-loan-page.component';
 
+// ── Pages Simulateur ───────────────────────────────────────
+import { SimulateurHomePageComponent } from './Simulateur/pages/simulateur-home-page/simulateur-home-page.component';
+import { SimulateurFormPageComponent } from './Simulateur/pages/simulateur-form-page/simulateur-form-page.component';
+
 // ── Routing ────────────────────────────────────────────
 import { CreditRoutingModule }     from './credit-routing.module';
 
@@ -28,6 +32,8 @@ import { CreditRoutingModule }     from './credit-routing.module';
     EcheancePageComponent,
     ChatbotPageComponent,
     KycLoanPageComponent,
+    SimulateurHomePageComponent,
+    SimulateurFormPageComponent,
   ],
   imports: [
     CommonModule,

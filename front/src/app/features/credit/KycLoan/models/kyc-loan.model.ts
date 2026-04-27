@@ -17,6 +17,7 @@ export interface KycLoanResponse {
   submittedAt: string;
   verifiedStatus: VerifiedStatus;
   verificationMessage?: string;
+  aiEvaluation?: string;
 }
 
 export interface KycLoan {
