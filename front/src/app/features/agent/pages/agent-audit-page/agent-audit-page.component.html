@@ -24,6 +24,17 @@
         <option value="STATUS_CHANGED">Status Changed</option>
       </select>
     </div>
+
+    <div class="filter-group">
+      <label class="checkbox-label">
+        <input
+          type="checkbox"
+          [(ngModel)]="showClientOnly"
+          class="client-filter-checkbox"
+        >
+        Client-related only
+      </label>
+    </div>
   </div>
 
   <!-- Loading State -->

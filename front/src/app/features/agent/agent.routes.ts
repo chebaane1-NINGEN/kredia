@@ -21,9 +21,5 @@ export const routes: Routes = [
   {
     path: 'audit',
     loadComponent: () => import('./pages/agent-audit-page/agent-audit-page.component').then(m => m.AgentAuditPageComponent)
-  },
-  {
-    path: 'profile',
-    loadComponent: () => import('./pages/agent-profile-page/agent-profile-page.component').then(m => m.AgentProfilePageComponent)
   }
 ];

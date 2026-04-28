@@ -24,6 +24,7 @@ export class AgentAuditPageComponent implements OnInit {
   // Filters
   selectedAction = '';
   searchTerm = '';
+  showClientOnly = true; // Default to showing only client-related activities
 
   // Pagination
   currentPage = 0;
@@ -81,7 +82,12 @@ export class AgentAuditPageComponent implements OnInit {
       const matchesSearch = !this.searchTerm ||
         activity.description.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         (activity.userName && activity.userName.toLowerCase().includes(this.searchTerm.toLowerCase()));
-      return matchesAction && matchesSearch;
+      const matchesClientFilter = !this.showClientOnly ||
+        activity.actionType === 'APPROVAL' ||
+        activity.actionType === 'CLIENT_HANDLED' ||
+        activity.actionType === 'STATUS_CHANGED' ||
+        activity.description.toLowerCase().includes('client');
+      return matchesAction && matchesSearch && matchesClientFilter;
     });
   }
 }

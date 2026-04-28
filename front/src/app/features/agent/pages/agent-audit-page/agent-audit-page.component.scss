@@ -61,6 +61,22 @@
       border-color: #007bff;
     }
   }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    color: #495057;
+    cursor: pointer;
+    user-select: none;
+
+    .client-filter-checkbox {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+  }
 }
 
 .loading-state, .error-state, .empty-state {

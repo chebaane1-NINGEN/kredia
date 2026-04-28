@@ -41,7 +41,9 @@ export class AgentApi {
     email?: string,
     status?: string,
     page = 0,
-    size = 10
+    size = 10,
+    sortBy?: string,
+    sortDirection?: string
   ): Observable<PageResponse<AgentClient>> {
     let params = new HttpParams()
       .set('page', page.toString())
@@ -49,6 +51,8 @@ export class AgentApi {
 
     if (email) params = params.set('email', email);
     if (status) params = params.set('status', status);
+    if (sortBy) params = params.set('sortBy', sortBy);
+    if (sortDirection) params = params.set('sortDirection', sortDirection);
 
     console.debug('[AgentApi] getClients', { email, status, page, size });
     return this.http.get<ApiResponse<PageResponse<AgentClient>>>(`${API_BASE_URL}/api/user/agent/clients`, { params }).pipe(

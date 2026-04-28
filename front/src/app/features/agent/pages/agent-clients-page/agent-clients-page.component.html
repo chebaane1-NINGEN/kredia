@@ -54,11 +54,25 @@
       <table class="clients-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Email</th>
+            <th (click)="onSortChange('firstName')" class="sortable">
+              Name <span class="sort-icon" [class.active]="sortBy === 'firstName'">{{ sortBy === 'firstName' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+            </th>
+            <th (click)="onSortChange('email')" class="sortable">
+              Email <span class="sort-icon" [class.active]="sortBy === 'email'">{{ sortBy === 'email' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+            </th>
             <th>Phone</th>
-            <th>Status</th>
-            <th>Created</th>
+            <th (click)="onSortChange('status')" class="sortable">
+              Status <span class="sort-icon" [class.active]="sortBy === 'status'">{{ sortBy === 'status' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+            </th>
+            <th (click)="onSortChange('createdAt')" class="sortable">
+              Created <span class="sort-icon" [class.active]="sortBy === 'createdAt'">{{ sortBy === 'createdAt' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+            </th>
+            <th (click)="onSortChange('updatedAt')" class="sortable">
+              Last Interaction <span class="sort-icon" [class.active]="sortBy === 'updatedAt'">{{ sortBy === 'updatedAt' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+            </th>
+            <th (click)="onSortChange('priorityScore')" class="sortable">
+              Priority <span class="sort-icon" [class.active]="sortBy === 'priorityScore'">{{ sortBy === 'priorityScore' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+            </th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -73,6 +87,12 @@
               </span>
             </td>
             <td>{{ client.createdAt | date:'shortDate' }}</td>
+            <td>{{ client.updatedAt | date:'short' }}</td>
+            <td>
+              <span class="priority-badge" [class]="getPriorityClass(client.priorityScore)">
+                {{ client.priorityScore || 'N/A' }}
+              </span>
+            </td>
             <td>
               <button (click)="viewClientDetails(client)" class="action-btn view-btn">
                 👁️ View

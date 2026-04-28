@@ -31,11 +31,14 @@ export interface AgentClient {
   status: string;
   role: string;
   createdAt: string;
+  updatedAt: string;
   assignedAgentId?: number;
   assignedAgentName?: string;
   dateOfBirth: string;
   address: string;
   gender: string;
+  lastInteraction?: string;
+  priorityScore?: number;
 }
 
 export interface ClientDetails extends AgentClient {

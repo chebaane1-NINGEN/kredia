@@ -140,6 +140,28 @@
       font-size: 0.875rem;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+
+      &.sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        transition: background-color 0.2s;
+
+        &:hover {
+          background-color: #e9ecef;
+        }
+
+        .sort-icon {
+          margin-left: 0.5rem;
+          opacity: 0.5;
+          font-size: 0.8em;
+
+          &.active {
+            opacity: 1;
+            color: #007bff;
+          }
+        }
+      }
     }
 
     tbody tr {
@@ -171,17 +193,44 @@
       font-weight: 500;
       text-transform: uppercase;
 
-      &.active {
+      &.status-active {
         background-color: #d4edda;
         color: #155724;
       }
 
-      &.pending {
+      &.status-inactive {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+
+      &.status-suspended {
         background-color: #fff3cd;
         color: #856404;
       }
 
-      &.inactive {
+      &.status-blocked {
+        background-color: #f5c6cb;
+        color: #721c24;
+      }
+    }
+
+    .priority-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+
+      &.priority-high {
+        background-color: #d4edda;
+        color: #155724;
+      }
+
+      &.priority-medium {
+        background-color: #fff3cd;
+        color: #856404;
+      }
+
+      &.priority-low {
         background-color: #f8d7da;
         color: #721c24;
       }
@@ -271,8 +320,6 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
-
-// Responsive design
 @media (max-width: 768px) {
   .clients-container {
     padding: 1rem;

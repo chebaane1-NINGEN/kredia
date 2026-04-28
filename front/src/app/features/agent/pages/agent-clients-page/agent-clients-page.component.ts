@@ -26,6 +26,8 @@ export class AgentClientsPageComponent implements OnInit {
   // Filters
   searchEmail = '';
   selectedStatus = '';
+  sortBy = 'priorityScore'; // Default sort by priority
+  sortDirection: 'asc' | 'desc' = 'desc'; // High priority first
 
   // Pagination
   currentPage = 0;
@@ -42,7 +44,7 @@ export class AgentClientsPageComponent implements OnInit {
     this.error = null;
     this.cdr.markForCheck();
 
-    this.api.getClients(this.searchEmail || undefined, this.selectedStatus || undefined, this.currentPage, this.pageSize)
+    this.api.getClients(this.searchEmail || undefined, this.selectedStatus || undefined, this.currentPage, this.pageSize, this.sortBy, this.sortDirection)
       .pipe(finalize(() => {
         this.loading = false;
         this.cdr.markForCheck();
@@ -70,6 +72,17 @@ export class AgentClientsPageComponent implements OnInit {
     this.loadClients();
   }
 
+  onSortChange(sortBy: string): void {
+    if (this.sortBy === sortBy) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortBy = sortBy;
+      this.sortDirection = 'desc'; // Default to descending for new sort
+    }
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
   onPageChange(page: number): void {
     if (page >= 0 && page < this.totalPages) {
       this.currentPage = page;
@@ -93,5 +106,12 @@ export class AgentClientsPageComponent implements OnInit {
 
   getStatusBadgeClass(status: string): string {
     return `status-${status.toLowerCase()}`;
+  }
+
+  getPriorityClass(score?: number): string {
+    if (!score) return 'priority-low';
+    if (score >= 80) return 'priority-high';
+    if (score >= 50) return 'priority-medium';
+    return 'priority-low';
   }
 }
