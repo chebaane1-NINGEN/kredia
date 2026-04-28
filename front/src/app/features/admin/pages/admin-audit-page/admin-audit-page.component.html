@@ -159,6 +159,7 @@
             <th (click)="sortBy('actionType')" [class.sorted]="filters.sortBy === 'actionType'">
               Action <i class="fas" [class.fa-sort-up]="filters.sortDirection === 'ASC'" [class.fa-sort-down]="filters.sortDirection === 'DESC'"></i>
             </th>
+            <th>Module</th>
             <th>Actor</th>
             <th>Target</th>
             <th>Status</th>
@@ -175,6 +176,7 @@
                 {{ log.actionType | titlecase }}
               </span>
             </td>
+            <td>{{ getModuleFromLog(log) }}</td>
             <td>
               <div class="actor-info">
                 <div class="actor-name">{{ log.actorName || 'System' }}</div>
@@ -299,6 +301,10 @@
             </div>
           </div>
 
+          <div class="detail-item full-width">
+            <label>Module</label>
+            <span>{{ getModuleFromLog(selectedLog) }}</span>
+          </div>
           <div class="detail-item full-width">
             <label>Network</label>
             <div class="network-details">

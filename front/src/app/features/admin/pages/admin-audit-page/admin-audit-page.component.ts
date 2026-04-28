@@ -104,6 +104,38 @@ export class AdminAuditPageComponent implements OnInit {
     this.selectedLog = null;
   }
 
+  getModuleFromLog(log: AuditLogDTO): string {
+    const moduleField = log?.requestData?.module || log?.responseData?.module;
+    if (typeof moduleField === 'string' && moduleField.trim().length > 0) {
+      return moduleField;
+    }
+
+    return this.deriveModuleFromAction(log?.actionType);
+  }
+
+  private deriveModuleFromAction(actionType?: string): string {
+    if (!actionType) {
+      return 'Unknown';
+    }
+
+    if (actionType.startsWith('CREATE_CREDIT') || actionType.startsWith('UPDATE_CREDIT') || actionType === 'DELETE_CREDIT' || actionType === 'APPROVE_CREDIT' || actionType === 'REJECT_CREDIT') {
+      return 'Credit Management';
+    }
+    if (actionType.startsWith('CREATE_TRANSACTION') || actionType.startsWith('UPDATE_TRANSACTION') || actionType === 'DELETE_TRANSACTION' || actionType === 'REVERSE_TRANSACTION') {
+      return 'Transaction Management';
+    }
+    if (actionType === 'LOGIN' || actionType === 'LOGOUT' || actionType === 'RESET_PASSWORD' || actionType === 'CHANGE_PERMISSIONS' || actionType === 'UPDATE_USER' || actionType === 'DELETE_USER' || actionType === 'CREATE_USER') {
+      return 'User Management';
+    }
+    if (actionType === 'VIEW' || actionType === 'GENERATE_REPORT' || actionType === 'VIEW_ANALYTICS') {
+      return 'Analytics';
+    }
+    if (actionType === 'MODIFY_SETTINGS' || actionType === 'SYSTEM_CONFIG_CHANGE' || actionType === 'IMPORT_DATA' || actionType === 'EXPORT_DATA') {
+      return 'Settings';
+    }
+    return 'General';
+  }
+
   getActionClass(actionType: string): string {
     const actionClasses: { [key: string]: string } = {
       'LOGIN': 'login',

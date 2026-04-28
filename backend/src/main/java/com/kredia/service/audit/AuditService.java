@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -210,7 +211,7 @@ public class AuditService {
 
         // Parse action types if comma-separated
         AuditLog.AuditActionType actionType = null;
-        if (filter.getActionType() != null && !filter.getActionType().isEmpty()) {
+        if (StringUtils.hasText(filter.getActionType())) {
             try {
                 actionType = AuditLog.AuditActionType.valueOf(filter.getActionType());
             } catch (IllegalArgumentException e) {
@@ -220,7 +221,7 @@ public class AuditService {
 
         // Parse severity
         AuditLog.AuditSeverity severity = null;
-        if (filter.getSeverity() != null && !filter.getSeverity().isEmpty()) {
+        if (StringUtils.hasText(filter.getSeverity())) {
             try {
                 severity = AuditLog.AuditSeverity.valueOf(filter.getSeverity());
             } catch (IllegalArgumentException e) {
@@ -230,7 +231,7 @@ public class AuditService {
 
         // Parse status
         AuditLog.AuditStatus status = null;
-        if (filter.getStatus() != null && !filter.getStatus().isEmpty()) {
+        if (StringUtils.hasText(filter.getStatus())) {
             try {
                 status = AuditLog.AuditStatus.valueOf(filter.getStatus());
             } catch (IllegalArgumentException e) {
@@ -238,7 +239,10 @@ public class AuditService {
             }
         }
 
-        return auditLogRepository.findByMultipleCriteria(startDate, endDate, actionType, severity, status, pageable)
+        String ipAddress = StringUtils.hasText(filter.getIpAddress()) ? filter.getIpAddress().trim() : null;
+
+        return auditLogRepository.findByMultipleCriteria(startDate, endDate, actionType, severity, status,
+                filter.getActorId(), filter.getTargetId(), ipAddress, pageable)
             .map(AuditLogDTO::fromEntity);
     }
 
@@ -280,7 +284,7 @@ public class AuditService {
         long failedToday = auditLogRepository.countByStatusAndTimestampBetween(AuditLog.AuditStatus.FAILED, today, tomorrow);
         long highSeverityToday = auditLogRepository.countBySeverityAndTimestampBetween(AuditLog.AuditSeverity.HIGH, today, tomorrow);
 
-        List<java.util.Map<String, Object>> actionDist = auditLogRepository.countByActionType();
+        List<java.util.Map<String, Object>> actionDist = auditLogRepository.countByActionTypeInRange(today, tomorrow);
         List<java.util.Map<String, Object>> severityDist = auditLogRepository.countBySeverityInRange(today, tomorrow);
 
         Map<String, Long> actionMap = actionDist.stream()

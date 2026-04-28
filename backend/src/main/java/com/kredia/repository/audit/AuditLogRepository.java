@@ -52,13 +52,16 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     Page<AuditLog> findHighSeverityActions(Pageable pageable);
 
     /**
-     * Complex filter: date range + action type + severity
+     * Complex filter: date range + action type + severity + status + actor + target + IP
      */
     @Query("SELECT a FROM AuditLog a WHERE " +
            "a.timestamp BETWEEN :startDate AND :endDate " +
            "AND (:actionType IS NULL OR a.actionType = :actionType) " +
            "AND (:severity IS NULL OR a.severity = :severity) " +
            "AND (:status IS NULL OR a.status = :status) " +
+           "AND (:actorId IS NULL OR a.actorId = :actorId) " +
+           "AND (:targetId IS NULL OR a.targetId = :targetId) " +
+           "AND (:ipAddress IS NULL OR a.ipAddress = :ipAddress) " +
            "ORDER BY a.timestamp DESC")
     Page<AuditLog> findByMultipleCriteria(
         @Param("startDate") Instant startDate,
@@ -66,8 +69,18 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
         @Param("actionType") AuditLog.AuditActionType actionType,
         @Param("severity") AuditLog.AuditSeverity severity,
         @Param("status") AuditLog.AuditStatus status,
+        @Param("actorId") Long actorId,
+        @Param("targetId") Long targetId,
+        @Param("ipAddress") String ipAddress,
         Pageable pageable
     );
+
+    /**
+     * Statistics: count by action type for a time range
+     */
+    @Query("SELECT NEW map(a.actionType as action, count(a) as count) FROM AuditLog a " +
+           "WHERE a.timestamp BETWEEN :start AND :end GROUP BY a.actionType")
+    List<java.util.Map<String, Object>> countByActionTypeInRange(@Param("start") Instant start, @Param("end") Instant end);
 
     /**
      * Find logs by IP address (for security analysis)

@@ -8,11 +8,13 @@ import com.kredia.service.audit.AuditService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 
 /**
  * AuditController: REST API for audit trail system
@@ -46,8 +48,8 @@ public class AuditController {
     public ResponseEntity<ApiResponse<Page<AuditLogDTO>>> getAuditLogs(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             @RequestParam(required = false) String actionType,
             @RequestParam(required = false) String severity,
             @RequestParam(required = false) String status,
@@ -59,8 +61,8 @@ public class AuditController {
     ) {
         try {
             AuditLogFilter filter = AuditLogFilter.builder()
-                    .startDate(startDate)
-                    .endDate(endDate)
+                    .startDate(parseDateParameter(startDate, false))
+                    .endDate(parseDateParameter(endDate, true))
                     .actionType(actionType)
                     .severity(severity)
                     .status(status)
@@ -78,6 +80,28 @@ public class AuditController {
         } catch (Exception e) {
             logger.error("Error retrieving audit logs", e);
             return ResponseEntity.status(500).body(ApiResponse.error("Failed to retrieve audit logs"));
+        }
+    }
+
+    private Instant parseDateParameter(String value, boolean endOfDay) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Instant.parse(value);
+        } catch (Exception ignored) {
+        }
+
+        try {
+            LocalDate localDate = LocalDate.parse(value);
+            if (endOfDay) {
+                return localDate.atTime(LocalTime.MAX).atZone(ZoneOffset.UTC).toInstant();
+            }
+            return localDate.atStartOfDay(ZoneOffset.UTC).toInstant();
+        } catch (Exception e) {
+            logger.warn("Unable to parse date parameter {}", value);
+            return null;
         }
     }
 
