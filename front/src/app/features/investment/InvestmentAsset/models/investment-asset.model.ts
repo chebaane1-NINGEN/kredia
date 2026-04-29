@@ -1,13 +1,11 @@
-export type AssetType = 'STOCK' | 'BOND' | 'CRYPTO' | 'REAL_ESTATE' | 'COMMODITY';
-export type AssetStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type AssetCategory = 'STOCK' | 'CRYPTO' | 'BOND' | 'ETF' | 'COMMODITY';
+export type AssetRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
 
 export interface InvestmentAsset {
-  assetId?: number;
-  name: string;
+  assetId: number;
   symbol: string;
-  assetType: AssetType;
-  currentPrice: number;
-  currency: string;
-  status: AssetStatus;
-  updatedAt?: string;
+  assetName: string;
+  category: AssetCategory;
+  riskLevel: AssetRiskLevel;
+  createdAt?: string;
 }

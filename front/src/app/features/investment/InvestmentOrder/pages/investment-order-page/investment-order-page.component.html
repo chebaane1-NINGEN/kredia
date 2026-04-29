@@ -1,4 +1,112 @@
-<div class="page-container">
-  <h1>Investment Order</h1>
-  <p>This is a placeholder for the Investment Order component.</p>
-</div>
+<section class="investment-page">
+  <header class="page-header">
+    <div class="title-group">
+      <h1>Investment Orders</h1>
+      <p>Supervision des ordres d'achat et de vente en temps réel.</p>
+    </div>
+
+    <button class="page-action-btn" type="button" (click)="loadOrders()">Actualiser</button>
+  </header>
+
+  <section class="kpi-grid">
+    <article class="kpi-card">
+      <p class="kpi-label">Ordres totaux</p>
+      <p class="kpi-value">{{ orders.length }}</p>
+      <p class="kpi-meta">Historique complet</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">En attente</p>
+      <p class="kpi-value">{{ pendingCount }}</p>
+      <p class="kpi-meta">À traiter</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Exécutés</p>
+      <p class="kpi-value">{{ executedCount }}</p>
+      <p class="kpi-meta">Succès opérationnel</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Annulés</p>
+      <p class="kpi-value">{{ cancelledCount }}</p>
+      <p class="kpi-meta">Ordres stoppés</p>
+    </article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-body filters-grid">
+      <div class="field">
+        <label for="order-search">Recherche</label>
+        <input
+          id="order-search"
+          type="text"
+          [value]="searchTerm"
+          (input)="onSearchInput($event)"
+          placeholder="ID ordre, utilisateur ou asset"
+        />
+      </div>
+
+      <div class="field">
+        <label for="order-status">Statut</label>
+        <select id="order-status" [value]="statusFilter" (change)="onStatusFilterChange($event)">
+          <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="order-type">Type</label>
+        <select id="order-type" [value]="typeFilter" (change)="onTypeFilterChange($event)">
+          <option *ngFor="let type of typeOptions" [value]="type">{{ type }}</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div *ngIf="loading" class="state">Chargement des ordres...</div>
+    <div *ngIf="!loading && errorMessage" class="state state--error">{{ errorMessage }}</div>
+    <div *ngIf="!loading && !errorMessage && filteredOrders.length === 0" class="state">
+      Aucun ordre disponible pour les filtres sélectionnés.
+    </div>
+
+    <div *ngIf="!loading && !errorMessage && filteredOrders.length > 0" class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>User</th>
+            <th>Asset</th>
+            <th>Type</th>
+            <th>Quantité</th>
+            <th>Prix ordre</th>
+            <th>Statut</th>
+            <th>Créé le</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let order of filteredOrders">
+            <td>#{{ order.orderId }}</td>
+            <td>{{ order.user?.userId ?? order.user?.id ?? '-' }}</td>
+            <td>{{ order.assetSymbol }}</td>
+            <td><span [class]="getTypeBadgeClass(order.orderType)">{{ order.orderType }}</span></td>
+            <td>{{ order.quantity | number:'1.0-4' }}</td>
+            <td>{{ order.price != null ? (order.price | number:'1.2-2') : '-' }}</td>
+            <td><span [class]="getStatusBadgeClass(order.orderStatus)">{{ order.orderStatus }}</span></td>
+            <td>{{ order.createdAt ? (order.createdAt | date:'short') : '-' }}</td>
+            <td>
+              <button
+                class="action-link"
+                type="button"
+                [disabled]="order.orderStatus !== 'PENDING' || cancelInProgressOrderId === order.orderId"
+                (click)="cancelOrder(order)">
+                {{ cancelInProgressOrderId === order.orderId ? 'Annulation...' : 'Annuler' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

@@ -15,7 +15,7 @@ export class InvestmentOrderVm {
     return this.api.findByUser(userId);
   }
 
-  cancel(id: number): Observable<InvestmentOrder> {
-    return this.api.cancel(id);
+  cancel(order: InvestmentOrder): Observable<InvestmentOrder> {
+    return this.api.cancel(order);
   }
 }

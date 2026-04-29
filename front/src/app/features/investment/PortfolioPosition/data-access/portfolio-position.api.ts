@@ -9,10 +9,10 @@ export class PortfolioPositionApi {
   constructor(private readonly http: HttpClient) {}
 
   findAll(): Observable<PortfolioPosition[]> {
-    return this.http.get<PortfolioPosition[]>(`${API_BASE_URL}/api/portfolio-positions`);
+    return this.http.get<PortfolioPosition[]>(`${API_BASE_URL}/api/investments/positions`);
   }
 
   findByUser(userId: number): Observable<PortfolioPosition[]> {
-    return this.http.get<PortfolioPosition[]>(`${API_BASE_URL}/api/portfolio-positions/user/${userId}`);
+    return this.http.get<PortfolioPosition[]>(`${API_BASE_URL}/api/investments/positions/user/${userId}`);
   }
 }

@@ -1,4 +1,95 @@
-<div class="page-container">
-  <h1>Portfolio Position</h1>
-  <p>This is a placeholder for the Portfolio Position component.</p>
-</div>
+<section class="investment-page">
+  <header class="page-header">
+    <div class="title-group">
+      <h1>Portfolio Positions</h1>
+      <p>Vue consolidée des positions utilisateurs et performance globale.</p>
+    </div>
+
+    <button class="page-action-btn" type="button" (click)="loadPositions()">Actualiser</button>
+  </header>
+
+  <section class="kpi-grid">
+    <article class="kpi-card">
+      <p class="kpi-label">Positions</p>
+      <p class="kpi-value">{{ positions.length }}</p>
+      <p class="kpi-meta">Lignes en portefeuille</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Valeur totale</p>
+      <p class="kpi-value">{{ totalPortfolioValue | number:'1.2-2' }}</p>
+      <p class="kpi-meta">Capital engagé</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">P/L net</p>
+      <p class="kpi-value" [class]="profitLossClass(totalProfitLoss)">
+        {{ totalProfitLoss | number:'1.2-2' }}
+      </p>
+      <p class="kpi-meta">Résultat agrégé</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Positions gagnantes</p>
+      <p class="kpi-value">{{ profitablePositionsCount }}</p>
+      <p class="kpi-meta">Performance positive</p>
+    </article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-body">
+      <div class="field">
+        <label for="portfolio-search">Recherche</label>
+        <input
+          id="portfolio-search"
+          type="text"
+          [value]="searchTerm"
+          (input)="onSearchInput($event)"
+          placeholder="Asset, ID utilisateur ou ID asset"
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div *ngIf="loading" class="state">Chargement des positions...</div>
+    <div *ngIf="!loading && errorMessage" class="state state--error">{{ errorMessage }}</div>
+    <div *ngIf="!loading && !errorMessage && filteredPositions.length === 0" class="state">
+      Aucune position trouvée.
+    </div>
+
+    <div *ngIf="!loading && !errorMessage && filteredPositions.length > 0" class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Asset</th>
+            <th>Quantité</th>
+            <th>Prix moyen achat</th>
+            <th>Prix actuel</th>
+            <th>Valeur totale</th>
+            <th>P/L</th>
+            <th>MAJ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let position of filteredPositions">
+            <td>{{ position.userId }}</td>
+            <td>
+              <strong>{{ position.assetSymbol }}</strong>
+              <div>#{{ position.positionId }}</div>
+            </td>
+            <td>{{ position.currentQuantity | number:'1.0-4' }}</td>
+            <td>{{ position.avgPurchasePrice | number:'1.2-2' }}</td>
+            <td>{{ position.currentMarketPrice != null ? (position.currentMarketPrice | number:'1.2-2') : '-' }}</td>
+            <td>{{ position.currentValue != null ? (position.currentValue | number:'1.2-2') : '-' }}</td>
+            <td [class]="profitLossClass(position.profitLossDollars ?? 0)">
+              {{ position.profitLossDollars != null ? (position.profitLossDollars | number:'1.2-2') : '-' }}
+            </td>
+            <td>{{ position.createdAt ? (position.createdAt | date:'short') : '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

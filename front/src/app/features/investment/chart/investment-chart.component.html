@@ -1,0 +1,157 @@
+<section class="investment-dashboard">
+  <header class="market-strip">
+    <article
+      *ngFor="let snapshot of marketSnapshots; let index = index; trackBy: trackByLabel"
+      class="market-card"
+      [class.market-card--active]="index === 0">
+      <div class="market-card__icon">{{ snapshot.code }}</div>
+      <div class="market-card__body">
+        <div class="market-card__title-row">
+          <h2>{{ snapshot.label }}</h2>
+          <span class="market-card__badge">D</span>
+        </div>
+        <div class="market-card__price-row">
+          <span class="market-card__value">{{ snapshot.value }}</span>
+          <span class="market-card__change" [class.is-positive]="snapshot.trend === 'positive'" [class.is-negative]="snapshot.trend === 'negative'">
+            {{ snapshot.change }}
+          </span>
+        </div>
+      </div>
+    </article>
+
+    <button class="carousel-button" type="button" aria-label="Afficher plus de marchés">›</button>
+  </header>
+
+  <section class="chart-shell">
+    <div class="chart-shell__header">
+      <div class="chart-shell__intro">
+        <p class="eyebrow">Marché en direct</p>
+        <h1>{{ assetPrice | number:'1.2-2' }} EUR</h1>
+        <div class="price-line">
+          <span class="price-line__direction" [class.is-positive]="priceChange >= 0" [class.is-negative]="priceChange < 0">
+            {{ priceChange >= 0 ? '+' : '' }}{{ priceChange | number:'1.2-2' }}%
+          </span>
+          <span class="price-line__label">{{ assetName }}</span>
+          <span class="price-line__separator">•</span>
+          <span class="price-line__label">{{ marketDirection }}</span>
+        </div>
+      </div>
+
+      <div class="chart-tools" aria-label="Outils du graphique">
+        <button *ngFor="let tool of chartTools" type="button" class="chart-tools__button">{{ tool }}</button>
+      </div>
+    </div>
+
+    <div class="chart-stage">
+      <div class="y-axis">
+        <span *ngFor="let label of yAxisLabels">{{ label | number:'1.0-0' }}</span>
+      </div>
+
+      <div class="chart-stage__plot">
+        <svg viewBox="0 0 1240 420" preserveAspectRatio="none" aria-label="Graphique de performance">
+          <defs>
+            <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ff495f" stop-opacity="0.30"></stop>
+              <stop offset="100%" stop-color="#ff495f" stop-opacity="0"></stop>
+            </linearGradient>
+          </defs>
+
+          <g class="grid-lines">
+            <line *ngFor="let label of yAxisLabels" x1="0" [attr.y1]="420 - 28 - ((label - minPrice) * 364) / (maxPrice - minPrice || 1)" x2="1240" [attr.y2]="420 - 28 - ((label - minPrice) * 364) / (maxPrice - minPrice || 1)"></line>
+          </g>
+
+          <path [attr.d]="areaPath" fill="url(#priceGradient)" opacity="0.8"></path>
+
+          <polyline
+            [attr.points]="svgPoints"
+            fill="none"
+            stroke="#ff3b4d"
+            stroke-width="4"
+            stroke-linecap="round"
+            stroke-linejoin="round"></polyline>
+
+          <circle
+            *ngFor="let price of prices; let index = index"
+            [attr.cx]="getPointCx(index)"
+            [attr.cy]="getPointCy(price)"
+            [attr.r]="index === prices.length - 1 ? 5 : 0"
+            [attr.fill]="index === prices.length - 1 ? '#ff3b4d' : 'transparent'">
+          </circle>
+        </svg>
+
+        <div class="x-axis">
+          <span *ngFor="let label of labels">{{ label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="timeframe-row">
+      <button
+        *ngFor="let timeframe of timeframes"
+        type="button"
+        class="timeframe-btn"
+        [class.active]="selectedTimeframe === timeframe"
+        (click)="setTimeframe(timeframe)">
+        {{ timeframe }}
+      </button>
+    </div>
+  </section>
+
+  <section class="movers-grid">
+    <article class="movers-panel">
+      <header class="panel-heading">
+        <h2>Actions à plus fort volume</h2>
+        <span>›</span>
+      </header>
+
+      <div class="mover-list">
+        <div *ngFor="let mover of volumeLeaders; trackBy: trackBySymbol" class="mover-row">
+          <div class="mover-row__identity">
+            <div class="mover-row__avatar">{{ mover.symbol.slice(0, 2) }}</div>
+            <div>
+              <h3>{{ mover.name }}</h3>
+              <span class="mover-row__symbol">{{ mover.symbol }}</span>
+            </div>
+          </div>
+
+          <div class="mover-row__metrics">
+            <span class="mover-row__value">{{ mover.value }}</span>
+            <span class="mover-row__change" [class.is-positive]="mover.trend === 'positive'" [class.is-negative]="mover.trend === 'negative'">
+              {{ mover.change }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <a href="#" class="panel-link">Voir toutes les actions les plus activement tradées ›</a>
+    </article>
+
+    <article class="movers-panel">
+      <header class="panel-heading">
+        <h2>Actions les plus volatiles</h2>
+        <span>›</span>
+      </header>
+
+      <div class="mover-list">
+        <div *ngFor="let mover of volatileLeaders; trackBy: trackBySymbol" class="mover-row">
+          <div class="mover-row__identity">
+            <div class="mover-row__avatar mover-row__avatar--alt">{{ mover.symbol.slice(0, 2) }}</div>
+            <div>
+              <h3>{{ mover.name }}</h3>
+              <span class="mover-row__symbol">{{ mover.symbol }}</span>
+            </div>
+          </div>
+
+          <div class="mover-row__metrics">
+            <span class="mover-row__value">{{ mover.value }}</span>
+            <span class="mover-row__change" [class.is-positive]="mover.trend === 'positive'" [class.is-negative]="mover.trend === 'negative'">
+              {{ mover.change }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <a href="#" class="panel-link">Voir toutes les actions dont le prix a le plus changé ›</a>
+    </article>
+  </section>
+</section>

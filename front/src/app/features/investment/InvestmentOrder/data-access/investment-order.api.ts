@@ -9,14 +9,20 @@ export class InvestmentOrderApi {
   constructor(private readonly http: HttpClient) {}
 
   findAll(): Observable<InvestmentOrder[]> {
-    return this.http.get<InvestmentOrder[]>(`${API_BASE_URL}/api/investment-orders`);
+    return this.http.get<InvestmentOrder[]>(`${API_BASE_URL}/api/investments/orders`);
   }
 
   findByUser(userId: number): Observable<InvestmentOrder[]> {
-    return this.http.get<InvestmentOrder[]>(`${API_BASE_URL}/api/investment-orders/user/${userId}`);
+    return this.http.get<InvestmentOrder[]>(`${API_BASE_URL}/api/investments/orders/user/${userId}`);
   }
 
-  cancel(id: number): Observable<InvestmentOrder> {
-    return this.http.patch<InvestmentOrder>(`${API_BASE_URL}/api/investment-orders/${id}/cancel`, {});
+  cancel(order: InvestmentOrder): Observable<InvestmentOrder> {
+    return this.http.put<InvestmentOrder>(
+      `${API_BASE_URL}/api/investments/orders/${order.orderId}`,
+      {
+        ...order,
+        orderStatus: 'CANCELLED'
+      }
+    );
   }
 }

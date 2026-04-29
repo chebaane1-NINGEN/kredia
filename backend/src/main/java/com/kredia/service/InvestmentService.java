@@ -652,32 +652,49 @@ public class InvestmentService {
      */
     private PortfolioPositionResponseDTO convertToResponseDTO(PortfolioPosition position) {
         try {
-            // Récupérer le prix actuel du marché
-            BigDecimal currentMarketPrice = marketPriceService.getCurrentPrice(position.getAssetSymbol());
-            
-            // Calculer la valeur actuelle: quantité * prix actuel
-            BigDecimal currentValue = position.getCurrentQuantity().multiply(currentMarketPrice);
-            
-            // Calculer la valeur d'achat initiale: quantité * prix d'achat moyen
-            BigDecimal purchaseValue = position.getCurrentQuantity().multiply(position.getAvgPurchasePrice());
-            
-            // Calculer le profit/perte en dollars: valeur actuelle - valeur d'achat
+            // Essayer la source principale (MarketPriceService)
+            BigDecimal currentMarketPrice = null;
+            try {
+                currentMarketPrice = marketPriceService.getCurrentPrice(position.getAssetSymbol());
+            } catch (Exception ex) {
+                // Tentative de fallback via YahooMarketDataService
+                System.err.println("MarketPriceService failed for " + position.getAssetSymbol() + ": " + ex.getMessage());
+                try {
+                    var opt = yahooMarketDataService.evaluateAsset(position.getAssetSymbol());
+                    if (opt.isPresent() && opt.get().getCurrentPrice() != null && opt.get().getCurrentPrice().compareTo(BigDecimal.ZERO) > 0) {
+                        currentMarketPrice = opt.get().getCurrentPrice();
+                    }
+                } catch (Exception e2) {
+                    System.err.println("Yahoo fallback failed for " + position.getAssetSymbol() + ": " + e2.getMessage());
+                }
+            }
+
+            // Si toujours absent ou invalide, utiliser le prix d'achat moyen comme fallback pour éviter les null
+            if (currentMarketPrice == null || currentMarketPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                currentMarketPrice = position.getAvgPurchasePrice() != null ? position.getAvgPurchasePrice() : BigDecimal.ZERO;
+            }
+
+            // Calculs (sécurisés contre nulls)
+            BigDecimal qty = position.getCurrentQuantity() != null ? position.getCurrentQuantity() : BigDecimal.ZERO;
+            BigDecimal avgPrice = position.getAvgPurchasePrice() != null ? position.getAvgPurchasePrice() : BigDecimal.ZERO;
+
+            BigDecimal currentValue = qty.multiply(currentMarketPrice);
+            BigDecimal purchaseValue = qty.multiply(avgPrice);
             BigDecimal profitLossDollars = currentValue.subtract(purchaseValue);
-            
-            // Calculer le profit/perte en pourcentage: ((prix actuel - prix achat) / prix achat) * 100
+
             BigDecimal profitLossPercentage = BigDecimal.ZERO;
-            if (position.getAvgPurchasePrice().compareTo(BigDecimal.ZERO) > 0) {
-                profitLossPercentage = currentMarketPrice.subtract(position.getAvgPurchasePrice())
-                        .divide(position.getAvgPurchasePrice(), 4, RoundingMode.HALF_UP)
+            if (avgPrice.compareTo(BigDecimal.ZERO) > 0) {
+                profitLossPercentage = currentMarketPrice.subtract(avgPrice)
+                        .divide(avgPrice, 4, RoundingMode.HALF_UP)
                         .multiply(new BigDecimal("100"));
             }
-            
+
             return new PortfolioPositionResponseDTO(
                     position.getPositionId(),
                     position.getUser().getUserId(),
                     position.getAssetSymbol(),
-                    position.getCurrentQuantity(),
-                    position.getAvgPurchasePrice(),
+                    qty,
+                    avgPrice,
                     currentMarketPrice,
                     currentValue,
                     profitLossDollars,
@@ -686,17 +703,18 @@ public class InvestmentService {
             );
         } catch (Exception e) {
             System.err.println("Erreur lors de la conversion de la position " + position.getPositionId() + ": " + e.getMessage());
-            // En cas d'erreur, retourner un DTO avec des valeurs null pour les calculs
+            // En dernier recours, retourner des zéros plutôt que des nulls
+            BigDecimal zero = BigDecimal.ZERO;
             return new PortfolioPositionResponseDTO(
                     position.getPositionId(),
-                    position.getUser().getUserId(),
+                    position.getUser() != null ? position.getUser().getUserId() : null,
                     position.getAssetSymbol(),
-                    position.getCurrentQuantity(),
-                    position.getAvgPurchasePrice(),
-                    null,
-                    null,
-                    null,
-                    null,
+                    position.getCurrentQuantity() != null ? position.getCurrentQuantity() : zero,
+                    position.getAvgPurchasePrice() != null ? position.getAvgPurchasePrice() : zero,
+                    zero,
+                    zero,
+                    zero,
+                    zero,
                     position.getCreatedAt()
             );
         }
