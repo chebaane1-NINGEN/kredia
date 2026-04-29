@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit }
 import { CommonModule } from '@angular/common';
 import { finalize } from 'rxjs';
 import { AgentApi } from '../../data-access/agent.api';
-import { AgentPerformance } from '../../models/agent.model';
+import { AgentPerformance, ApprovalTrendPoint, PerformanceTrendPoint } from '../../models/agent.model';
 
 @Component({
   standalone: true,
@@ -18,6 +18,7 @@ export class AgentPerformancePageComponent implements OnInit {
   performance: AgentPerformance | null = null;
   loading = true;
   error: string | null = null;
+  displayedScore = 0;
 
   ngOnInit(): void {
     this.loadPerformance();
@@ -26,6 +27,8 @@ export class AgentPerformancePageComponent implements OnInit {
   loadPerformance(): void {
     this.loading = true;
     this.error = null;
+    this.performance = null;
+    this.displayedScore = 0;
     this.cdr.markForCheck();
 
     this.api.getPerformance()
@@ -36,6 +39,7 @@ export class AgentPerformancePageComponent implements OnInit {
       .subscribe({
         next: (data) => {
           this.performance = data;
+          this.animateScore();
         },
         error: (err) => {
           this.error = 'Failed to load performance data';
@@ -64,14 +68,49 @@ export class AgentPerformancePageComponent implements OnInit {
     return '#EF4444'; // red
   }
 
-  getApprovalRate(): number {
-    if (!this.performance) return 0;
-    const total = this.performance.approvalActionsCount + this.performance.rejectionActionsCount;
-    return total > 0 ? Math.round((this.performance.approvalActionsCount / total) * 100) : 0;
+  getScoreDeltaLabel(): string {
+    if (!this.performance) return '';
+    const delta = this.performance.scoreChangeFromLastWeek ?? 0;
+    return delta >= 0 ? `+${delta.toFixed(2)}% vs last week` : `${delta.toFixed(2)}% vs last week`;
   }
 
-  getMonthlyApprovalRate(approvals: number, rejections: number): number {
-    const total = approvals + rejections;
-    return total > 0 ? Math.round((approvals / total) * 100) : 0;
+  formatDuration(seconds: number): string {
+    if (!seconds || seconds <= 0) {
+      return 'N/A';
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remaining = Math.floor(seconds % 60);
+    return `${minutes}m ${remaining}s`;
+  }
+
+  getTrendMax(trend: PerformanceTrendPoint[] | ApprovalTrendPoint[] = []): number {
+    return trend.reduce((max, point) => {
+      const values = 'actions' in point
+        ? Math.max(point.actions, point.approvals)
+        : Math.max(point.approvals, point.rejections);
+      return Math.max(max, values);
+    }, 0);
+  }
+
+  trackByDate(index: number, item: { date: string }): string {
+    return item.date;
+  }
+
+  private animateScore(): void {
+    if (!this.performance) return;
+    const target = Math.round(this.performance.performanceScore);
+    const step = Math.max(1, Math.floor(target / 20));
+    let current = 0;
+
+    const interval = window.setInterval(() => {
+      current += step;
+      if (current >= target) {
+        this.displayedScore = target;
+        window.clearInterval(interval);
+      } else {
+        this.displayedScore = current;
+      }
+      this.cdr.markForCheck();
+    }, 16);
   }
 }

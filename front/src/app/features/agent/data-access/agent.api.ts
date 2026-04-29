@@ -41,7 +41,7 @@ export class AgentApi {
     email?: string,
     statuses?: string,
     page = 0,
-    size = 100,
+    size = 1000,
     sortBy?: string,
     sortDirection?: string,
     startDate?: string,
@@ -53,12 +53,22 @@ export class AgentApi {
       .set('size', size.toString());
 
     if (email) params = params.set('email', email);
-    if (statuses) params = params.set('statuses', statuses);
+    if (statuses) {
+      // Split comma-separated string and add each status as separate param
+      statuses.split(',').forEach(status => {
+        params = params.append('statuses', status.trim());
+      });
+    }
     if (sortBy) params = params.set('sortBy', sortBy);
     if (sortDirection) params = params.set('sortDirection', sortDirection);
     if (startDate) params = params.set('startDate', startDate);
     if (endDate) params = params.set('endDate', endDate);
-    if (priorities) params = params.set('priorities', priorities);
+    if (priorities) {
+      // Split comma-separated string and add each priority as separate param
+      priorities.split(',').forEach(priority => {
+        params = params.append('priorities', priority.trim());
+      });
+    }
 
     console.debug('[AgentApi] getClients', { email, statuses, page, size, startDate, endDate, priorities });
     return this.http.get<ApiResponse<PageResponse<AgentClient>>>(`${API_BASE_URL}/api/user/agent/clients/enhanced`, { params }).pipe(
@@ -98,7 +108,7 @@ export class AgentApi {
   getPerformance(): Observable<AgentPerformance> {
     const agentId = this.getAgentId();
     console.debug('[AgentApi] getPerformance', agentId);
-    return this.http.get<ApiResponse<AgentPerformance>>(`${API_BASE_URL}/api/user/agent/${agentId}/performance`).pipe(
+    return this.http.get<ApiResponse<AgentPerformance>>(`${API_BASE_URL}/api/agent/performance/${agentId}`).pipe(
       map(response => response.data)
     );
   }

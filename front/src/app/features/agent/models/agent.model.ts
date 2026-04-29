@@ -7,13 +7,38 @@ export interface AgentActivity {
   userName?: string;
 }
 
+export interface PerformanceTrendPoint {
+  date: string;
+  score: number;
+  actions: number;
+  approvals: number;
+}
+
+export interface ApprovalTrendPoint {
+  date: string;
+  approvals: number;
+  rejections: number;
+}
+
 export interface AgentPerformance {
-  approvalActionsCount: number;
-  rejectionActionsCount: number;
-  totalActions: number;
   performanceScore: number;
-  numberOfClientsHandled: number;
-  averageProcessingTimeSeconds: number;
+  totalActions: number;
+  approvals: number;
+  rejections: number;
+  approvalRate: number;
+  clientsHandled: number;
+  avgProcessingTime: number;
+  pendingClients?: number;
+  efficiencyScore?: number;
+  weeklyTrend?: PerformanceTrendPoint[];
+  monthlyTrend?: PerformanceTrendPoint[];
+  approvalTrend?: ApprovalTrendPoint[];
+  insights?: string[];
+  performanceStatus?: string;
+  performanceColor?: string;
+  scoreChangeFromLastWeek?: number;
+  approvalRateChangeFromLastWeek?: number;
+  processingTimeChangeFromLastWeek?: number;
 }
 
 export interface AgentDashboard extends AgentPerformance {

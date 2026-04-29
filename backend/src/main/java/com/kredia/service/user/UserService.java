@@ -6,6 +6,7 @@ import com.kredia.dto.user.AdminUserUpdateDTO;
 import com.kredia.dto.user.ClientProfileUpdateDTO;
 import com.kredia.dto.user.AdminStatsDTO;
 import com.kredia.dto.user.AgentPerformanceDTO;
+import com.kredia.dto.user.EnhancedAgentPerformanceDTO;
 import com.kredia.dto.user.ClientDetailsDTO;
 import com.kredia.dto.user.ClientEligibilityDTO;
 import com.kredia.dto.user.ClientRiskScoreDTO;
@@ -76,6 +77,7 @@ public interface UserService {
     // --- Agent Performance & Activity ---
     AgentPerformanceDTO agentDashboard(Long agentId);
     AgentPerformanceDTO agentPerformance(Long agentId);
+    EnhancedAgentPerformanceDTO agentPerformanceEnhanced(Long agentId);
     Page<UserActivityResponseDTO> agentActivity(Long agentId, Pageable pageable);
     Page<UserActivityResponseDTO> agentActivityForClients(Long agentId, Pageable pageable);
 

@@ -52,6 +52,10 @@ public interface UserActivityRepository extends JpaRepository<UserActivity, Long
     
     long countByUserId(Long userId);
 
+    long countByUserIdAndActionTypeAndTimestampBetween(Long userId, com.kredia.entity.user.UserActivityActionType actionType, Instant startDate, Instant endDate);
+
+    List<UserActivity> findByUserIdAndTimestampBetweenOrderByTimestampAsc(Long userId, Instant startDate, Instant endDate);
+
     // ==================== Time-Based Queries for Analytics ====================
     
     List<UserActivity> findByTimestampBetween(Instant startDate, Instant endDate);

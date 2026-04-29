@@ -33,8 +33,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/user")
@@ -53,7 +55,25 @@ public class UserController {
             @RequestHeader("X-Actor-Id") Long actorId,
             @Valid @RequestBody UserRequestDTO user
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(userService.create(actorId, user)));
+        try {
+            if (user.getEmail() == null || user.getEmail().isBlank()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Email is required"));
+            }
+            if (user.getFirstName() == null || user.getFirstName().isBlank()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("First name is required"));
+            }
+            if (user.getLastName() == null || user.getLastName().isBlank()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Last name is required"));
+            }
+            if (user.getPassword() == null || user.getPassword().isBlank()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Password is required"));
+            }
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(userService.create(actorId, user)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("User creation failed: " + e.getMessage()));
+        }
     }
 
     @GetMapping
@@ -331,12 +351,36 @@ public class UserController {
     public ResponseEntity<ApiResponse<Page<com.kredia.dto.user.EnhancedClientDTO>>> agentClientsEnhanced(
             @RequestHeader("X-Actor-Id") Long actorId,
             @RequestParam(name = "email", required = false) String email,
-            @RequestParam(name = "statuses", required = false) List<UserStatus> statuses,
-            @RequestParam(name = "priorities", required = false) List<String> priorities,
+            @RequestParam(name = "statuses", required = false) String statusesStr,
+            @RequestParam(name = "priorities", required = false) String prioritiesStr,
             @RequestParam(name = "startDate", required = false) String startDate,
             @RequestParam(name = "endDate", required = false) String endDate,
             @PageableDefault Pageable pageable
     ) {
+        // Parse comma-separated strings into lists
+        List<UserStatus> statuses = null;
+        if (statusesStr != null && !statusesStr.trim().isEmpty()) {
+            statuses = Arrays.stream(statusesStr.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(s -> {
+                        try {
+                            return UserStatus.valueOf(s.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            throw new IllegalArgumentException("Invalid status: " + s);
+                        }
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        List<String> priorities = null;
+        if (prioritiesStr != null && !prioritiesStr.trim().isEmpty()) {
+            priorities = Arrays.stream(prioritiesStr.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+        }
+
         return ResponseEntity.ok(ApiResponse.ok(userService.agentClientsEnhanced(actorId, Optional.ofNullable(email), Optional.ofNullable(statuses), Optional.ofNullable(priorities), parseStartOfDay(startDate), parseEndOfDay(endDate), pageable)));
     }
 

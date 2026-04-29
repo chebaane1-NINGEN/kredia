@@ -41,7 +41,7 @@
       <div class="kpi-card">
         <div class="kpi-icon">👍</div>
         <div class="kpi-content">
-          <h3>{{ dashboard.approvalActionsCount }}</h3>
+          <h3>{{ dashboard.approvals }}</h3>
           <p>Approvals</p>
         </div>
       </div>
@@ -49,7 +49,7 @@
       <div class="kpi-card">
         <div class="kpi-icon">⛔</div>
         <div class="kpi-content">
-          <h3>{{ dashboard.rejectionActionsCount }}</h3>
+          <h3>{{ dashboard.rejections }}</h3>
           <p>Rejections</p>
         </div>
       </div>
@@ -67,7 +67,7 @@
       <div class="kpi-card">
         <div class="kpi-icon">🧾</div>
         <div class="kpi-content">
-          <h3>{{ dashboard.numberOfClientsHandled }}</h3>
+          <h3>{{ dashboard.clientsHandled }}</h3>
           <p>Clients Handled</p>
         </div>
       </div>
@@ -75,7 +75,7 @@
       <div class="kpi-card">
         <div class="kpi-icon">⏱️</div>
         <div class="kpi-content">
-          <h3>{{ dashboard.averageProcessingTimeSeconds | number:'1.0-0' }} s</h3>
+          <h3>{{ dashboard.avgProcessingTime | number:'1.0-0' }} s</h3>
           <p>Avg Processing Time</p>
         </div>
       </div>

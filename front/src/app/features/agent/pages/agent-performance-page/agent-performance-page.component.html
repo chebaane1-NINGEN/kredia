@@ -1,91 +1,154 @@
 <div class="performance-container">
   <div class="performance-header">
-    <h1>My Performance</h1>
-    <p>Track your performance metrics and statistics</p>
+    <div>
+      <h1>Agent Performance Intelligence</h1>
+      <p>Real-time insights and trends for your sales activity.</p>
+    </div>
+    <button class="refresh-button" type="button" (click)="loadPerformance()" [disabled]="loading">
+      {{ loading ? 'Refreshing…' : 'Refresh dashboard' }}
+    </button>
   </div>
 
-  <!-- Loading State -->
   <div *ngIf="loading" class="loading-state">
     <div class="spinner"></div>
-    <p>Loading performance data...</p>
+    <p>Loading performance intelligence...</p>
   </div>
 
-  <!-- Error State -->
   <div *ngIf="error && !loading" class="error-state">
     <div class="error-icon">⚠️</div>
     <h3>{{ error }}</h3>
     <button (click)="loadPerformance()" class="retry-btn">Retry</button>
   </div>
 
-  <!-- Performance Content -->
   <div *ngIf="!loading && !error && performance" class="performance-content">
 
-    <!-- Performance Score -->
-    <div class="score-section">
-      <div class="score-card">
-        <div class="score-circle" [style.border-color]="getPerformanceColor()">
-          <span class="score-value">{{ performance.performanceScore }}%</span>
-        </div>
-        <div class="score-info">
-          <h3>{{ getPerformanceBadge() }}</h3>
-          <p>Performance Score</p>
-        </div>
+    <section class="hero-card">
+      <div>
+        <div class="hero-label">Performance Score</div>
+        <div class="hero-value" [style.color]="getPerformanceColor()">{{ displayedScore }}%</div>
+        <div class="hero-badge">{{ getPerformanceBadge() }}</div>
       </div>
-    </div>
-
-    <!-- KPI Cards -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-icon">�</div>
-        <div class="kpi-content">
-          <h3>{{ performance.totalActions }}</h3>
-          <p>Total Actions</p>
-        </div>
+      <div class="hero-summary">
+        <span>{{ getScoreDeltaLabel() }}</span>
+        <p>Approval ratio, client velocity and processing efficiency are all factored in.</p>
       </div>
+    </section>
 
-      <div class="kpi-card">
+    <section class="kpi-grid">
+      <article class="kpi-card">
+        <div class="kpi-icon">🧠</div>
+        <div>
+          <div class="kpi-value">{{ performance.totalActions }}</div>
+          <div class="kpi-label">Total Actions</div>
+        </div>
+      </article>
+
+      <article class="kpi-card">
         <div class="kpi-icon">✅</div>
-        <div class="kpi-content">
-          <h3>{{ performance.approvalActionsCount }}</h3>
-          <p>Approvals</p>
+        <div>
+          <div class="kpi-value">{{ performance.approvals }}</div>
+          <div class="kpi-label">Approvals</div>
         </div>
-      </div>
+      </article>
 
-      <div class="kpi-card">
+      <article class="kpi-card">
         <div class="kpi-icon">❌</div>
-        <div class="kpi-content">
-          <h3>{{ performance.rejectionActionsCount }}</h3>
-          <p>Rejections</p>
+        <div>
+          <div class="kpi-value">{{ performance.rejections }}</div>
+          <div class="kpi-label">Rejections</div>
         </div>
-      </div>
+      </article>
 
-      <div class="kpi-card">
+      <article class="kpi-card">
         <div class="kpi-icon">📊</div>
-        <div class="kpi-content">
-          <h3>{{ getApprovalRate() }}%</h3>
-          <p>Approval Rate</p>
+        <div>
+          <div class="kpi-value">{{ performance.approvalRate | number:'1.0-2' }}%</div>
+          <div class="kpi-label">Approval Rate</div>
         </div>
-      </div>
-    </div>
+      </article>
 
-    <div class="kpi-grid">
-      <div class="kpi-card">
+      <article class="kpi-card">
         <div class="kpi-icon">👥</div>
-        <div class="kpi-content">
-          <h3>{{ performance.numberOfClientsHandled }}</h3>
-          <p>Clients Handled</p>
+        <div>
+          <div class="kpi-value">{{ performance.clientsHandled }}</div>
+          <div class="kpi-label">Clients Handled</div>
         </div>
-      </div>
+      </article>
 
-      <div class="kpi-card">
+      <article class="kpi-card">
         <div class="kpi-icon">⏱️</div>
-        <div class="kpi-content">
-          <h3>{{ performance.averageProcessingTimeSeconds | number:'1.0-0' }}s</h3>
-          <p>Avg Processing Time</p>
+        <div>
+          <div class="kpi-value">{{ formatDuration(performance.avgProcessingTime) }}</div>
+          <div class="kpi-label">Avg Processing Time</div>
         </div>
+      </article>
+    </section>
+
+    <section class="chart-section">
+      <div class="chart-card">
+        <div class="card-title">Weekly Performance Trend</div>
+        <div *ngIf="performance.weeklyTrend?.length; else noTrend" class="sparkline">
+          <div class="sparkline-row">
+            <div *ngFor="let item of performance.weeklyTrend; trackBy: trackByDate" class="sparkline-bar" [style.height.%]="item.score" [attr.title]="item.date + ': ' + item.score + '%'">
+              <span>{{ item.date }}</span>
+            </div>
+          </div>
+        </div>
+        <ng-template #noTrend>
+          <div class="empty-chart">No weekly trend data available.</div>
+        </ng-template>
       </div>
-    </div>
 
+      <div class="chart-card">
+        <div class="card-title">Approvals vs Rejections</div>
+        <div *ngIf="performance.approvalTrend?.length; else noTrend2" class="bar-chart">
+          <div *ngFor="let item of performance.approvalTrend; trackBy: trackByDate" class="bar-row">
+            <div class="bar-row-label">{{ item.date }}</div>
+            <div class="bar-track">
+              <div class="bar-approval" [style.width.%]="item.approvals / (getTrendMax(performance.approvalTrend) || 1) * 100"></div>
+              <div class="bar-rejection" [style.width.%]="item.rejections / (getTrendMax(performance.approvalTrend) || 1) * 100"></div>
+            </div>
+            <div class="bar-values">{{ item.approvals }}/{{ item.rejections }}</div>
+          </div>
+        </div>
+        <ng-template #noTrend2>
+          <div class="empty-chart">No approval trend data available.</div>
+        </ng-template>
+      </div>
+    </section>
 
+    <section class="detail-section">
+      <div class="detail-card insights-card">
+        <div class="detail-title">Insights</div>
+        <ul>
+          <li *ngFor="let insight of performance.insights">{{ insight }}</li>
+        </ul>
+      </div>
+      <div class="detail-card summary-card">
+        <div class="detail-title">Summary Metrics</div>
+        <table>
+          <tr>
+            <td>Performance Score</td>
+            <td>{{ performance.performanceScore | number:'1.0-2' }}%</td>
+          </tr>
+          <tr>
+            <td>Approval Rate</td>
+            <td>{{ performance.approvalRate | number:'1.0-2' }}%</td>
+          </tr>
+          <tr>
+            <td>Clients Pending</td>
+            <td>{{ performance.pendingClients ?? 0 }}</td>
+          </tr>
+          <tr>
+            <td>Efficiency Score</td>
+            <td>{{ performance.efficiencyScore ?? 0 | number:'1.0-2' }}</td>
+          </tr>
+          <tr>
+            <td>Processing Change</td>
+            <td>{{ performance.processingTimeChangeFromLastWeek ?? 0 | number:'1.0-2' }}s</td>
+          </tr>
+        </table>
+      </div>
+    </section>
   </div>
 </div>

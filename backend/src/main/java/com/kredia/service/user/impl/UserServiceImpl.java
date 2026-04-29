@@ -23,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -445,16 +448,16 @@ public class UserServiceImpl implements UserService {
         Page<User> clients;
         
         if (email.isPresent() && status.isPresent()) {
-            clients = userRepository.findAllByAssignedAgentAndRoleAndEmailContainingIgnoreCaseAndStatusAndDeletedFalse(
-                agent, UserRole.CLIENT, email.get(), status.get(), pageable);
+            clients = userRepository.findAllByRoleAndEmailContainingIgnoreCaseAndStatusAndDeletedFalse(
+                UserRole.CLIENT, email.get(), status.get(), pageable);
         } else if (email.isPresent()) {
-            clients = userRepository.findAllByAssignedAgentAndRoleAndEmailContainingIgnoreCaseAndDeletedFalse(
-                agent, UserRole.CLIENT, email.get(), pageable);
+            clients = userRepository.findAllByRoleAndEmailContainingIgnoreCaseAndDeletedFalse(
+                UserRole.CLIENT, email.get(), pageable);
         } else if (status.isPresent()) {
-            clients = userRepository.findAllByAssignedAgentAndRoleAndStatusAndDeletedFalse(
-                agent, UserRole.CLIENT, status.get(), pageable);
+            clients = userRepository.findAllByRoleAndStatusAndDeletedFalse(
+                UserRole.CLIENT, status.get(), pageable);
         } else {
-            clients = userRepository.findAllByAssignedAgentAndRoleAndDeletedFalse(agent, UserRole.CLIENT, pageable);
+            clients = userRepository.findAllByRoleAndDeletedFalse(UserRole.CLIENT, pageable);
         }
         
         return clients.map(this::toDto);
@@ -468,9 +471,9 @@ public class UserServiceImpl implements UserService {
         var queryBuilder = new StringBuilder();
         var params = new HashMap<String, Object>();
         
-        queryBuilder.append("SELECT u FROM User u WHERE u.role = :role AND u.deleted = false AND u.assignedAgent.id = :agentId");
+        queryBuilder.append("SELECT u FROM User u WHERE u.role = :role AND u.deleted = false AND u.assignedAgent = :agent");
         params.put("role", UserRole.CLIENT);
-        params.put("agentId", actorId);
+        params.put("agent", agent);
         
         // Email filter
         if (email.isPresent() && !email.get().trim().isEmpty()) {
@@ -525,7 +528,7 @@ public class UserServiceImpl implements UserService {
         var clients = query.getResultList();
         
         // Count query for total elements
-        var countQueryBuilder = new StringBuilder("SELECT COUNT(u) FROM User u WHERE u.role = :role AND u.deleted = false AND u.assignedAgent.id = :agentId");
+        var countQueryBuilder = new StringBuilder("SELECT COUNT(u) FROM User u WHERE u.role = :role AND u.deleted = false AND u.assignedAgent = :agent");
         if (email.isPresent() && !email.get().trim().isEmpty()) {
             countQueryBuilder.append(" AND LOWER(u.email) LIKE LOWER(:email)");
         }
@@ -562,7 +565,12 @@ public class UserServiceImpl implements UserService {
         params.forEach(countQuery::setParameter);
         var total = countQuery.getSingleResult();
         
-        return new PageImpl<>(clients, pageable, total).map(client -> toEnhancedClientDto(client, agent));
+        // Convert to DTOs
+        var clientDTOs = clients.stream()
+                .map(client -> this.toEnhancedClientDto(client, agent))
+                .collect(Collectors.toList());
+        
+        return new PageImpl<>(clientDTOs, pageable, total);
     }
 
     @Override
@@ -626,6 +634,247 @@ public class UserServiceImpl implements UserService {
     @Override
     public AgentPerformanceDTO agentPerformance(Long agentId) {
         return agentDashboard(agentId);
+    }
+
+    @Override
+    public EnhancedAgentPerformanceDTO agentPerformanceEnhanced(Long agentId) {
+        User agent = findUser(agentId);
+
+        long approvals = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.APPROVAL);
+        long rejections = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.REJECTION);
+        long totalActions = userActivityRepository.countByUserId(agentId);
+        long clientsHandled = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.CLIENT_HANDLED);
+
+        double performanceScore = 0;
+        long totalDecisions = approvals + rejections;
+        if (totalDecisions > 0) {
+            performanceScore = Math.round((approvals * 100.0 / totalDecisions) * 100.0) / 100.0;
+        }
+
+        double approvalRate = 0;
+        if (totalActions > 0) {
+            approvalRate = Math.round((approvals * 100.0 / totalActions) * 100.0) / 100.0;
+        }
+
+        double avgProcessingTime = calculateAverageProcessingTime(agentId, totalActions);
+
+        double efficiencyScore = 0;
+        if (avgProcessingTime > 0) {
+            efficiencyScore = Math.round((approvals / avgProcessingTime * 100.0) * 100.0) / 100.0;
+        }
+
+        List<User> clients = userRepository.findAllByAssignedAgentAndRoleAndDeletedFalse(agent, UserRole.CLIENT);
+        long pendingClients = clients.stream()
+                .filter(c -> c.getStatus() == UserStatus.ACTIVE)
+                .count();
+
+        EnhancedAgentPerformanceDTO dto = new EnhancedAgentPerformanceDTO(
+                performanceScore,
+                approvalRate,
+                totalActions,
+                approvals,
+                rejections,
+                clientsHandled,
+                avgProcessingTime
+        );
+
+        dto.setPendingClients(pendingClients);
+        dto.setEfficiencyScore(efficiencyScore);
+        dto.setWeeklyTrend(buildWeeklyTrend(agentId));
+        dto.setMonthlyTrend(buildMonthlyTrend(agentId));
+        dto.setApprovalTrend(buildApprovalTrend(agentId));
+        dto.setScoreChangeFromLastWeek(calculateWeeklyScoreChange(agentId));
+        dto.setApprovalRateChangeFromLastWeek(calculateWeeklyApprovalChange(agentId));
+        dto.setProcessingTimeChangeFromLastWeek(calculateWeeklyProcessingTimeChange(agentId));
+        dto.updatePerformanceStatus();
+
+        generateInsights(dto);
+
+        return dto;
+    }
+
+    private double calculateAverageProcessingTime(Long agentId, long totalActions) {
+        if (totalActions == 0) {
+            return 0;
+        }
+
+        Instant startWindow = Instant.now().minus(30, ChronoUnit.DAYS);
+        List<UserActivity> activities = userActivityRepository.findByUserIdAndTimestampBetweenOrderByTimestampAsc(agentId, startWindow, Instant.now());
+
+        Instant currentStart = null;
+        long totalSeconds = 0;
+        long pairs = 0;
+
+        for (UserActivity activity : activities) {
+            if (activity.getActionType() == UserActivityActionType.PROCESSING_STARTED) {
+                currentStart = activity.getTimestamp();
+            } else if (activity.getActionType() == UserActivityActionType.PROCESSING_COMPLETED && currentStart != null) {
+                totalSeconds += Duration.between(currentStart, activity.getTimestamp()).getSeconds();
+                pairs++;
+                currentStart = null;
+            }
+        }
+
+        if (pairs > 0) {
+            return Math.round((totalSeconds / (double) pairs) * 100.0) / 100.0;
+        }
+        return 1800.0;
+    }
+
+    private List<EnhancedAgentPerformanceDTO.PerformanceTrendPoint> buildWeeklyTrend(Long agentId) {
+        List<EnhancedAgentPerformanceDTO.PerformanceTrendPoint> trend = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d");
+
+        for (int offset = 6; offset >= 0; offset--) {
+            LocalDate day = LocalDate.now().minusDays(offset);
+            Instant dayStart = day.atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+            Instant dayEnd = day.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).minusNanos(1).toInstant();
+
+            long dailyApprovals = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.APPROVAL, dayStart, dayEnd);
+            long dailyRejections = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.REJECTION, dayStart, dayEnd);
+            long dailyActions = userActivityRepository.countByUserIdAndTimestampBetween(agentId, dayStart, dayEnd);
+
+            double dailyScore = 0;
+            long decisions = dailyApprovals + dailyRejections;
+            if (decisions > 0) {
+                dailyScore = Math.round((dailyApprovals * 100.0 / decisions) * 100.0) / 100.0;
+            }
+
+            trend.add(new EnhancedAgentPerformanceDTO.PerformanceTrendPoint(day.format(formatter), dailyScore, dailyActions, dailyApprovals));
+        }
+        return trend;
+    }
+
+    private List<EnhancedAgentPerformanceDTO.PerformanceTrendPoint> buildMonthlyTrend(Long agentId) {
+        List<EnhancedAgentPerformanceDTO.PerformanceTrendPoint> trend = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d");
+        LocalDate today = LocalDate.now();
+
+        for (int week = 4; week >= 1; week--) {
+            LocalDate end = today.minusWeeks(week - 1).plusDays(1);
+            LocalDate start = end.minusWeeks(1);
+            Instant periodStart = start.atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+            Instant periodEnd = end.atStartOfDay(java.time.ZoneOffset.UTC).minusNanos(1).toInstant();
+
+            long weeklyApprovals = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.APPROVAL, periodStart, periodEnd);
+            long weeklyRejections = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.REJECTION, periodStart, periodEnd);
+            long weeklyActions = userActivityRepository.countByUserIdAndTimestampBetween(agentId, periodStart, periodEnd);
+
+            double weeklyScore = 0;
+            long decisions = weeklyApprovals + weeklyRejections;
+            if (decisions > 0) {
+                weeklyScore = Math.round((weeklyApprovals * 100.0 / decisions) * 100.0) / 100.0;
+            }
+
+            trend.add(new EnhancedAgentPerformanceDTO.PerformanceTrendPoint(start.format(formatter) + " - " + end.minusDays(1).format(formatter), weeklyScore, weeklyActions, weeklyApprovals));
+        }
+        return trend;
+    }
+
+    private List<EnhancedAgentPerformanceDTO.ApprovalTrendPoint> buildApprovalTrend(Long agentId) {
+        List<EnhancedAgentPerformanceDTO.ApprovalTrendPoint> trend = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE");
+
+        for (int offset = 6; offset >= 0; offset--) {
+            LocalDate day = LocalDate.now().minusDays(offset);
+            Instant start = day.atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+            Instant end = day.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).minusNanos(1).toInstant();
+
+            long dailyApprovals = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.APPROVAL, start, end);
+            long dailyRejections = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.REJECTION, start, end);
+
+            trend.add(new EnhancedAgentPerformanceDTO.ApprovalTrendPoint(day.format(formatter), dailyApprovals, dailyRejections));
+        }
+
+        return trend;
+    }
+
+    private double calculateWeeklyScoreChange(Long agentId) {
+        Instant today = Instant.now();
+        Instant lastWeekStart = today.minus(14, ChronoUnit.DAYS);
+        Instant lastWeekMiddle = today.minus(7, ChronoUnit.DAYS);
+
+        long currentApprovals = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.APPROVAL, lastWeekMiddle, today);
+        long currentRejections = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.REJECTION, lastWeekMiddle, today);
+        long previousApprovals = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.APPROVAL, lastWeekStart, lastWeekMiddle);
+        long previousRejections = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.REJECTION, lastWeekStart, lastWeekMiddle);
+
+        double currentScore = 0;
+        double previousScore = 0;
+        if (currentApprovals + currentRejections > 0) {
+            currentScore = (currentApprovals * 100.0) / (currentApprovals + currentRejections);
+        }
+        if (previousApprovals + previousRejections > 0) {
+            previousScore = (previousApprovals * 100.0) / (previousApprovals + previousRejections);
+        }
+        return Math.round((currentScore - previousScore) * 100.0) / 100.0;
+    }
+
+    private double calculateWeeklyApprovalChange(Long agentId) {
+        Instant today = Instant.now();
+        Instant lastWeekStart = today.minus(14, ChronoUnit.DAYS);
+        Instant lastWeekMiddle = today.minus(7, ChronoUnit.DAYS);
+
+        long currentApprovals = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.APPROVAL, lastWeekMiddle, today);
+        long previousApprovals = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(agentId, UserActivityActionType.APPROVAL, lastWeekStart, lastWeekMiddle);
+
+        if (previousApprovals == 0) {
+            return currentApprovals > 0 ? currentApprovals : 0;
+        }
+        return Math.round(((currentApprovals - previousApprovals) / (double) Math.max(previousApprovals, 1)) * 100.0 * 100.0) / 100.0;
+    }
+
+    private double calculateWeeklyProcessingTimeChange(Long agentId) {
+        Instant today = Instant.now();
+        Instant lastWeekStart = today.minus(14, ChronoUnit.DAYS);
+        Instant lastWeekMiddle = today.minus(7, ChronoUnit.DAYS);
+
+        double currentAvg = calculateAverageProcessingTime(agentId, userActivityRepository.countByUserIdAndTimestampBetween(agentId, lastWeekMiddle, today));
+        double previousAvg = calculateAverageProcessingTime(agentId, userActivityRepository.countByUserIdAndTimestampBetween(agentId, lastWeekStart, lastWeekMiddle));
+        return Math.round((previousAvg == 0 ? 0 : currentAvg - previousAvg) * 100.0) / 100.0;
+    }
+
+    /**
+     * Generate AI-driven insights based on performance metrics
+     */
+    private void generateInsights(EnhancedAgentPerformanceDTO performance) {
+        List<String> insights = new ArrayList<>();
+
+        if (performance.getPerformanceScore() >= 90) {
+            insights.add("🌟 Excellent performance! You're among the top performers. Keep up this momentum!");
+        } else if (performance.getPerformanceScore() >= 75) {
+            insights.add("✨ Good performance. Consider reviewing rejection cases to optimize further.");
+        } else if (performance.getPerformanceScore() >= 60) {
+            insights.add("📈 Average performance. Focus on improving approval quality and consistency.");
+        } else {
+            insights.add("⚠️ Performance needs attention. Review your approval criteria and process.");
+        }
+
+        if (performance.getApprovals() > 0) {
+            if (performance.getApprovalRate() > 80) {
+                insights.add("📊 High approval rate (" + (long)performance.getApprovalRate() + "%). Maintain quality checks.");
+            } else if (performance.getApprovalRate() < 50) {
+                insights.add("🔍 Low approval rate. Consider additional training or process review.");
+            }
+        }
+
+        if (performance.getPendingClients() > 5) {
+            insights.add("📋 You have " + performance.getPendingClients() + " pending clients. Consider prioritization.");
+        } else if (performance.getPendingClients() > 0) {
+            insights.add("💼 Current workload is manageable. Focus on quality.");
+        }
+
+        if (performance.getEfficiencyScore() > 0.5) {
+            insights.add("⚡ Excellent efficiency score. Optimize further!");
+        }
+
+        if (performance.getTotalActions() == 0) {
+            insights.add("📉 No activity detected. Start taking actions to build performance data.");
+        } else if (performance.getTotalActions() > 20) {
+            insights.add("🎯 Strong activity level. Maintain consistency.");
+        }
+
+        performance.setInsights(insights);
     }
 
     @Override
