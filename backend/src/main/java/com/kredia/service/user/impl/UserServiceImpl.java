@@ -602,20 +602,50 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public AgentPerformanceDTO agentDashboard(Long agentId) {
+    public AgentDashboard agentDashboard(Long agentId) {
+        User agent = findUser(agentId);
+        AgentDashboard dashboard = new AgentDashboard(agentId, agent.getFirstName() + " " + agent.getLastName());
+
+        // Calculate core metrics
+        calculateCoreMetrics(dashboard, agentId);
+
+        // Calculate SLA metrics
+        calculateSLAMetrics(dashboard, agentId);
+
+        // Calculate risk metrics
+        calculateRiskMetrics(dashboard, agent);
+
+        // Calculate priority metrics
+        calculatePriorityMetrics(dashboard, agent);
+
+        // Build trend data
+        dashboard.setWeeklyTrend(buildWeeklyPerformanceTrend(agentId));
+        dashboard.setMonthlyTrend(buildMonthlyPerformanceTrend(agentId));
+
+        // Build recent activities
+        dashboard.setRecentActivities(buildRecentActivities(agentId));
+
+        // Generate insights and recommendations
+        generateInsightsAndRecommendations(dashboard);
+
+        return dashboard;
+    }
+
+    @Override
+    public AgentPerformanceDTO agentPerformance(Long agentId) {
         User agent = findUser(agentId);
         AgentPerformanceDTO dto = new AgentPerformanceDTO();
-        
+
         long approvals = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.APPROVAL);
         long rejections = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.REJECTION);
         long totalActions = userActivityRepository.countByUserId(agentId);
         long clientsHandled = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.CLIENT_HANDLED);
-        
+
         dto.setApprovalActionsCount((int) approvals);
         dto.setRejectionActionsCount((int) rejections);
         dto.setTotalActions((int) totalActions);
         dto.setNumberOfClientsHandled((int) clientsHandled);
-        
+
         // FIX #1: Calculate correct performance score (approvals * 100) / (approvals + rejections)
         double score = 0;
         long totalDecisions = approvals + rejections;
@@ -623,17 +653,12 @@ public class UserServiceImpl implements UserService {
             score = (approvals * 100.0) / totalDecisions;
         }
         dto.setPerformanceScore(score);
-        
+
         // FIX #2: Use realistic average processing time instead of hardcoded 300
         double avgProcessingTime = totalActions > 0 ? 1800.0 : 0; // 30 minutes default when active
         dto.setAverageProcessingTimeSeconds(avgProcessingTime);
-        
-        return dto;
-    }
 
-    @Override
-    public AgentPerformanceDTO agentPerformance(Long agentId) {
-        return agentDashboard(agentId);
+        return dto;
     }
 
     @Override
@@ -875,6 +900,409 @@ public class UserServiceImpl implements UserService {
         }
 
         performance.setInsights(insights);
+    }
+
+    // ==================== Agent Dashboard Implementation ====================
+
+    private void calculateCoreMetrics(AgentDashboard dashboard, Long agentId) {
+        // Get basic activity counts
+        long approvals = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.APPROVAL);
+        long rejections = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.REJECTION);
+        long totalActions = userActivityRepository.countByUserId(agentId);
+        long clientsHandled = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.CLIENT_HANDLED);
+
+        // Calculate approval rate
+        long totalDecisions = approvals + rejections;
+        double approvalRate = totalDecisions > 0 ? (approvals * 100.0 / totalDecisions) : 0.0;
+
+        // Calculate average processing time
+        double avgProcessingTime = calculateAverageProcessingTime(agentId, totalActions);
+
+        // Set core metrics
+        dashboard.setApprovals(approvals);
+        dashboard.setRejections(rejections);
+        dashboard.setTotalActions(totalActions);
+        dashboard.setClientsHandled(clientsHandled);
+        dashboard.setApprovalRate(approvalRate);
+        dashboard.setAverageProcessingTime(avgProcessingTime);
+
+        // Calculate derived metrics
+        dashboard.calculateEfficiencyScore();
+        dashboard.calculatePerformanceScore();
+
+        // Get pending clients
+        User agent = findUser(agentId);
+        List<User> clients = userRepository.findAllByAssignedAgentAndRoleAndDeletedFalse(agent, UserRole.CLIENT);
+        long pendingClients = clients.stream()
+                .filter(c -> c.getStatus() == UserStatus.ACTIVE || c.getStatus() == UserStatus.PENDING_VERIFICATION)
+                .count();
+        dashboard.setPendingClients(pendingClients);
+    }
+
+    private void calculateSLAMetrics(AgentDashboard dashboard, Long agentId) {
+        // SLA target: 2 hours (7200 seconds) for processing
+        double slaTargetSeconds = 7200.0;
+
+        // Get activities from last 30 days for SLA calculation
+        Instant thirtyDaysAgo = Instant.now().minus(30, ChronoUnit.DAYS);
+        List<UserActivity> recentActivities = userActivityRepository.findByUserIdAndTimestampBetweenOrderByTimestampAsc(
+                agentId, thirtyDaysAgo, Instant.now());
+
+        long compliantActions = 0;
+        long totalSLAActions = 0;
+        double totalResponseTime = 0;
+
+        // Calculate SLA compliance based on processing time pairs
+        Instant currentStart = null;
+        for (UserActivity activity : recentActivities) {
+            if (activity.getActionType() == UserActivityActionType.PROCESSING_STARTED) {
+                currentStart = activity.getTimestamp();
+            } else if (activity.getActionType() == UserActivityActionType.PROCESSING_COMPLETED && currentStart != null) {
+                double responseTime = Duration.between(currentStart, activity.getTimestamp()).getSeconds();
+                totalResponseTime += responseTime;
+                totalSLAActions++;
+
+                if (responseTime <= slaTargetSeconds) {
+                    compliantActions++;
+                }
+                currentStart = null;
+            }
+        }
+
+        double complianceRate = totalSLAActions > 0 ? (compliantActions * 100.0 / totalSLAActions) : 100.0;
+        double averageResponseTime = totalSLAActions > 0 ? totalResponseTime / totalSLAActions : 0;
+
+        AgentDashboard.SLAMetrics slaMetrics = new AgentDashboard.SLAMetrics(
+                complianceRate, totalSLAActions, compliantActions,
+                totalSLAActions - compliantActions, averageResponseTime, slaTargetSeconds);
+
+        dashboard.setSlaMetrics(slaMetrics);
+        dashboard.updateSLAStatus();
+    }
+
+    private void calculateRiskMetrics(AgentDashboard dashboard, User agent) {
+        List<User> clients = userRepository.findAllByAssignedAgentAndRoleAndDeletedFalse(agent, UserRole.CLIENT);
+
+        if (clients.isEmpty()) {
+            dashboard.setRiskMetrics(new AgentDashboard.RiskMetrics(0, 0, 0, 0, 0));
+            return;
+        }
+
+        long highRisk = 0, mediumRisk = 0, lowRisk = 0;
+        double totalRiskScore = 0;
+
+        for (User client : clients) {
+            ClientRiskScoreDTO riskScore = clientRiskScore(client.getId());
+            double score = riskScore.getRiskScore();
+
+            totalRiskScore += score;
+
+            if (score >= 80) highRisk++;
+            else if (score >= 60) mediumRisk++;
+            else lowRisk++;
+        }
+
+        double averageRiskScore = totalRiskScore / clients.size();
+
+        // Calculate risk distribution index (measure of concentration)
+        double riskDistributionIndex = 0;
+        if (clients.size() > 1) {
+            double expectedEqual = clients.size() / 3.0;
+            double variance = Math.pow(highRisk - expectedEqual, 2) +
+                            Math.pow(mediumRisk - expectedEqual, 2) +
+                            Math.pow(lowRisk - expectedEqual, 2);
+            riskDistributionIndex = Math.sqrt(variance / clients.size()) * 100;
+        }
+
+        AgentDashboard.RiskMetrics riskMetrics = new AgentDashboard.RiskMetrics(
+                averageRiskScore, highRisk, mediumRisk, lowRisk, riskDistributionIndex);
+
+        dashboard.setRiskMetrics(riskMetrics);
+    }
+
+    private void calculatePriorityMetrics(AgentDashboard dashboard, User agent) {
+        List<User> clients = userRepository.findAllByAssignedAgentAndRoleAndDeletedFalse(agent, UserRole.CLIENT);
+
+        long urgent = 0, high = 0, medium = 0, low = 0;
+        long totalPriorityActions = 0, urgentHandled = 0;
+
+        for (User client : clients) {
+            Integer priorityScore = calculatePriorityScore(client, agent);
+
+            if (priorityScore >= 90) urgent++;
+            else if (priorityScore >= 75) high++;
+            else if (priorityScore >= 50) medium++;
+            else low++;
+
+            // Check if urgent clients were handled quickly
+            if (priorityScore >= 90) {
+                List<UserActivity> clientActivities = userActivityRepository.findByUserIdAndTimestampBetweenOrderByTimestampAsc(
+                        client.getId(), Instant.now().minus(7, ChronoUnit.DAYS), Instant.now());
+
+                boolean handled = clientActivities.stream()
+                        .anyMatch(a -> a.getActionType() == UserActivityActionType.APPROVAL ||
+                                     a.getActionType() == UserActivityActionType.REJECTION);
+
+                if (handled) {
+                    urgentHandled++;
+                    totalPriorityActions++;
+                }
+            }
+        }
+
+        double priorityHandlingEfficiency = urgent > 0 ? (urgentHandled * 100.0 / urgent) : 100.0;
+
+        AgentDashboard.PriorityMetrics priorityMetrics = new AgentDashboard.PriorityMetrics(
+                urgent, high, medium, low, priorityHandlingEfficiency);
+
+        dashboard.setPriorityMetrics(priorityMetrics);
+    }
+
+    private List<AgentDashboard.PerformanceTrendPoint> buildWeeklyPerformanceTrend(Long agentId) {
+        List<AgentDashboard.PerformanceTrendPoint> trend = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM d");
+
+        for (int offset = 6; offset >= 0; offset--) {
+            LocalDate day = LocalDate.now().minusDays(offset);
+            Instant dayStart = day.atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+            Instant dayEnd = day.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).minusNanos(1).toInstant();
+
+            long dailyApprovals = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(
+                    agentId, UserActivityActionType.APPROVAL, dayStart, dayEnd);
+            long dailyRejections = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(
+                    agentId, UserActivityActionType.REJECTION, dayStart, dayEnd);
+            long dailyActions = userActivityRepository.countByUserIdAndTimestampBetween(agentId, dayStart, dayEnd);
+
+            double dailyApprovalRate = 0;
+            long decisions = dailyApprovals + dailyRejections;
+            if (decisions > 0) {
+                dailyApprovalRate = (dailyApprovals * 100.0 / decisions);
+            }
+
+            // Calculate daily performance score using the same formula
+            double dailyPerformanceScore = 0;
+            if (decisions > 0) {
+                double approvalComponent = dailyApprovalRate * 0.5;
+                double speedComponent = 30.0; // Simplified for trend
+                double volumeComponent = Math.min(20.0, dailyActions * 0.1);
+                dailyPerformanceScore = approvalComponent + speedComponent + volumeComponent;
+            }
+
+            trend.add(new AgentDashboard.PerformanceTrendPoint(
+                    day.format(formatter),
+                    Math.round(dailyPerformanceScore * 100.0) / 100.0,
+                    dailyActions,
+                    dailyApprovals,
+                    Math.round(dailyApprovalRate * 100.0) / 100.0));
+        }
+
+        return trend;
+    }
+
+    private List<AgentDashboard.PerformanceTrendPoint> buildMonthlyPerformanceTrend(Long agentId) {
+        List<AgentDashboard.PerformanceTrendPoint> trend = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM yyyy");
+
+        for (int offset = 5; offset >= 0; offset--) {
+            LocalDate month = LocalDate.now().minusMonths(offset);
+            LocalDate startOfMonth = month.withDayOfMonth(1);
+            LocalDate endOfMonth = month.withDayOfMonth(month.lengthOfMonth());
+
+            Instant monthStart = startOfMonth.atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+            Instant monthEnd = endOfMonth.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).minusNanos(1).toInstant();
+
+            long monthlyApprovals = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(
+                    agentId, UserActivityActionType.APPROVAL, monthStart, monthEnd);
+            long monthlyRejections = userActivityRepository.countByUserIdAndActionTypeAndTimestampBetween(
+                    agentId, UserActivityActionType.REJECTION, monthStart, monthEnd);
+            long monthlyActions = userActivityRepository.countByUserIdAndTimestampBetween(agentId, monthStart, monthEnd);
+
+            double monthlyApprovalRate = 0;
+            long decisions = monthlyApprovals + monthlyRejections;
+            if (decisions > 0) {
+                monthlyApprovalRate = (monthlyApprovals * 100.0 / decisions);
+            }
+
+            double monthlyPerformanceScore = 0;
+            if (decisions > 0) {
+                double approvalComponent = monthlyApprovalRate * 0.5;
+                double speedComponent = 30.0;
+                double volumeComponent = Math.min(20.0, monthlyActions * 0.1);
+                monthlyPerformanceScore = approvalComponent + speedComponent + volumeComponent;
+            }
+
+            trend.add(new AgentDashboard.PerformanceTrendPoint(
+                    month.format(formatter),
+                    Math.round(monthlyPerformanceScore * 100.0) / 100.0,
+                    monthlyActions,
+                    monthlyApprovals,
+                    Math.round(monthlyApprovalRate * 100.0) / 100.0));
+        }
+
+        return trend;
+    }
+
+    private List<AgentDashboard.ActivityGroup> buildRecentActivities(Long agentId) {
+        List<AgentDashboard.ActivityGroup> activityGroups = new ArrayList<>();
+
+        // Get activities from last 7 days
+        Instant weekAgo = Instant.now().minus(7, ChronoUnit.DAYS);
+        List<UserActivity> activities = userActivityRepository.findByUserIdAndTimestampBetweenOrderByTimestampAsc(
+                agentId, weekAgo, Instant.now());
+
+        // Group by date
+        Map<String, List<UserActivity>> groupedByDate = activities.stream()
+                .collect(Collectors.groupingBy(
+                        activity -> activity.getTimestamp().atZone(java.time.ZoneOffset.UTC)
+                                .toLocalDate().toString(),
+                        Collectors.toList()));
+
+        // Convert to ActivityGroups
+        for (Map.Entry<String, List<UserActivity>> entry : groupedByDate.entrySet()) {
+            List<AgentDashboard.ActivityItem> activityItems = entry.getValue().stream()
+                    .map(this::toActivityItem)
+                    .collect(Collectors.toList());
+
+            AgentDashboard.ActivityGroup group = new AgentDashboard.ActivityGroup(
+                    entry.getKey(), activityItems, activityItems.size());
+
+            activityGroups.add(group);
+        }
+
+        // Sort by date descending
+        activityGroups.sort((a, b) -> b.getDate().compareTo(a.getDate()));
+
+        return activityGroups;
+    }
+
+    private AgentDashboard.ActivityItem toActivityItem(UserActivity activity) {
+        String impact = determineActivityImpact(activity.getActionType());
+        String status = "SUCCESS"; // Default status
+
+        return new AgentDashboard.ActivityItem(
+                activity.getId(),
+                activity.getActionType().toString(),
+                activity.getDescription(),
+                activity.getTimestamp(),
+                null, // clientName - would need additional query
+                null, // clientId
+                impact,
+                status
+        );
+    }
+
+    private String determineActivityImpact(UserActivityActionType actionType) {
+        switch (actionType) {
+            case APPROVAL:
+            case REJECTION:
+                return "HIGH";
+            case CLIENT_HANDLED:
+            case PROCESSING_COMPLETED:
+                return "MEDIUM";
+            default:
+                return "LOW";
+        }
+    }
+
+    private void generateInsightsAndRecommendations(AgentDashboard dashboard) {
+        List<String> insights = new ArrayList<>();
+        List<String> recommendations = new ArrayList<>();
+
+        // Performance insights
+        if (dashboard.getPerformanceScore() >= 80) {
+            insights.add("🎉 Excellent performance! You're in the top tier.");
+        } else if (dashboard.getPerformanceScore() >= 60) {
+            insights.add("👍 Good performance. Keep up the momentum!");
+        } else {
+            insights.add("⚠️ Performance needs improvement. Focus on key metrics.");
+        }
+
+        // Approval rate insights
+        if (dashboard.getApprovalRate() > 80) {
+            insights.add("📈 High approval rate indicates efficient processing.");
+            recommendations.add("Maintain quality control while sustaining approval rates.");
+        } else if (dashboard.getApprovalRate() < 50) {
+            insights.add("🔍 Lower approval rate may indicate conservative decision-making.");
+            recommendations.add("Review approval criteria and consider additional training.");
+        }
+
+        // SLA insights
+        if (dashboard.getSlaMetrics() != null) {
+            if (dashboard.getSlaMetrics().getComplianceRate() >= 95) {
+                insights.add("⏱️ Outstanding SLA compliance!");
+            } else if (dashboard.getSlaMetrics().getComplianceRate() < 85) {
+                insights.add("⏰ SLA compliance needs attention.");
+                recommendations.add("Focus on reducing processing times for better SLA performance.");
+            }
+        }
+
+        // Risk insights
+        if (dashboard.getRiskMetrics() != null) {
+            if (dashboard.getRiskMetrics().getHighRiskClients() > 0) {
+                insights.add("🚨 " + dashboard.getRiskMetrics().getHighRiskClients() + " high-risk clients require attention.");
+                recommendations.add("Prioritize review of high-risk client applications.");
+            }
+        }
+
+        // Priority insights
+        if (dashboard.getPriorityMetrics() != null) {
+            if (dashboard.getPriorityMetrics().getUrgentClients() > 0) {
+                insights.add("🔥 " + dashboard.getPriorityMetrics().getUrgentClients() + " urgent clients pending.");
+                recommendations.add("Address urgent client cases immediately.");
+            }
+        }
+
+        // Workload insights
+        if (dashboard.getPendingClients() > 10) {
+            insights.add("📋 High workload detected.");
+            recommendations.add("Consider workload distribution or additional support.");
+        }
+
+        dashboard.setInsights(insights);
+        dashboard.setRecommendations(recommendations);
+    }
+
+    @Override
+    public Page<UserActivityResponseDTO> agentActivityEnhanced(Long agentId, List<UserActivityActionType> actionTypes,
+                                                              Long clientId, Instant fromDate, Instant toDate,
+                                                              String searchTerm, Pageable pageable) {
+        // Build dynamic query based on filters
+        Specification<UserActivity> spec = Specification.where(null);
+
+        // Always filter by agent
+        spec = spec.and((root, query, cb) -> cb.equal(root.get("userId"), agentId));
+
+        // Filter by action types
+        if (actionTypes != null && !actionTypes.isEmpty()) {
+            spec = spec.and((root, query, cb) -> root.get("actionType").in(actionTypes));
+        }
+
+        // Filter by client (if specified, get activities for that specific client handled by this agent)
+        if (clientId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("userId"), clientId));
+        }
+
+        // Filter by date range
+        if (fromDate != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("timestamp"), fromDate));
+        }
+        if (toDate != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("timestamp"), toDate));
+        }
+
+        // Filter by search term in description
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            spec = spec.and((root, query, cb) ->
+                cb.like(cb.lower(root.get("description")), "%" + searchTerm.toLowerCase() + "%"));
+        }
+
+        return userActivityRepository.findAll(spec, pageable).map(this::toActivityDto);
+    }
+
+    @Override
+    public List<UserActivityResponseDTO> agentActivityRealtime(Long agentId, Instant since) {
+        List<UserActivity> activities = userActivityRepository.findByUserIdAndTimestampAfterOrderByTimestampDesc(agentId, since);
+        return activities.stream().map(this::toActivityDto).collect(Collectors.toList());
     }
 
     @Override

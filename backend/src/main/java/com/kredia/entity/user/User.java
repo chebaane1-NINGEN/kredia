@@ -96,6 +96,9 @@ public class User {
     @JoinColumn(name = "assigned_agent_id")
     private User assignedAgent;
 
+    @Column(name = "priority_score", nullable = false)
+    private int priorityScore = 0;
+
     public User() {}
 
     public Long getId() { return id; }
@@ -145,6 +148,9 @@ public class User {
 
     public User getAssignedAgent() { return assignedAgent; }
     public void setAssignedAgent(User assignedAgent) { this.assignedAgent = assignedAgent; }
+
+    public int getPriorityScore() { return priorityScore; }
+    public void setPriorityScore(int priorityScore) { this.priorityScore = priorityScore; }
 
     public int getFailedLoginAttempts() { return failedLoginAttempts; }
     public void setFailedLoginAttempts(int failedLoginAttempts) { this.failedLoginAttempts = failedLoginAttempts; }

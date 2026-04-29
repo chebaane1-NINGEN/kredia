@@ -1,17 +1,19 @@
 package com.kredia.service.user;
 
-import com.kredia.dto.user.UserRequestDTO;
-import com.kredia.dto.user.UserResponseDTO;
-import com.kredia.dto.user.AdminUserUpdateDTO;
-import com.kredia.dto.user.ClientProfileUpdateDTO;
-import com.kredia.dto.user.AdminStatsDTO;
+import com.kredia.dto.user.AgentDashboard;
 import com.kredia.dto.user.AgentPerformanceDTO;
 import com.kredia.dto.user.EnhancedAgentPerformanceDTO;
 import com.kredia.dto.user.ClientDetailsDTO;
 import com.kredia.dto.user.ClientEligibilityDTO;
 import com.kredia.dto.user.ClientRiskScoreDTO;
+import com.kredia.dto.user.ClientProfileUpdateDTO;
+import com.kredia.dto.user.AdminUserUpdateDTO;
 import com.kredia.dto.user.EnhancedClientDTO;
 import com.kredia.dto.user.UserActivityResponseDTO;
+import com.kredia.dto.user.UserRequestDTO;
+import com.kredia.dto.user.UserResponseDTO;
+import com.kredia.dto.user.AdminStatsDTO;
+import com.kredia.entity.user.UserActivityActionType;
 import com.kredia.entity.user.UserRole;
 import com.kredia.entity.user.UserStatus;
 import org.springframework.data.domain.Page;
@@ -75,7 +77,9 @@ public interface UserService {
     byte[] exportSelectedUsersExcel(Long actorId, List<Long> ids);
 
     // --- Agent Performance & Activity ---
-    AgentPerformanceDTO agentDashboard(Long agentId);
+    AgentDashboard agentDashboard(Long agentId);
+    Page<UserActivityResponseDTO> agentActivityEnhanced(Long agentId, List<UserActivityActionType> actionTypes, Long clientId, Instant fromDate, Instant toDate, String searchTerm, Pageable pageable);
+    List<UserActivityResponseDTO> agentActivityRealtime(Long agentId, Instant since);
     AgentPerformanceDTO agentPerformance(Long agentId);
     EnhancedAgentPerformanceDTO agentPerformanceEnhanced(Long agentId);
     Page<UserActivityResponseDTO> agentActivity(Long agentId, Pageable pageable);

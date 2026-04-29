@@ -2,6 +2,7 @@ package com.kredia.controller.user;
 
 import com.kredia.dto.ApiResponse;
 import com.kredia.dto.user.AdminStatsDTO;
+import com.kredia.dto.user.AgentDashboard;
 import com.kredia.dto.user.AgentPerformanceDTO;
 import com.kredia.dto.user.ClientDetailsDTO;
 import com.kredia.dto.user.ClientEligibilityDTO;
@@ -11,9 +12,9 @@ import com.kredia.dto.user.ClientProfileUpdateDTO;
 import com.kredia.dto.user.AdminUserUpdateDTO;
 import com.kredia.dto.user.UserResponseDTO;
 import com.kredia.dto.user.UserRequestDTO;
-import com.kredia.dto.user.UserResponseDTO;
 import com.kredia.dto.user.UserRoleChangeRequestDTO;
 import com.kredia.entity.user.KycDocument;
+import com.kredia.entity.user.UserActivityActionType;
 import com.kredia.enums.DocumentType;
 import com.kredia.enums.KycStatus;
 import com.kredia.service.user.KycDocumentService;
@@ -33,6 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -415,7 +417,7 @@ public class UserController {
     }
 
     @GetMapping("/agent/{agentId}/dashboard")
-    public ResponseEntity<ApiResponse<AgentPerformanceDTO>> agentDashboard(@PathVariable("agentId") Long agentId) {
+    public ResponseEntity<ApiResponse<AgentDashboard>> agentDashboard(@PathVariable("agentId") Long agentId) {
         return ResponseEntity.ok(ApiResponse.ok(userService.agentDashboard(agentId)));
     }
 
@@ -424,15 +426,29 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.agentPerformance(agentId)));
     }
 
-    @GetMapping("/agent/{agentId}/activity")
-    public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> agentActivity(
-            @PathVariable("agentId") Long agentId,
-            @PageableDefault Pageable pageable
-    ) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.agentActivity(agentId, pageable)));
-    }
+    // @GetMapping("/agent/{agentId}/activity")
+    // public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> agentActivity(
+    //         @RequestHeader("X-Actor-Id") Long actorId,
+    //         @PathVariable("agentId") Long agentId,
+    //         @RequestParam(name = "actionType", required = false) List<UserActivityActionType> actionTypes,
+    //         @RequestParam(name = "clientId", required = false) Long clientId,
+    //         @RequestParam(name = "fromDate", required = false) String fromDate,
+    //         @RequestParam(name = "toDate", required = false) String toDate,
+    //         @RequestParam(name = "search", required = false) String searchTerm,
+    //         @PageableDefault Pageable pageable
+    // ) {
+    //     return ResponseEntity.ok(ApiResponse.ok(userService.agentActivityEnhanced(agentId, actionTypes, clientId, parseStartOfDay(fromDate), parseEndOfDay(toDate), searchTerm, pageable)));
+    // }
 
-    @GetMapping("/agent/{agentId}/activity/clients")
+    @GetMapping("/agent/{agentId}/activity/realtime")
+    public ResponseEntity<ApiResponse<List<UserActivityResponseDTO>>> agentActivityRealtime(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("agentId") Long agentId,
+            @RequestParam(name = "since", required = false) String since
+    ) {
+        Instant sinceInstant = since != null ? Instant.parse(since) : Instant.now().minus(1, ChronoUnit.MINUTES);
+        return ResponseEntity.ok(ApiResponse.ok(userService.agentActivityRealtime(agentId, sinceInstant)));
+    }
     public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> agentActivityForClients(
             @PathVariable("agentId") Long agentId,
             @PageableDefault Pageable pageable
