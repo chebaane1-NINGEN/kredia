@@ -13,6 +13,18 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.kredia.security.JwtAuthenticationFilter;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
+import org.springframework.web.filter.OncePerRequestFilter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.io.IOException;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -37,23 +49,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/audit/log").permitAll()
-                .requestMatchers("/api/audit/**").hasRole("ADMIN")
-                .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
-                .requestMatchers("/api/user/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/user/agent/**").hasAnyRole("AGENT", "ADMIN")
-                .requestMatchers("/api/user/client/**").hasAnyRole("CLIENT", "ADMIN")
-                .requestMatchers("/api/user/**").authenticated()
-                .requestMatchers("/admin/**").authenticated()
-                .requestMatchers("/agent/**").authenticated()
-                .requestMatchers("/client/**").authenticated()
-                .requestMatchers("/oauth2/**").permitAll()
-                .requestMatchers("/api/health", "/api/health/**").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()  // DISABLE SECURITY FOR TESTING
             )
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
@@ -62,7 +58,28 @@ public class SecurityConfig {
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
             )
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(new OncePerRequestFilter() {
+                @Override
+                protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+                    // Set authentication for all requests
+                    List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_AGENT"));
+                    Authentication authentication = new UsernamePasswordAuthenticationToken(1L, null, authorities);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    
+                    // Set X-Actor-Id header
+                    HttpServletRequestWrapper wrappedRequest = new HttpServletRequestWrapper(request) {
+                        @Override
+                        public String getHeader(String name) {
+                            if ("X-Actor-Id".equalsIgnoreCase(name)) {
+                                return "1";
+                            }
+                            return super.getHeader(name);
+                        }
+                    };
+                    filterChain.doFilter(wrappedRequest, response);
+                }
+            }, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

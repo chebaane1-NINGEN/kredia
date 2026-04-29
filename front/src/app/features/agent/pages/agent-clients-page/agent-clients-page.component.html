@@ -178,7 +178,7 @@
               <td class="actions-cell">
                 <button type="button" class="icon-btn view" (click)="viewClientDetails(client)" title="View client">👁</button>
                 <button type="button" class="icon-btn edit" (click)="editClient(client)" title="Edit client">✎</button>
-                <button type="button" class="icon-btn approve" [disabled]="actionLoadingId === client.userId" (click)="approveClient(client)" title="Approve client">✓</button>
+                <button type="button" class="icon-btn approve" [disabled]="actionLoadingId === client.userId" (click)="approveClient(client, $event)" title="Approve client">✓</button>
                 <button type="button" class="icon-btn suspend" [disabled]="actionLoadingId === client.userId" (click)="suspendClient(client)" title="Suspend client">⛔</button>
               </td>
             </tr>
@@ -222,7 +222,7 @@
         <div class="card-actions">
           <button type="button" class="btn outline" (click)="viewClientDetails(client)">View Details</button>
           <button type="button" class="btn outline" (click)="editClient(client)">Edit</button>
-          <button type="button" class="btn primary" [disabled]="actionLoadingId === client.userId" (click)="approveClient(client)">Approve</button>
+          <button type="button" class="btn primary" [disabled]="actionLoadingId === client.userId" (click)="approveClient(client, $event)">Approve</button>
           <button type="button" class="btn outline" [disabled]="actionLoadingId === client.userId" (click)="suspendClient(client)">Suspend</button>
         </div>
       </div>

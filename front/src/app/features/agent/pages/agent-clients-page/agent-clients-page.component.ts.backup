@@ -6,11 +6,12 @@ import { finalize } from 'rxjs';
 import { AgentApi } from '../../data-access/agent.api';
 import { AgentClient } from '../../models/agent.model';
 import { PageResponse } from '../../../admin/models/admin.model';
+import { AddClientModalComponent } from '../../components/add-client-modal/add-client-modal.component';
 import { NotificationService } from '../../../../core/services/notification.service';
 
 @Component({
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AddClientModalComponent],
   templateUrl: './agent-clients-page.component.html',
   styleUrl: './agent-clients-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -129,7 +130,7 @@ export class AgentClientsPageComponent implements OnInit {
       }))
       .subscribe({
         next: () => {
-          this.notify.success('Success', 'Client added successfully');
+          this.notify.success('Client added successfully');
           this.closeAddClientModal();
           this.currentPage = 0;
           this.loadClients();
@@ -251,11 +252,11 @@ export class AgentClientsPageComponent implements OnInit {
       }))
       .subscribe({
         next: () => {
-          this.notify.success('Success', `${client.firstName} approved successfully`);
+          this.notify.success(`${client.firstName} approved successfully`);
           this.loadClients();
         },
         error: (err) => {
-          this.notify.error('Error', 'Failed to approve client: ' + (err.error?.message || 'Unknown error'));
+          this.notify.error('Failed to approve client: ' + (err.error?.message || 'Unknown error'));
         }
       });
   }
@@ -275,11 +276,11 @@ export class AgentClientsPageComponent implements OnInit {
       }))
       .subscribe({
         next: () => {
-          this.notify.success('Success', `${client.firstName} rejected`);
+          this.notify.success(`${client.firstName} rejected`);
           this.loadClients();
         },
         error: (err) => {
-          this.notify.error('Error', 'Failed to reject client: ' + (err.error?.message || 'Unknown error'));
+          this.notify.error('Failed to reject client: ' + (err.error?.message || 'Unknown error'));
         }
       });
   }
@@ -291,42 +292,140 @@ export class AgentClientsPageComponent implements OnInit {
     return 'priority-low';
   }
 
-  getPriorityCategory(score?: number): string {
-    if (!score) return 'LOW';
-    if (score >= 80) return 'HIGH';
-    if (score >= 50) return 'MEDIUM';
-    return 'LOW';
+  getPriorityLabel(score?: number): string {
+    if (!score) return 'Unknown';
+    if (score >= 80) return 'High';
+    if (score >= 50) return 'Medium';
+    return 'Low';
   }
 
   getStatusBadgeClass(status: string): string {
     return `status-${status.toLowerCase().replace('_', '-')}`;
   }
 
-  // Missing methods called from template
+  refreshClients(): void {
+    this.loadClients();
+  }
+
+  clearFilters(): void {
+    this.searchEmail = '';
+    this.selectedStatuses = [];
+    this.selectedPriorities = [];
+    this.startDate = '';
+    this.endDate = '';
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
+  onSearch(): void {
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
+  onStatusFilter(): void {
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
+  onPriorityFilter(): void {
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
+  onDateFilter(): void {
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
+  toggleStatusDropdown(): void {
+    this.statusDropdownOpen = !this.statusDropdownOpen;
+    this.priorityDropdownOpen = false; // Close other dropdown
+  }
+
+  togglePriorityDropdown(): void {
+    this.priorityDropdownOpen = !this.priorityDropdownOpen;
+    this.statusDropdownOpen = false; // Close other dropdown
+  }
+
+  onStatusChange(status: string, event: Event): void {
+    const target = event.target as HTMLInputElement;
+    if (target.checked) {
+      this.selectedStatuses.push(status);
+    } else {
+      this.selectedStatuses = this.selectedStatuses.filter(s => s !== status);
+    }
+    this.onStatusFilter();
+  }
+
+  onPriorityChange(priority: string, event: Event): void {
+    const target = event.target as HTMLInputElement;
+    if (target.checked) {
+      this.selectedPriorities.push(priority);
+    } else {
+      this.selectedPriorities = this.selectedPriorities.filter(p => p !== priority);
+    }
+    this.onPriorityFilter();
+  }
+
+  // Close dropdowns when clicking outside
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.multi-select')) {
+      this.statusDropdownOpen = false;
+      this.priorityDropdownOpen = false;
+    }
+  }
+
+  onSortChange(sortBy: string): void {
+    if (this.sortBy === sortBy) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortBy = sortBy;
+      this.sortDirection = 'desc'; // Default to descending for new sort
+    }
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
+  onPageChange(page: number): void {
+    if (page >= 0 && page < this.totalPages) {
+      this.currentPage = page;
+      this.loadClients();
+    }
+  }
+
+  viewClientDetails(client: AgentClient): void {
+    this.selectedClient = client;
+    this.showViewClientModal = true;
+    this.cdr.markForCheck();
+  }
+
+  editClient(client: AgentClient): void {
+    this.selectedClient = { ...client }; // Create a copy for editing
+    this.showEditClientModal = true;
+    this.cdr.markForCheck();
+  }
+
   createClient(): void {
     this.showAddClientModal = true;
   }
 
-  getVisibleClients(): AgentClient[] {
-    return this.clients.filter(client => {
-      if (this.selectedPriorities.length === 0) {
-        return true;
-      }
-      return this.selectedPriorities.includes(this.getPriorityCategory(client.priorityScore));
-    });
-  }
-
-  getPriorityClass(score?: number): string {
-    if (!score) return 'priority-low';
-    if (score >= 80) return 'priority-high';
-    if (score >= 50) return 'priority-medium';
-    return 'priority-low';
-  }
-
-  editClient(client: AgentClient): void {
-    this.selectedClient = { ...client };
-    this.showEditClientModal = true;
-    this.cdr.markForCheck();
+  approveClient(client: AgentClient): void {
+    if (!client.userId) return;
+    this.actionLoadingId = client.userId;
+    this.api.approveClient(client.userId)
+      .pipe(finalize(() => {
+        this.actionLoadingId = null;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: () => this.loadClients(),
+        error: (err) => {
+          this.error = 'Failed to approve client';
+          console.error('Approve client error:', err);
+        }
+      });
   }
 
   suspendClient(client: AgentClient): void {
@@ -345,6 +444,83 @@ export class AgentClientsPageComponent implements OnInit {
           console.error('Suspend client error:', err);
         }
       });
+  }
+
+  rejectClient(client: AgentClient): void {
+    if (!client.userId) return;
+    const reason = prompt('Reason for rejection (optional):');
+    this.actionLoadingId = client.userId;
+    this.api.rejectClient(client.userId, reason || undefined)
+      .pipe(finalize(() => {
+        this.actionLoadingId = null;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: () => this.loadClients(),
+        error: (err) => {
+          this.error = 'Failed to reject client';
+          console.error('Reject client error:', err);
+        }
+      });
+  }
+
+  getVisibleClients(): AgentClient[] {
+    return this.clients.filter(client => {
+      if (this.selectedPriorities.length === 0) {
+        return true;
+      }
+      return this.selectedPriorities.includes(this.getPriorityCategory(client.priorityScore));
+    });
+  }
+
+  getPriorityCategory(score?: number): string {
+    if (!score) {
+      return 'LOW';
+    }
+    if (score >= 80) {
+      return 'HIGH';
+    }
+    if (score >= 50) {
+      return 'MEDIUM';
+    }
+    return 'LOW';
+  }
+
+  getStatusIcon(status: string): string {
+    switch (status) {
+      case 'ACTIVE': return '✔️';
+      case 'INACTIVE': return '⏸️';
+      case 'SUSPENDED': return '⛔';
+      case 'BLOCKED': return '🚫';
+      default: return 'ℹ️';
+    }
+  }
+
+  getStatusBadgeClass(status: string): string {
+    return `status-${status.toLowerCase()}`;
+  }
+
+  getPriorityClass(score?: number): string {
+    if (!score) return 'priority-low';
+    if (score >= 80) return 'priority-high';
+    if (score >= 50) return 'priority-medium';
+    return 'priority-low';
+  }
+
+  // Modal methods
+  closeAddClientModal(): void {
+    this.showAddClientModal = false;
+    this.resetAddClientForm();
+  }
+
+  resetAddClientForm(): void {
+    this.newClient = {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phoneNumber: ''
+    };
+    this.addClientLoading = false;
   }
 
   submitAddClient(): void {
@@ -383,6 +559,7 @@ export class AgentClientsPageComponent implements OnInit {
       });
   }
 
+  // Modal methods
   closeViewClientModal(): void {
     this.showViewClientModal = false;
     this.selectedClient = null;
