@@ -11,6 +11,11 @@ public class UserActivityResponseDTO {
     private UserActivityActionType actionType;
     private String description;
     private Instant timestamp;
+    private Long clientId;
+    private String clientName;
+    private String previousValue;
+    private String newValue;
+    private String context;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -26,4 +31,19 @@ public class UserActivityResponseDTO {
 
     public Instant getTimestamp() { return timestamp; }
     public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }
+
+    public Long getClientId() { return clientId; }
+    public void setClientId(Long clientId) { this.clientId = clientId; }
+
+    public String getClientName() { return clientName; }
+    public void setClientName(String clientName) { this.clientName = clientName; }
+
+    public String getPreviousValue() { return previousValue; }
+    public void setPreviousValue(String previousValue) { this.previousValue = previousValue; }
+
+    public String getNewValue() { return newValue; }
+    public void setNewValue(String newValue) { this.newValue = newValue; }
+
+    public String getContext() { return context; }
+    public void setContext(String context) { this.context = context; }
 }

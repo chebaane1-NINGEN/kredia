@@ -5,6 +5,11 @@ export interface AgentActivity {
   timestamp: string;
   userId?: number;
   userName?: string;
+  clientId?: number;
+  clientName?: string;
+  previousValue?: string;
+  newValue?: string;
+  context?: string;
 }
 
 export interface PerformanceTrendPoint {
@@ -39,6 +44,12 @@ export interface AgentPerformance {
   scoreChangeFromLastWeek?: number;
   approvalRateChangeFromLastWeek?: number;
   processingTimeChangeFromLastWeek?: number;
+  calculationWindow?: string;
+  scoreFormula?: string;
+  approvalRateFormula?: string;
+  efficiencyFormula?: string;
+  dataSources?: string[];
+  recommendations?: string[];
 }
 
 export interface AgentDashboard extends AgentPerformance {

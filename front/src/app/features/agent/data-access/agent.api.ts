@@ -53,22 +53,13 @@ export class AgentApi {
       .set('size', size.toString());
 
     if (email) params = params.set('email', email);
-    if (statuses) {
-      // Split comma-separated string and add each status as separate param
-      statuses.split(',').forEach(status => {
-        params = params.append('statuses', status.trim());
-      });
-    }
+    if (statuses) params = params.set('statuses', statuses);
     if (sortBy) params = params.set('sortBy', sortBy);
     if (sortDirection) params = params.set('sortDirection', sortDirection);
+    if (sortBy && sortDirection) params = params.set('sort', `${sortBy},${sortDirection}`);
     if (startDate) params = params.set('startDate', startDate);
     if (endDate) params = params.set('endDate', endDate);
-    if (priorities) {
-      // Split comma-separated string and add each priority as separate param
-      priorities.split(',').forEach(priority => {
-        params = params.append('priorities', priority.trim());
-      });
-    }
+    if (priorities) params = params.set('priorities', priorities);
 
     console.debug('[AgentApi] getClients', { email, statuses, page, size, startDate, endDate, priorities });
     return this.http.get<ApiResponse<PageResponse<AgentClient>>>(`${API_BASE_URL}/api/user/agent/clients/enhanced`, { params }).pipe(
@@ -93,8 +84,9 @@ export class AgentApi {
       firstName: payload.firstName,
       lastName: payload.lastName,
       phoneNumber: payload.phoneNumber,
-      role: payload.role,
-      status: payload.status,
+      password: (payload as any).password || 'Client@123',
+      role: 'CLIENT',
+      status: payload.status || 'PENDING_VERIFICATION',
       dateOfBirth: payload.dateOfBirth,
       address: payload.address,
       gender: payload.gender
@@ -114,14 +106,26 @@ export class AgentApi {
   }
 
   // Activity/Audit
-  getActivity(page = 0, size = 20): Observable<PageResponse<AgentActivity>> {
+  getActivity(page = 0, size = 20, filters?: {
+    actionType?: string;
+    clientId?: number;
+    fromDate?: string;
+    toDate?: string;
+    search?: string;
+  }): Observable<PageResponse<AgentActivity>> {
     const agentId = this.getAgentId();
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('page', page.toString())
-      .set('size', size.toString());
+      .set('size', size.toString())
+      .set('sort', 'timestamp,desc');
+    if (filters?.actionType) params = params.set('actionType', filters.actionType);
+    if (filters?.clientId) params = params.set('clientId', filters.clientId.toString());
+    if (filters?.fromDate) params = params.set('fromDate', filters.fromDate);
+    if (filters?.toDate) params = params.set('toDate', filters.toDate);
+    if (filters?.search) params = params.set('search', filters.search);
 
     console.debug('[AgentApi] getActivity', { agentId, page, size });
-    return this.http.get<ApiResponse<PageResponse<AgentActivity>>>(`${API_BASE_URL}/api/user/agent/${agentId}/activity/clients`, { params }).pipe(
+    return this.http.get<ApiResponse<PageResponse<AgentActivity>>>(`${API_BASE_URL}/api/user/agent/${agentId}/activity`, { params }).pipe(
       map(response => response.data)
     );
   }
@@ -135,7 +139,7 @@ export class AgentApi {
 
   private mapToAgentClient(data: any): AgentClient {
     return {
-      userId: data.id,
+      userId: data.userId ?? data.id,
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,

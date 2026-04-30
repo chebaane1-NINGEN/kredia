@@ -37,38 +37,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         
-        System.out.println("=== JWT FILTER CALLED ===");
-        System.out.println("Request URI: " + request.getRequestURI());
-        
         // Skip auth endpoints
         if (request.getRequestURI().startsWith("/api/auth/")) {
-            System.out.println("Skipping auth endpoint");
             filterChain.doFilter(request, response);
-            return;
-        }
-
-        // TEMPORARILY ALLOW AGENT ENDPOINTS FOR DEBUGGING
-        if (request.getRequestURI().startsWith("/api/user/agent/")) {
-            System.out.println("Allowing agent endpoint without auth");
-            // Set a default actor ID for testing
-            HttpServletRequestWrapper wrappedRequest = new HttpServletRequestWrapper(request) {
-                @Override
-                public String getHeader(String name) {
-                    if ("X-Actor-Id".equalsIgnoreCase(name)) {
-                        return "1"; // Default test actor ID
-                    }
-                    return super.getHeader(name);
-                }
-
-                @Override
-                public Enumeration<String> getHeaders(String name) {
-                    if ("X-Actor-Id".equalsIgnoreCase(name)) {
-                        return Collections.enumeration(List.of("1"));
-                    }
-                    return super.getHeaders(name);
-                }
-            };
-            filterChain.doFilter(wrappedRequest, response);
             return;
         }
 

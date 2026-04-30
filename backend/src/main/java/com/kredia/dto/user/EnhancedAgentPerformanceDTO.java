@@ -36,6 +36,12 @@ public class EnhancedAgentPerformanceDTO {
     private double scoreChangeFromLastWeek;
     private double approvalRateChangeFromLastWeek;
     private double processingTimeChangeFromLastWeek;
+    private String calculationWindow;
+    private String scoreFormula;
+    private String approvalRateFormula;
+    private String efficiencyFormula;
+    private List<String> dataSources;
+    private List<String> recommendations;
 
     // Timestamp
     private long generatedAt;
@@ -115,6 +121,24 @@ public class EnhancedAgentPerformanceDTO {
 
     public double getProcessingTimeChangeFromLastWeek() { return processingTimeChangeFromLastWeek; }
     public void setProcessingTimeChangeFromLastWeek(double processingTimeChangeFromLastWeek) { this.processingTimeChangeFromLastWeek = processingTimeChangeFromLastWeek; }
+
+    public String getCalculationWindow() { return calculationWindow; }
+    public void setCalculationWindow(String calculationWindow) { this.calculationWindow = calculationWindow; }
+
+    public String getScoreFormula() { return scoreFormula; }
+    public void setScoreFormula(String scoreFormula) { this.scoreFormula = scoreFormula; }
+
+    public String getApprovalRateFormula() { return approvalRateFormula; }
+    public void setApprovalRateFormula(String approvalRateFormula) { this.approvalRateFormula = approvalRateFormula; }
+
+    public String getEfficiencyFormula() { return efficiencyFormula; }
+    public void setEfficiencyFormula(String efficiencyFormula) { this.efficiencyFormula = efficiencyFormula; }
+
+    public List<String> getDataSources() { return dataSources; }
+    public void setDataSources(List<String> dataSources) { this.dataSources = dataSources; }
+
+    public List<String> getRecommendations() { return recommendations; }
+    public void setRecommendations(List<String> recommendations) { this.recommendations = recommendations; }
 
     public long getGeneratedAt() { return generatedAt; }
     public void setGeneratedAt(long generatedAt) { this.generatedAt = generatedAt; }

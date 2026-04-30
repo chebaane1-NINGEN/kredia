@@ -89,7 +89,12 @@ public class UserServiceImpl implements UserService {
         String description = actor.getRole() == UserRole.AGENT
                 ? String.format("Client created by agent %s", actor.getEmail())
                 : String.format("User created by %s", actor.getEmail());
-        logActivity(savedUser.getId(), UserActivityActionType.CREATED, description);
+        if (actor.getRole() == UserRole.AGENT) {
+            logAgentClientActivity(actor.getId(), savedUser.getId(), UserActivityActionType.CREATED,
+                    description, "-", savedUser.getStatus().name(), "Agent created and assigned client");
+        } else {
+            logActivity(savedUser.getId(), UserActivityActionType.CREATED, description);
+        }
         return toDto(savedUser);
     }
 
@@ -275,8 +280,9 @@ public class UserServiceImpl implements UserService {
 
         User savedUser = userRepository.save(user);
         if (actor.getRole() == UserRole.AGENT) {
-            logActivity(savedUser.getId(), UserActivityActionType.CLIENT_HANDLED,
-                    String.format("Updated client profile %s %s", savedUser.getFirstName(), savedUser.getLastName()));
+            logAgentClientActivity(actorId, savedUser.getId(), UserActivityActionType.CLIENT_HANDLED,
+                    String.format("Updated client profile %s %s", savedUser.getFirstName(), savedUser.getLastName()),
+                    "profile-before-update", "profile-after-update", "Agent edited client profile");
         }
         return toDto(savedUser);
     }
@@ -477,7 +483,7 @@ public class UserServiceImpl implements UserService {
         
         // Email filter
         if (email.isPresent() && !email.get().trim().isEmpty()) {
-            queryBuilder.append(" AND LOWER(u.email) LIKE LOWER(:email)");
+            queryBuilder.append(" AND (LOWER(u.email) LIKE LOWER(:email) OR LOWER(u.firstName) LIKE LOWER(:email) OR LOWER(u.lastName) LIKE LOWER(:email) OR LOWER(u.phoneNumber) LIKE LOWER(:email))");
             params.put("email", "%" + email.get().trim() + "%");
         }
         
@@ -517,6 +523,13 @@ public class UserServiceImpl implements UserService {
                 queryBuilder.append(" AND (").append(String.join(" OR ", priorityConditions)).append(")");
             }
         }
+        pageable.getSort().stream().findFirst().ifPresent(order -> {
+            String property = switch (order.getProperty()) {
+                case "firstName", "email", "status", "createdAt", "updatedAt", "priorityScore" -> order.getProperty();
+                default -> "priorityScore";
+            };
+            queryBuilder.append(" ORDER BY u.").append(property).append(order.isAscending() ? " ASC" : " DESC");
+        });
         
         var query = entityManager.createQuery(queryBuilder.toString(), User.class);
         params.forEach(query::setParameter);
@@ -530,7 +543,7 @@ public class UserServiceImpl implements UserService {
         // Count query for total elements
         var countQueryBuilder = new StringBuilder("SELECT COUNT(u) FROM User u WHERE u.role = :role AND u.deleted = false AND u.assignedAgent = :agent");
         if (email.isPresent() && !email.get().trim().isEmpty()) {
-            countQueryBuilder.append(" AND LOWER(u.email) LIKE LOWER(:email)");
+            countQueryBuilder.append(" AND (LOWER(u.email) LIKE LOWER(:email) OR LOWER(u.firstName) LIKE LOWER(:email) OR LOWER(u.lastName) LIKE LOWER(:email) OR LOWER(u.phoneNumber) LIKE LOWER(:email))");
         }
         if (statuses.isPresent() && !statuses.get().isEmpty()) {
             countQueryBuilder.append(" AND u.status IN :statuses");
@@ -670,28 +683,22 @@ public class UserServiceImpl implements UserService {
         long totalActions = userActivityRepository.countByUserId(agentId);
         long clientsHandled = userActivityRepository.countByUserIdAndActionType(agentId, UserActivityActionType.CLIENT_HANDLED);
 
-        double performanceScore = 0;
         long totalDecisions = approvals + rejections;
-        if (totalDecisions > 0) {
-            performanceScore = Math.round((approvals * 100.0 / totalDecisions) * 100.0) / 100.0;
-        }
-
-        double approvalRate = 0;
-        if (totalActions > 0) {
-            approvalRate = Math.round((approvals * 100.0 / totalActions) * 100.0) / 100.0;
-        }
+        double approvalRate = totalDecisions > 0
+                ? Math.round((approvals * 100.0 / totalDecisions) * 100.0) / 100.0
+                : 0;
 
         double avgProcessingTime = calculateAverageProcessingTime(agentId, totalActions);
 
-        double efficiencyScore = 0;
-        if (avgProcessingTime > 0) {
-            efficiencyScore = Math.round((approvals / avgProcessingTime * 100.0) * 100.0) / 100.0;
-        }
-
         List<User> clients = userRepository.findAllByAssignedAgentAndRoleAndDeletedFalse(agent, UserRole.CLIENT);
         long pendingClients = clients.stream()
-                .filter(c -> c.getStatus() == UserStatus.ACTIVE)
+                .filter(c -> c.getStatus() == UserStatus.PENDING_VERIFICATION || c.getStatus() == UserStatus.INACTIVE)
                 .count();
+        double timeScore = avgProcessingTime <= 0 ? 0 : Math.max(0, Math.min(100, 100 - ((avgProcessingTime / 7200.0) * 100)));
+        double outputScore = clients.isEmpty() ? 0 : Math.min(100, (clientsHandled * 100.0 / Math.max(clients.size(), 1)));
+        double efficiencyScore = Math.round(((timeScore * 0.60) + (outputScore * 0.40)) * 100.0) / 100.0;
+        double volumeScore = Math.min(100, clientsHandled * 10.0);
+        double performanceScore = Math.round(((approvalRate * 0.50) + (efficiencyScore * 0.30) + (volumeScore * 0.20)) * 100.0) / 100.0;
 
         EnhancedAgentPerformanceDTO dto = new EnhancedAgentPerformanceDTO(
                 performanceScore,
@@ -711,6 +718,15 @@ public class UserServiceImpl implements UserService {
         dto.setScoreChangeFromLastWeek(calculateWeeklyScoreChange(agentId));
         dto.setApprovalRateChangeFromLastWeek(calculateWeeklyApprovalChange(agentId));
         dto.setProcessingTimeChangeFromLastWeek(calculateWeeklyProcessingTimeChange(agentId));
+        dto.setCalculationWindow("Last 30 days for processing time; current totals from all recorded agent workflow actions.");
+        dto.setScoreFormula("Performance Score = approval rate x 0.50 + efficiency score x 0.30 + handling volume score x 0.20");
+        dto.setApprovalRateFormula("Approval Rate = approvals / (approvals + rejections) x 100");
+        dto.setEfficiencyFormula("Efficiency Score = processing time score x 0.60 + output score x 0.40");
+        dto.setDataSources(List.of(
+                "user_activity rows owned by agentId=" + agentId,
+                "assigned CLIENT users in the user table",
+                "APPROVAL, REJECTION, CLIENT_HANDLED, PROCESSING_STARTED and PROCESSING_COMPLETED actions"
+        ));
         dto.updatePerformanceStatus();
 
         generateInsights(dto);
@@ -864,6 +880,7 @@ public class UserServiceImpl implements UserService {
      */
     private void generateInsights(EnhancedAgentPerformanceDTO performance) {
         List<String> insights = new ArrayList<>();
+        List<String> recommendations = new ArrayList<>();
 
         if (performance.getPerformanceScore() >= 90) {
             insights.add("🌟 Excellent performance! You're among the top performers. Keep up this momentum!");
@@ -873,6 +890,7 @@ public class UserServiceImpl implements UserService {
             insights.add("📈 Average performance. Focus on improving approval quality and consistency.");
         } else {
             insights.add("⚠️ Performance needs attention. Review your approval criteria and process.");
+            recommendations.add("Review rejected cases and prioritize pending clients with high priority scores.");
         }
 
         if (performance.getApprovals() > 0) {
@@ -880,11 +898,13 @@ public class UserServiceImpl implements UserService {
                 insights.add("📊 High approval rate (" + (long)performance.getApprovalRate() + "%). Maintain quality checks.");
             } else if (performance.getApprovalRate() < 50) {
                 insights.add("🔍 Low approval rate. Consider additional training or process review.");
+                recommendations.add("Audit the last rejection reasons and validate whether documentation gaps can be resolved before rejection.");
             }
         }
 
         if (performance.getPendingClients() > 5) {
             insights.add("📋 You have " + performance.getPendingClients() + " pending clients. Consider prioritization.");
+            recommendations.add("Work the oldest pending clients first, then sort by priority score.");
         } else if (performance.getPendingClients() > 0) {
             insights.add("💼 Current workload is manageable. Focus on quality.");
         }
@@ -895,11 +915,13 @@ public class UserServiceImpl implements UserService {
 
         if (performance.getTotalActions() == 0) {
             insights.add("📉 No activity detected. Start taking actions to build performance data.");
+            recommendations.add("Create or update a client record to start the activity trail.");
         } else if (performance.getTotalActions() > 20) {
             insights.add("🎯 Strong activity level. Maintain consistency.");
         }
 
         performance.setInsights(insights);
+        performance.setRecommendations(recommendations);
     }
 
     // ==================== Agent Dashboard Implementation ====================
@@ -1277,9 +1299,10 @@ public class UserServiceImpl implements UserService {
             spec = spec.and((root, query, cb) -> root.get("actionType").in(actionTypes));
         }
 
-        // Filter by client (if specified, get activities for that specific client handled by this agent)
+        // Filter by client context while keeping ownership on the agent's activity stream.
         if (clientId != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("userId"), clientId));
+            String marker = "clientId=" + clientId;
+            spec = spec.and((root, query, cb) -> cb.like(root.get("description"), "%" + marker + "%"));
         }
 
         // Filter by date range
@@ -1533,6 +1556,7 @@ public class UserServiceImpl implements UserService {
         dto.setActionType(a.getActionType());
         dto.setDescription(a.getDescription());
         dto.setTimestamp(a.getTimestamp());
+        enrichActivityContext(dto);
         return dto;
     }
 
@@ -1543,6 +1567,57 @@ public class UserServiceImpl implements UserService {
         activity.setDescription(description);
         activity.setTimestamp(java.time.Instant.now());
         userActivityRepository.save(activity);
+    }
+
+    private void logAgentClientActivity(Long agentId, Long clientId, UserActivityActionType actionType,
+                                        String summary, String previousValue, String newValue, String context) {
+        String description = String.format(
+                "%s | clientId=%d | previous=%s | new=%s | context=%s",
+                summary,
+                clientId,
+                previousValue != null ? previousValue : "-",
+                newValue != null ? newValue : "-",
+                context != null ? context : "-"
+        );
+        logActivity(agentId, actionType, description);
+        logActivity(clientId, actionType, description);
+    }
+
+    private void enrichActivityContext(UserActivityResponseDTO dto) {
+        String description = dto.getDescription();
+        if (description == null) {
+            return;
+        }
+        dto.setClientId(extractLong(description, "clientId="));
+        dto.setPreviousValue(extractText(description, "previous="));
+        dto.setNewValue(extractText(description, "new="));
+        dto.setContext(extractText(description, "context="));
+        if (dto.getClientId() != null) {
+            userRepository.findById(dto.getClientId()).ifPresent(client ->
+                    dto.setClientName((client.getFirstName() + " " + client.getLastName()).trim()));
+        }
+    }
+
+    private Long extractLong(String value, String marker) {
+        String text = extractText(value, marker);
+        if (text == null || text.isBlank() || "-".equals(text)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(text);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String extractText(String value, String marker) {
+        int start = value.indexOf(marker);
+        if (start < 0) {
+            return null;
+        }
+        start += marker.length();
+        int end = value.indexOf(" | ", start);
+        return (end >= 0 ? value.substring(start, end) : value.substring(start)).trim();
     }
 
     private Specification<User> notDeleted() {
@@ -1583,17 +1658,18 @@ public class UserServiceImpl implements UserService {
         User client = findUser(clientId);
 
         // Verify agent is assigned to this client
-        if (!client.getAssignedAgent().getUserId().equals(agentId)) {
+        if (client.getAssignedAgent() == null || !client.getAssignedAgent().getUserId().equals(agentId)) {
             throw new IllegalArgumentException("Agent not assigned to this client");
         }
 
         // Update client status
+        UserStatus previousStatus = client.getStatus();
         client.setStatus(UserStatus.ACTIVE);
         userRepository.save(client);
 
-        // Log activity on the client record so history is available for the client
-        logActivity(clientId, UserActivityActionType.APPROVAL,
-            String.format("Approved client %s %s", client.getFirstName(), client.getLastName()));
+        logAgentClientActivity(agentId, clientId, UserActivityActionType.APPROVAL,
+            String.format("Approved client %s %s", client.getFirstName(), client.getLastName()),
+            previousStatus.name(), client.getStatus().name(), "Agent approval workflow");
 
         return toDto(client);
     }
@@ -1604,20 +1680,21 @@ public class UserServiceImpl implements UserService {
         User client = findUser(clientId);
 
         // Verify agent is assigned to this client
-        if (!client.getAssignedAgent().getUserId().equals(agentId)) {
+        if (client.getAssignedAgent() == null || !client.getAssignedAgent().getUserId().equals(agentId)) {
             throw new IllegalArgumentException("Agent not assigned to this client");
         }
 
         // Update client status
+        UserStatus previousStatus = client.getStatus();
         client.setStatus(UserStatus.BLOCKED);
         userRepository.save(client);
 
-        // Log activity on the client record so history is available for the client
         String description = String.format("Rejected client %s %s", client.getFirstName(), client.getLastName());
         if (reason != null && !reason.trim().isEmpty()) {
             description += " - Reason: " + reason;
         }
-        logActivity(clientId, UserActivityActionType.REJECTION, description);
+        logAgentClientActivity(agentId, clientId, UserActivityActionType.REJECTION, description,
+                previousStatus.name(), client.getStatus().name(), reason);
 
         return toDto(client);
     }
@@ -1628,20 +1705,21 @@ public class UserServiceImpl implements UserService {
         User client = findUser(clientId);
 
         // Verify agent is assigned to this client
-        if (!client.getAssignedAgent().getUserId().equals(agentId)) {
+        if (client.getAssignedAgent() == null || !client.getAssignedAgent().getUserId().equals(agentId)) {
             throw new IllegalArgumentException("Agent not assigned to this client");
         }
 
         // Update client status
+        UserStatus previousStatus = client.getStatus();
         client.setStatus(UserStatus.SUSPENDED);
         userRepository.save(client);
 
-        // Log activity on the client record so history is available for the client
         String description = String.format("Suspended client %s %s", client.getFirstName(), client.getLastName());
         if (reason != null && !reason.trim().isEmpty()) {
             description += " - Reason: " + reason;
         }
-        logActivity(clientId, UserActivityActionType.CLIENT_SUSPENDED, description);
+        logAgentClientActivity(agentId, clientId, UserActivityActionType.CLIENT_SUSPENDED, description,
+                previousStatus.name(), client.getStatus().name(), reason);
 
         return toDto(client);
     }

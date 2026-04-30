@@ -10,30 +10,40 @@
       <input
         type="text"
         [(ngModel)]="searchTerm"
+        (keyup.enter)="applyFilters()"
         placeholder="Search activities..."
         class="search-input"
       >
     </div>
 
     <div class="filter-group">
-      <select [(ngModel)]="selectedAction" class="action-select">
+      <select [(ngModel)]="selectedAction" (change)="applyFilters()" class="action-select">
         <option value="">All Actions</option>
+        <option value="CREATED">Created</option>
         <option value="LOGIN">Login</option>
         <option value="APPROVAL">Approval</option>
+        <option value="REJECTION">Rejection</option>
         <option value="CLIENT_HANDLED">Client Handled</option>
         <option value="STATUS_CHANGED">Status Changed</option>
+        <option value="CLIENT_SUSPENDED">Client Suspended</option>
       </select>
     </div>
 
     <div class="filter-group">
-      <label class="checkbox-label">
-        <input
-          type="checkbox"
-          [(ngModel)]="showClientOnly"
-          class="client-filter-checkbox"
-        >
-        Client-related only
-      </label>
+      <input type="number" [(ngModel)]="clientIdFilter" (keyup.enter)="applyFilters()" placeholder="Client ID" class="search-input">
+    </div>
+
+    <div class="filter-group">
+      <input type="date" [(ngModel)]="fromDate" (change)="applyFilters()" class="search-input">
+    </div>
+
+    <div class="filter-group">
+      <input type="date" [(ngModel)]="toDate" (change)="applyFilters()" class="search-input">
+    </div>
+
+    <div class="filter-group">
+      <button type="button" class="retry-btn" (click)="applyFilters()">Apply</button>
+      <button type="button" class="page-btn" (click)="clearFilters()">Clear</button>
     </div>
   </div>
 
@@ -67,10 +77,16 @@
         <div class="activity-content">
           <p class="activity-description">{{ activity.description }}</p>
           <p class="activity-meta">
-            <span *ngIf="activity.userName" class="user-name">{{ activity.userName }}</span>
+            <span *ngIf="activity.clientName" class="user-name">{{ activity.clientName }}</span>
+            <span *ngIf="activity.clientId">Client #{{ activity.clientId }}</span>
             <span class="activity-type">{{ activity.actionType }}</span>
             <span class="activity-time">{{ activity.timestamp | date:'medium' }}</span>
           </p>
+          <div *ngIf="activity.previousValue || activity.newValue || activity.context" class="activity-meta">
+            <span *ngIf="activity.previousValue">Previous: {{ activity.previousValue }}</span>
+            <span *ngIf="activity.newValue">New: {{ activity.newValue }}</span>
+            <span *ngIf="activity.context">Context: {{ activity.context }}</span>
+          </div>
         </div>
       </div>
     </div>

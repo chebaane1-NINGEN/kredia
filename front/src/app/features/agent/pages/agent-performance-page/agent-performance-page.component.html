@@ -30,7 +30,7 @@
       </div>
       <div class="hero-summary">
         <span>{{ getScoreDeltaLabel() }}</span>
-        <p>Approval ratio, client velocity and processing efficiency are all factored in.</p>
+        <p>{{ performance.scoreFormula || 'Approval ratio, client velocity and processing efficiency are all factored in.' }}</p>
       </div>
     </section>
 
@@ -118,10 +118,35 @@
     </section>
 
     <section class="detail-section">
+      <div class="detail-card summary-card">
+        <div class="detail-title">Metric Transparency</div>
+        <table>
+          <tr>
+            <td>Time Period</td>
+            <td>{{ performance.calculationWindow || 'Current agent activity history' }}</td>
+          </tr>
+          <tr>
+            <td>Approval Rate</td>
+            <td>{{ performance.approvalRateFormula || 'Approvals / decisions' }}</td>
+          </tr>
+          <tr>
+            <td>Efficiency</td>
+            <td>{{ performance.efficiencyFormula || 'Processing speed and output volume' }}</td>
+          </tr>
+        </table>
+        <div class="detail-title">Data Sources</div>
+        <ul>
+          <li *ngFor="let source of performance.dataSources || []">{{ source }}</li>
+        </ul>
+      </div>
       <div class="detail-card insights-card">
         <div class="detail-title">Insights</div>
         <ul>
           <li *ngFor="let insight of performance.insights">{{ insight }}</li>
+        </ul>
+        <div class="detail-title">Recommendations</div>
+        <ul>
+          <li *ngFor="let recommendation of performance.recommendations || []">{{ recommendation }}</li>
         </ul>
       </div>
       <div class="detail-card summary-card">

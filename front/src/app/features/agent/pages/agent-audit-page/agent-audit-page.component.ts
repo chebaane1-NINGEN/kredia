@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
@@ -13,7 +13,7 @@ import { PageResponse } from '../../../admin/models/admin.model';
   styleUrl: './agent-audit-page.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AgentAuditPageComponent implements OnInit {
+export class AgentAuditPageComponent implements OnInit, OnDestroy {
   private readonly api = inject(AgentApi);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -24,7 +24,10 @@ export class AgentAuditPageComponent implements OnInit {
   // Filters
   selectedAction = '';
   searchTerm = '';
-  showClientOnly = true; // Default to showing only client-related activities
+  clientIdFilter: number | null = null;
+  fromDate = '';
+  toDate = '';
+  private refreshTimer: number | null = null;
 
   // Pagination
   currentPage = 0;
@@ -34,14 +37,27 @@ export class AgentAuditPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadActivities();
+    this.refreshTimer = window.setInterval(() => this.loadActivities(false), 15000);
   }
 
-  loadActivities(): void {
-    this.loading = true;
+  ngOnDestroy(): void {
+    if (this.refreshTimer) {
+      window.clearInterval(this.refreshTimer);
+    }
+  }
+
+  loadActivities(showLoading = true): void {
+    this.loading = showLoading;
     this.error = null;
     this.cdr.markForCheck();
 
-    this.api.getActivity(this.currentPage, this.pageSize)
+    this.api.getActivity(this.currentPage, this.pageSize, {
+      actionType: this.selectedAction || undefined,
+      clientId: this.clientIdFilter || undefined,
+      fromDate: this.fromDate || undefined,
+      toDate: this.toDate || undefined,
+      search: this.searchTerm || undefined
+    })
       .pipe(finalize(() => {
         this.loading = false;
         this.cdr.markForCheck();
@@ -70,24 +86,30 @@ export class AgentAuditPageComponent implements OnInit {
     switch (actionType) {
       case 'LOGIN': return '🔑';
       case 'APPROVAL': return '✅';
+      case 'REJECTION': return '⛔';
+      case 'CREATED': return '＋';
       case 'CLIENT_HANDLED': return '👥';
       case 'STATUS_CHANGED': return '🔄';
+      case 'CLIENT_SUSPENDED': return '⏸';
       default: return '📝';
     }
   }
 
+  applyFilters(): void {
+    this.currentPage = 0;
+    this.loadActivities();
+  }
+
+  clearFilters(): void {
+    this.selectedAction = '';
+    this.searchTerm = '';
+    this.clientIdFilter = null;
+    this.fromDate = '';
+    this.toDate = '';
+    this.applyFilters();
+  }
+
   getFilteredActivities(): AgentActivity[] {
-    return this.activities.filter(activity => {
-      const matchesAction = !this.selectedAction || activity.actionType === this.selectedAction;
-      const matchesSearch = !this.searchTerm ||
-        activity.description.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        (activity.userName && activity.userName.toLowerCase().includes(this.searchTerm.toLowerCase()));
-      const matchesClientFilter = !this.showClientOnly ||
-        activity.actionType === 'APPROVAL' ||
-        activity.actionType === 'CLIENT_HANDLED' ||
-        activity.actionType === 'STATUS_CHANGED' ||
-        activity.description.toLowerCase().includes('client');
-      return matchesAction && matchesSearch && matchesClientFilter;
-    });
+    return this.activities;
   }
 }

@@ -30,7 +30,7 @@ export class AgentClientsPageComponent implements OnInit {
   searchEmail = '';
   selectedStatuses: string[] = [];
   selectedPriorities: string[] = [];
-  availableStatuses = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'BLOCKED'];
+  availableStatuses = ['PENDING_VERIFICATION', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'BLOCKED'];
   availablePriorities = ['HIGH', 'MEDIUM', 'LOW'];
   startDate = '';
   endDate = '';
@@ -107,6 +107,7 @@ export class AgentClientsPageComponent implements OnInit {
   // Modal operations
   openAddClientModal(): void {
     this.showAddClientModal = true;
+    this.newClient = { status: 'PENDING_VERIFICATION', role: 'CLIENT' } as Partial<AgentClient>;
     this.addClientError = null;
     this.cdr.markForCheck();
   }
@@ -304,7 +305,7 @@ export class AgentClientsPageComponent implements OnInit {
 
   // Missing methods called from template
   createClient(): void {
-    this.showAddClientModal = true;
+    this.openAddClientModal();
   }
 
   getVisibleClients(): AgentClient[] {
@@ -348,13 +349,14 @@ export class AgentClientsPageComponent implements OnInit {
   }
 
   submitAddClient(): void {
-    if (!this.newClient.firstName || !this.newClient.lastName || !this.newClient.email || !this.newClient.phoneNumber) {
-      this.error = 'First name, last name, email, and phone number are required.';
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.newClient.email || '');
+    if (!this.newClient.firstName || !this.newClient.lastName || !this.newClient.email || !this.newClient.phoneNumber || !emailValid) {
+      this.addClientError = 'First name, last name, valid email, and phone number are required.';
       return;
     }
 
     this.addClientLoading = true;
-    this.error = null;
+    this.addClientError = null;
 
     this.api.createClient(this.newClient)
       .pipe(finalize(() => {
@@ -363,21 +365,24 @@ export class AgentClientsPageComponent implements OnInit {
       }))
       .subscribe({
         next: () => {
+          this.notify.success('Success', 'Client created and assigned to you');
           this.closeAddClientModal();
+          this.newClient = {};
+          this.currentPage = 0;
           this.loadClients();
         },
         error: (err) => {
           console.error('Create client error:', err);
           if (err.error && err.error.message) {
-            this.error = err.error.message;
+            this.addClientError = err.error.message;
           } else if (err.status === 400) {
-            this.error = 'Invalid client data. Please check the form and try again.';
+            this.addClientError = 'Invalid client data. Please check the form and try again.';
           } else if (err.status === 409) {
-            this.error = 'A client with this email or phone number already exists.';
+            this.addClientError = 'A client with this email or phone number already exists.';
           } else if (err.status === 403) {
-            this.error = 'You do not have permission to create clients.';
+            this.addClientError = 'You do not have permission to create clients.';
           } else {
-            this.error = 'Failed to create client. Please try again later.';
+            this.addClientError = 'Failed to create client. Please try again later.';
           }
         }
       });
@@ -397,16 +402,29 @@ export class AgentClientsPageComponent implements OnInit {
 
   saveEditedClient(): void {
     if (!this.selectedClient || !this.selectedClient.userId) return;
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.selectedClient.email || '');
+    if (!this.selectedClient.firstName || !this.selectedClient.lastName || !this.selectedClient.email || !emailValid) {
+      this.notify.error('Validation', 'First name, last name, and a valid email are required');
+      return;
+    }
 
     this.editClientLoading = true;
     this.cdr.markForCheck();
 
-    // For now, we'll just close the modal and refresh
-    // In a real implementation, you'd call an update API
-    setTimeout(() => {
-      this.editClientLoading = false;
-      this.closeEditClientModal();
-      this.loadClients(); // Refresh the list
-    }, 1000);
+    this.api.updateClient(this.selectedClient.userId, this.selectedClient)
+      .pipe(finalize(() => {
+        this.editClientLoading = false;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: () => {
+          this.notify.success('Success', 'Client profile updated');
+          this.closeEditClientModal();
+          this.loadClients();
+        },
+        error: (err) => {
+          this.notify.error('Error', 'Failed to update client: ' + (err.error?.message || 'Unknown error'));
+        }
+      });
   }
 }
