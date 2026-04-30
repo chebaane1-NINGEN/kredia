@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { CreditVm } from '../../vm/credit.vm';
 import { Credit, DemandeCredit } from '../../models/credit.model';
@@ -19,6 +19,9 @@ export class CreditListPageComponent implements OnInit {
   private readonly cdr   = inject(ChangeDetectorRef);
   readonly auth          = inject(AuthService);
   private readonly kycVm = inject(KycLoanVm);
+  private readonly route = inject(ActivatedRoute);
+
+  filterDemandeId: number | null = null;
 
   credits: Credit[]         = [];
   demandes: DemandeCredit[] = [];
@@ -34,6 +37,7 @@ export class CreditListPageComponent implements OnInit {
   kycModalLoading  = false;
   kycModalDocs: KycLoanResponse[] = [];
   kycModalDemandeId: number | null = null;
+  filterKycLoanId: number | null = null;
 
   openKycDetails(demandeId: number): void {
     this.kycModalOpen      = true;
@@ -42,9 +46,24 @@ export class CreditListPageComponent implements OnInit {
     this.kycModalDocs      = [];
     this.cdr.markForCheck();
     this.kycVm.getByDemandeId(demandeId).subscribe({
-      next:  (docs) => { this.kycModalDocs = docs ?? []; this.kycModalLoading = false; this.cdr.markForCheck(); },
+      next:  (docs) => { 
+        let all = docs ?? [];
+        if (this.filterKycLoanId) {
+          all = all.filter(d => d.kycLoanId === this.filterKycLoanId);
+        }
+        this.kycModalDocs = all; 
+        this.kycModalLoading = false; 
+        this.cdr.markForCheck(); 
+      },
       error: ()     => { this.kycModalLoading = false; this.cdr.markForCheck(); }
     });
+  }
+
+  clearKycFilter(): void {
+    this.filterKycLoanId = null;
+    if (this.kycModalDemandeId) {
+      this.openKycDetails(this.kycModalDemandeId);
+    }
   }
 
   closeKycModal(): void {
@@ -93,10 +112,32 @@ export class CreditListPageComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  ngOnInit(): void { this.loadData(); }
+  ngOnInit(): void {
+    this.route.queryParamMap.subscribe(params => {
+      const demandeId = params.get('demandeId');
+      this.filterDemandeId = demandeId ? +demandeId : null;
+
+      const kycLoanId = params.get('filterKycLoanId');
+      this.filterKycLoanId = kycLoanId ? +kycLoanId : null;
+
+      const openKycId = params.get('openKycDemandeId');
+      
+      if (this.filterDemandeId && !this.auth.isClient()) {
+        this.viewMode = 'PENDING';
+      }
+      
+      this.loadData();
+
+      if (openKycId && !this.auth.isClient()) {
+        this.viewMode = 'PENDING';
+        this.openKycDetails(+openKycId);
+      }
+    });
+  }
 
   setViewMode(mode: 'ALL' | 'PENDING'): void {
     this.viewMode = mode;
+    this.filterDemandeId = null;
     this.loadData();
   }
 
@@ -117,7 +158,14 @@ export class CreditListPageComponent implements OnInit {
     this.vm.findDemandesByUserId(userId)
       .pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
       .subscribe({
-        next:  (data: DemandeCredit[]) => { this.clientDemandes = data ?? []; this.cdr.markForCheck(); },
+        next:  (data: DemandeCredit[]) => { 
+          let all = data ?? [];
+          if (this.filterDemandeId) {
+            all = all.filter(d => d.creditId === this.filterDemandeId);
+          }
+          this.clientDemandes = all; 
+          this.cdr.markForCheck(); 
+        },
         error: ()                       => { this.error = 'Unable to load your applications.'; this.cdr.markForCheck(); }
       });
   }
@@ -131,7 +179,14 @@ export class CreditListPageComponent implements OnInit {
       this.vm.getPendingDemandes()
         .pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
         .subscribe({
-          next:  (data: DemandeCredit[]) => { this.demandes = data ?? []; this.cdr.markForCheck(); },
+          next:  (data: DemandeCredit[]) => { 
+            let all = data ?? [];
+            if (this.filterDemandeId) {
+              all = all.filter(d => d.creditId === this.filterDemandeId);
+            }
+            this.demandes = all; 
+            this.cdr.markForCheck(); 
+          },
           error: ()                       => { this.error = 'Unable to load pending applications.'; this.cdr.markForCheck(); }
         });
     } else {
@@ -145,7 +200,7 @@ export class CreditListPageComponent implements OnInit {
   }
 
   approveCredit(id: number): void {
-    if (!confirm('Approve this application? A 12% interest rate will be applied automatically.')) return;
+    if (!confirm('Approve this application? A 15% interest rate will be applied automatically.')) return;
     this.vm.approveCredit(id).subscribe({
       next:  () => this.loadData(),
       error: () => { this.error = 'Error approving the application.'; this.cdr.markForCheck(); }

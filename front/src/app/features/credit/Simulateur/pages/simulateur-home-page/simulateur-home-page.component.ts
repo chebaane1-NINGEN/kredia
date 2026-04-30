@@ -45,7 +45,7 @@ export class SimulateurHomePageComponent {
     {
       type:        'IN_FINE',
       icon:        '🏦',
-      title:       'In Fine',
+      title:       'In_Fine',
       subtitle:    'Intérêts seuls, capital en fin',
       description: 'Le client paie uniquement les intérêts chaque mois. Le capital est remboursé intégralement à la dernière échéance.',
       badge:       'Taux fixe annuel : 15 %',

@@ -123,42 +123,58 @@ public class GeminiService {
     public String verifyDocument(String documentUrl, String documentType) {
         log.info("Verifying document type {} with Gemini {}", documentType, modelName);
 
-        try {
-            byte[] imageBytes = downloadImage(documentUrl);
-            log.info("Image downloaded successfully, size: {} bytes", imageBytes.length);
+        int maxRetries = 3;
+        int retryDelayMs = 2000;
 
-            String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                byte[] imageBytes = downloadImage(documentUrl);
+                log.info("Image downloaded successfully, size: {} bytes", imageBytes.length);
 
-            String mimeType = getMimeType(documentUrl);
+                String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+                String mimeType = getMimeType(documentUrl);
 
-            String prompt = buildVerificationPrompt(documentType);
-            JsonObject requestBody = buildGeminiRequest(prompt, base64Image, mimeType);
+                String prompt = buildVerificationPrompt(documentType);
+                JsonObject requestBody = buildGeminiRequest(prompt, base64Image, mimeType);
 
-            String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
+                String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(apiUrl))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
-                    .build();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(apiUrl))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                        .build();
 
-            log.info("Sending request to Gemini API...");
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                log.info("Sending request to Gemini API (Attempt {})...", attempt);
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() != 200) {
-                log.error("Gemini API error: {}", response.body());
-                return "ERROR: Gemini API returned status " + response.statusCode();
+                if (response.statusCode() == 429) {
+                    log.warn("Gemini API Rate Limit (429) reached on attempt {}. Retrying in {}ms...", attempt, retryDelayMs);
+                    if (attempt < maxRetries) {
+                        Thread.sleep(retryDelayMs * attempt); // Exponential backoff
+                        continue;
+                    }
+                }
+
+                if (response.statusCode() != 200) {
+                    log.error("Gemini API error (Status {}): {}", response.statusCode(), response.body());
+                    return "ERROR: Gemini API returned status " + response.statusCode();
+                }
+
+                String result = parseGeminiResponse(response.body());
+                log.info("Verification result: {}", result);
+
+                return result;
+
+            } catch (Exception e) {
+                log.error("Gemini verification failed on attempt {}: {}", attempt, e.getMessage());
+                if (attempt == maxRetries) {
+                    return "ERROR: " + e.getMessage();
+                }
+                try { Thread.sleep(retryDelayMs); } catch (InterruptedException ignored) {}
             }
-
-            String result = parseGeminiResponse(response.body());
-            log.info("Verification result: {}", result);
-
-            return result;
-
-        } catch (Exception e) {
-            log.error("Gemini verification failed: {}", e.getMessage(), e);
-            return "ERROR: " + e.getMessage();
         }
+        return "ERROR: Maximum retries reached for Gemini API";
     }
 
     /**

@@ -13,8 +13,12 @@
     <div class="grid">
       <label>
         <span>Amount</span>
-        <input type="number" formControlName="amount" placeholder="e.g. 5000" min="1" />
-        <small *ngIf="form.controls.amount.touched && form.controls.amount.invalid">A positive amount is required.</small>
+        <input type="number" formControlName="amount" placeholder="e.g. 5000" min="500" max="10000" />
+        <small *ngIf="form.controls.amount.touched && form.controls.amount.invalid">
+          <span *ngIf="form.controls.amount.errors?.['required']">Amount is required.</span>
+          <span *ngIf="form.controls.amount.errors?.['min']">Minimum amount is 500 DT.</span>
+          <span *ngIf="form.controls.amount.errors?.['max']">Maximum amount is 10,000 DT.</span>
+        </small>
       </label>
 
       <label>
@@ -63,7 +67,7 @@
 
     <div class="info-box">
       <span>ℹ️</span>
-      <p>A fixed interest rate of 12% will be applied automatically when your request is approved by an agent or administrator.</p>
+      <p>A fixed interest rate of 15% will be applied automatically when your request is approved by an agent or administrator.</p>
     </div>
 
     <div class="actions">

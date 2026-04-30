@@ -65,7 +65,7 @@ export class SimulateurFormPageComponent implements OnInit {
 
   /* ── Form ───────────────────────────────────────────────── */
   readonly form = this.fb.nonNullable.group({
-    amount:     [10000,  [Validators.required, Validators.min(100)]],
+    amount:     [5000,  [Validators.required, Validators.min(100), Validators.max(10000)]],
     termMonths: [12,     [Validators.required, Validators.min(1), Validators.max(360)]],
     startDate:  [this.todayStr(), Validators.required],
   });
@@ -145,7 +145,7 @@ export class SimulateurFormPageComponent implements OnInit {
 
   reset(): void {
     this.form.reset({
-      amount:     10000,
+      amount:     5000,
       termMonths: 12,
       startDate:  this.todayStr(),
     });
