@@ -43,6 +43,7 @@ public interface UserService {
     );
 
     UserResponseDTO update(Long actorId, Long id, UserRequestDTO payload);
+    void changePassword(Long actorId, Long id, String currentPassword, String newPassword);
     UserResponseDTO updateProfile(Long actorId, Long id, ClientProfileUpdateDTO payload);
     UserResponseDTO adminUpdateUser(Long actorId, Long id, AdminUserUpdateDTO payload);
 

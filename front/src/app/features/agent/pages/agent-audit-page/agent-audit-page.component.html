@@ -72,7 +72,7 @@
 
     <!-- Activities List -->
     <div *ngIf="getFilteredActivities().length > 0" class="activities-list">
-      <div *ngFor="let activity of getFilteredActivities()" class="activity-item">
+      <div *ngFor="let activity of getFilteredActivities()" class="activity-item" (click)="openActivityDetails(activity)">
         <div class="activity-icon">{{ getActivityIcon(activity.actionType) }}</div>
         <div class="activity-content">
           <p class="activity-description">{{ activity.description }}</p>
@@ -117,3 +117,48 @@
 
   </div>
 </div>
+
+<section *ngIf="selectedActivity" class="modal-overlay" (click)="closeActivityDetails()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Activity Details</h3>
+      <button type="button" class="modal-close" (click)="closeActivityDetails()">x</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div>
+          <label>Action Type</label>
+          <strong>{{ selectedActivity.actionType }}</strong>
+        </div>
+        <div>
+          <label>Timestamp</label>
+          <span>{{ selectedActivity.timestamp | date:'medium' }}</span>
+        </div>
+        <div>
+          <label>Agent ID</label>
+          <span>{{ selectedActivity.userId || '—' }}</span>
+        </div>
+        <div>
+          <label>Client</label>
+          <span>{{ selectedActivity.clientName || '—' }} <ng-container *ngIf="selectedActivity.clientId">(#{{ selectedActivity.clientId }})</ng-container></span>
+        </div>
+        <div>
+          <label>Previous Value</label>
+          <span>{{ selectedActivity.previousValue || '—' }}</span>
+        </div>
+        <div>
+          <label>New Value</label>
+          <span>{{ selectedActivity.newValue || '—' }}</span>
+        </div>
+      </div>
+      <div class="detail-block">
+        <label>Context</label>
+        <p>{{ selectedActivity.context || selectedActivity.description }}</p>
+      </div>
+      <div class="detail-block">
+        <label>Raw Explanation</label>
+        <p>{{ selectedActivity.description }}</p>
+      </div>
+    </div>
+  </div>
+</section>

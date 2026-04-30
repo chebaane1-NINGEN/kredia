@@ -28,6 +28,7 @@ public class UserResponseDTO {
     private LocalDate dateOfBirth;
     private String address;
     private Gender gender;
+    private Integer priorityScore;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -82,4 +83,7 @@ public class UserResponseDTO {
 
     public Gender getGender() { return gender; }
     public void setGender(Gender gender) { this.gender = gender; }
+
+    public Integer getPriorityScore() { return priorityScore; }
+    public void setPriorityScore(Integer priorityScore) { this.priorityScore = priorityScore; }
 }

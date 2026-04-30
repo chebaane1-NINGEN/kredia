@@ -107,7 +107,7 @@ export class AgentClientsPageComponent implements OnInit {
   // Modal operations
   openAddClientModal(): void {
     this.showAddClientModal = true;
-    this.newClient = { status: 'PENDING_VERIFICATION', role: 'CLIENT' } as Partial<AgentClient>;
+    this.newClient = { status: 'PENDING_VERIFICATION', role: 'CLIENT', priorityScore: 50 } as Partial<AgentClient>;
     this.addClientError = null;
     this.cdr.markForCheck();
   }
@@ -350,8 +350,9 @@ export class AgentClientsPageComponent implements OnInit {
 
   submitAddClient(): void {
     const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.newClient.email || '');
-    if (!this.newClient.firstName || !this.newClient.lastName || !this.newClient.email || !this.newClient.phoneNumber || !emailValid) {
-      this.addClientError = 'First name, last name, valid email, and phone number are required.';
+    const passwordValid = !!this.newClient.password && this.newClient.password.length >= 8;
+    if (!this.newClient.firstName || !this.newClient.lastName || !this.newClient.email || !this.newClient.phoneNumber || !emailValid || !passwordValid) {
+      this.addClientError = 'First name, last name, valid email, phone number, and an 8+ character password are required.';
       return;
     }
 

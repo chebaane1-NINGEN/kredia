@@ -34,6 +34,7 @@ export class AgentAuditPageComponent implements OnInit, OnDestroy {
   pageSize = 20;
   totalPages = 0;
   totalElements = 0;
+  selectedActivity: AgentActivity | null = null;
 
   ngOnInit(): void {
     this.loadActivities();
@@ -107,6 +108,16 @@ export class AgentAuditPageComponent implements OnInit, OnDestroy {
     this.fromDate = '';
     this.toDate = '';
     this.applyFilters();
+  }
+
+  openActivityDetails(activity: AgentActivity): void {
+    this.selectedActivity = activity;
+    this.cdr.markForCheck();
+  }
+
+  closeActivityDetails(): void {
+    this.selectedActivity = null;
+    this.cdr.markForCheck();
   }
 
   getFilteredActivities(): AgentActivity[] {

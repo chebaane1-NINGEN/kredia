@@ -22,7 +22,30 @@ public class MessageController {
             @RequestHeader("X-Actor-Id") Long actorId,
             @PathVariable Long userId
     ) {
+        repository.markConversationRead(actorId, userId);
         return ResponseEntity.ok(ApiResponse.ok(repository.findConversation(actorId, userId)));
+    }
+
+    @GetMapping("/unread")
+    public ResponseEntity<ApiResponse<List<DirectMessage>>> getUnread(
+            @RequestHeader("X-Actor-Id") Long actorId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(repository.findUnreadForReceiver(actorId)));
+    }
+
+    @GetMapping("/unread/count")
+    public ResponseEntity<ApiResponse<Long>> getUnreadCount(
+            @RequestHeader("X-Actor-Id") Long actorId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(repository.countByReceiverIdAndReadFalse(actorId)));
+    }
+
+    @PatchMapping("/{userId}/read")
+    public ResponseEntity<ApiResponse<Integer>> markConversationRead(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable Long userId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(repository.markConversationRead(actorId, userId)));
     }
 
     @PostMapping("/{userId}")

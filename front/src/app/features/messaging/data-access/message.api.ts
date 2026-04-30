@@ -28,4 +28,22 @@ export class MessageApi {
       map(res => res.data)
     );
   }
+
+  getUnreadMessages(): Observable<DirectMessage[]> {
+    return this.http.get<ApiResponse<DirectMessage[]>>(`${API_BASE_URL}/api/messages/unread`).pipe(
+      map(res => res.data || [])
+    );
+  }
+
+  getUnreadCount(): Observable<number> {
+    return this.http.get<ApiResponse<number>>(`${API_BASE_URL}/api/messages/unread/count`).pipe(
+      map(res => res.data || 0)
+    );
+  }
+
+  markConversationRead(userId: number): Observable<number> {
+    return this.http.patch<ApiResponse<number>>(`${API_BASE_URL}/api/messages/${userId}/read`, {}).pipe(
+      map(res => res.data || 0)
+    );
+  }
 }

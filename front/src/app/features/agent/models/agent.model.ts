@@ -75,6 +75,7 @@ export interface AgentClient {
   gender: string;
   lastInteraction?: string;
   priorityScore?: number;
+  password?: string;
 }
 
 export interface ClientDetails extends AgentClient {

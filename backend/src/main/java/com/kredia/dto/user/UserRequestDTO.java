@@ -33,6 +33,7 @@ public class UserRequestDTO {
     private LocalDate dateOfBirth;
     private String address;
     private Gender gender;
+    private Integer priorityScore;
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
@@ -63,4 +64,7 @@ public class UserRequestDTO {
 
     public Gender getGender() { return gender; }
     public void setGender(Gender gender) { this.gender = gender; }
+
+    public Integer getPriorityScore() { return priorityScore; }
+    public void setPriorityScore(Integer priorityScore) { this.priorityScore = priorityScore; }
 }

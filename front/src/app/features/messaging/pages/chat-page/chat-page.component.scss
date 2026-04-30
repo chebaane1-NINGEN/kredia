@@ -39,6 +39,26 @@
   }
 }
 
+.unread-total,
+.unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.unread-badge {
+  margin-left: auto;
+  box-shadow: 0 0 0 3px #fee2e2;
+}
+
 .user-avatar {
   width: 40px;
   height: 40px;

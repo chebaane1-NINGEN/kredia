@@ -2,7 +2,7 @@
   <div class="chat-sidebar panel">
     <header>
       <h3>Utilisateurs</h3>
-      <p>Sélectionnez quelqu'un pour discuter</p>
+      <p>Sélectionnez quelqu'un pour discuter <span *ngIf="unreadCount" class="unread-total">{{ unreadCount }}</span></p>
     </header>
     <div class="users-list">
       <div *ngIf="loading" class="loading-state">Chargement...</div>
@@ -15,6 +15,7 @@
           <strong>{{ user.firstName }} {{ user.lastName }}</strong>
           <span>{{ user.role }}</span>
         </div>
+        <span *ngIf="unreadBySender.get(user.userId)" class="unread-badge">{{ unreadBySender.get(user.userId) }}</span>
       </div>
     </div>
   </div>

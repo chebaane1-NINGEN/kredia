@@ -299,11 +299,32 @@
             />
           </div>
           <div class="form-group">
+            <label for="password" class="form-label">Password *</label>
+            <input
+              id="password"
+              type="password"
+              [(ngModel)]="newClient.password"
+              name="password"
+              class="form-input"
+              placeholder="Minimum 8 characters"
+              minlength="8"
+              required
+            />
+          </div>
+          <div class="form-group">
             <label for="status" class="form-label">Initial Status</label>
             <select id="status" [(ngModel)]="newClient.status" name="status" class="form-input">
               <option value="PENDING_VERIFICATION">Pending Verification</option>
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="priorityScore" class="form-label">Priority</label>
+            <select id="priorityScore" [(ngModel)]="newClient.priorityScore" name="priorityScore" class="form-input">
+              <option [ngValue]="90">High priority</option>
+              <option [ngValue]="60">Medium priority</option>
+              <option [ngValue]="30">Low priority</option>
             </select>
           </div>
           <div class="form-group">
@@ -444,6 +465,24 @@
           placeholder="Enter phone number"
           required
         />
+      </div>
+      <div class="form-group">
+        <label for="editStatus" class="form-label">Status</label>
+        <select id="editStatus" [(ngModel)]="selectedClient.status" name="status" class="form-input">
+          <option value="PENDING_VERIFICATION">Pending Verification</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+          <option value="SUSPENDED">Suspended</option>
+          <option value="BLOCKED">Blocked</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="editPriorityScore" class="form-label">Priority</label>
+        <select id="editPriorityScore" [(ngModel)]="selectedClient.priorityScore" name="priorityScore" class="form-input">
+          <option [ngValue]="90">High priority</option>
+          <option [ngValue]="60">Medium priority</option>
+          <option [ngValue]="30">Low priority</option>
+        </select>
       </div>
     </form>
 

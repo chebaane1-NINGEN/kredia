@@ -74,6 +74,9 @@ public class UserServiceImpl implements UserService {
         user.setDateOfBirth(request.getDateOfBirth());
         user.setAddress(request.getAddress());
         user.setGender(request.getGender());
+        if (request.getPriorityScore() != null) {
+            user.setPriorityScore(normalizePriorityScore(request.getPriorityScore()));
+        }
         if (request.getPassword() != null) {
             user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
@@ -246,7 +249,7 @@ public class UserServiceImpl implements UserService {
         User actor = findUser(actorId);
         User user = findUser(id);
 
-        if (actor.getRole() == UserRole.AGENT) {
+        if (actor.getRole() == UserRole.AGENT && !actor.getId().equals(id)) {
             if (user.getAssignedAgent() == null || !user.getAssignedAgent().getId().equals(actorId)) {
                 throw new IllegalArgumentException("Agent can only update assigned clients");
             }
@@ -260,6 +263,9 @@ public class UserServiceImpl implements UserService {
             user.setDateOfBirth(payload.getDateOfBirth());
             user.setAddress(payload.getAddress());
             user.setGender(payload.getGender());
+            if (payload.getPriorityScore() != null) {
+                user.setPriorityScore(normalizePriorityScore(payload.getPriorityScore()));
+            }
             if (payload.getPassword() != null) {
                 user.setPasswordHash(passwordEncoder.encode(payload.getPassword()));
             }
@@ -273,6 +279,9 @@ public class UserServiceImpl implements UserService {
             user.setDateOfBirth(payload.getDateOfBirth());
             user.setAddress(payload.getAddress());
             user.setGender(payload.getGender());
+            if (payload.getPriorityScore() != null) {
+                user.setPriorityScore(normalizePriorityScore(payload.getPriorityScore()));
+            }
             if (payload.getPassword() != null) {
                 user.setPasswordHash(passwordEncoder.encode(payload.getPassword()));
             }
@@ -285,6 +294,26 @@ public class UserServiceImpl implements UserService {
                     "profile-before-update", "profile-after-update", "Agent edited client profile");
         }
         return toDto(savedUser);
+    }
+
+    @Override
+    public void changePassword(Long actorId, Long id, String currentPassword, String newPassword) {
+        User actor = findUser(actorId);
+        User user = findUser(id);
+        boolean changingOwnPassword = actor.getId().equals(id);
+        if (!changingOwnPassword && actor.getRole() != UserRole.ADMIN) {
+            throw new IllegalArgumentException("Only admins can change another user's password");
+        }
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new IllegalArgumentException("New password must be at least 8 characters");
+        }
+        if (changingOwnPassword && (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPasswordHash()))) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        logActivity(actorId, UserActivityActionType.PASSWORD_RESET_COMPLETED,
+                changingOwnPassword ? "Password changed from profile" : "Password changed by administrator for userId=" + id);
     }
 
     @Override
@@ -1470,6 +1499,7 @@ public class UserServiceImpl implements UserService {
         dto.setDateOfBirth(user.getDateOfBirth());
         dto.setAddress(user.getAddress());
         dto.setGender(user.getGender());
+        dto.setPriorityScore(user.getPriorityScore());
         if (user.getAssignedAgent() != null) {
             dto.setAssignedAgentId(user.getAssignedAgent().getId());
             dto.setAssignedAgentName(user.getAssignedAgent().getFirstName() + " " + user.getAssignedAgent().getLastName());
@@ -1517,7 +1547,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Integer calculatePriorityScore(User client, User agent) {
-        int score = 50; // Base score
+        int score = client.getPriorityScore() > 0 ? client.getPriorityScore() : 50; // Base score
         
         // Status bonus: ACTIVE clients get higher priority
         if (client.getStatus() == UserStatus.ACTIVE) {
@@ -1546,6 +1576,13 @@ public class UserServiceImpl implements UserService {
         }
         
         // Ensure score is within bounds
+        return Math.max(0, Math.min(100, score));
+    }
+
+    private int normalizePriorityScore(Integer score) {
+        if (score == null) {
+            return 0;
+        }
         return Math.max(0, Math.min(100, score));
     }
 

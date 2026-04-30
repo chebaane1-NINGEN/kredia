@@ -84,12 +84,13 @@ export class AgentApi {
       firstName: payload.firstName,
       lastName: payload.lastName,
       phoneNumber: payload.phoneNumber,
-      password: (payload as any).password || 'Client@123',
+      password: payload.password,
       role: 'CLIENT',
       status: payload.status || 'PENDING_VERIFICATION',
       dateOfBirth: payload.dateOfBirth,
       address: payload.address,
-      gender: payload.gender
+      gender: payload.gender,
+      priorityScore: payload.priorityScore
     };
     return this.http.post<ApiResponse<any>>(`${API_BASE_URL}/api/user`, createPayload).pipe(
       map(response => this.mapToAgentClient(response.data))
@@ -173,6 +174,14 @@ export class AgentApi {
     return this.http.put<ApiResponse<AgentProfile>>(`${API_BASE_URL}/api/user/${agentId}`, profile).pipe(
       map(response => response.data)
     );
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
+    const agentId = this.getAgentId();
+    return this.http.patch<ApiResponse<void>>(`${API_BASE_URL}/api/user/${agentId}/password`, {
+      currentPassword,
+      newPassword
+    }).pipe(map(() => undefined));
   }
 
   // Client workflow actions

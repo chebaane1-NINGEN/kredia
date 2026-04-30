@@ -148,6 +148,16 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.update(actorId, id, payload)));
     }
 
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("id") Long id,
+            @RequestBody Map<String, String> payload
+    ) {
+        userService.changePassword(actorId, id, payload.get("currentPassword"), payload.get("newPassword"));
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
     @PutMapping("/{id}/profile")
     public ResponseEntity<ApiResponse<UserResponseDTO>> updateProfile(
             @RequestHeader("X-Actor-Id") Long actorId,
