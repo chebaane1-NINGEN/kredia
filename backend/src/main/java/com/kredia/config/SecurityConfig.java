@@ -40,7 +40,7 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers("/api/investments/market/chart/**").permitAll()
+                .requestMatchers("/api/investments/market/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
                 .requestMatchers("/api/user/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/user/agent/**").hasRole("AGENT")

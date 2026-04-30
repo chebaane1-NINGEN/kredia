@@ -8,6 +8,10 @@ import { InvestmentOrder } from '../models/investment-order.model';
 export class InvestmentOrderApi {
   constructor(private readonly http: HttpClient) {}
 
+  create(order: InvestmentOrder): Observable<InvestmentOrder> {
+    return this.http.post<InvestmentOrder>(`${API_BASE_URL}/api/investments/orders`, order);
+  }
+
   findAll(): Observable<InvestmentOrder[]> {
     return this.http.get<InvestmentOrder[]>(`${API_BASE_URL}/api/investments/orders`);
   }

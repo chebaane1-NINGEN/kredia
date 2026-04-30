@@ -10,7 +10,7 @@ export interface InvestmentOrderUser {
 }
 
 export interface InvestmentOrder {
-  orderId: number;
+  orderId?: number;
   user?: InvestmentOrderUser;
   orderType: OrderType;
   quantity: number;
