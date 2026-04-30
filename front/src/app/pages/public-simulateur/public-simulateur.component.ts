@@ -9,12 +9,14 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 
+import { CommonModule } from '@angular/common';
+
 const ANNUAL_RATE = 0.15;
 
 @Component({
   selector: 'app-public-simulateur',
   standalone: true,
-  imports: [],
+  imports: [CommonModule],
   templateUrl: './public-simulateur.component.html',
   styleUrl:    './public-simulateur.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -25,14 +27,14 @@ export class PublicSimulateurComponent {
 
   /* ── Sliders state ───────────────────────────────────────── */
   readonly AMOUNT_MIN  = 1_000;
-  readonly AMOUNT_MAX  = 100_000;
-  readonly AMOUNT_STEP = 500;
+  readonly AMOUNT_MAX  = 10_000;
+  readonly AMOUNT_STEP = 100;
 
   readonly TERM_MIN    = 3;
   readonly TERM_MAX    = 120;
   readonly TERM_STEP   = 1;
 
-  amount     = signal(15_000);
+  amount     = signal(5_000);
   termMonths = signal(24);
   repaymentType = signal<'MENSUALITE_CONSTANTE' | 'AMORTISSEMENT_CONSTANT' | 'IN_FINE'>('MENSUALITE_CONSTANTE');
 
@@ -80,6 +82,19 @@ export class PublicSimulateurComponent {
   totalInterest = computed(() => this.schedule().reduce((acc, row) => acc + row.interest, 0));
   firstPayment = computed(() => this.schedule()[0]?.payment ?? 0);
   lastPayment = computed(() => this.schedule()[this.schedule().length - 1]?.payment ?? 0);
+  monthlyDecrease = computed(() => {
+    if (this.repaymentType() === 'AMORTISSEMENT_CONSTANT' && this.schedule().length > 1) {
+      return this.schedule()[0].payment - this.schedule()[1].payment;
+    }
+    return 0;
+  });
+  decreasePct = computed(() => {
+    const first = this.firstPayment();
+    if (first > 0) {
+      return (this.monthlyDecrease() / first) * 100;
+    }
+    return 0;
+  });
 
   /* ── Slider track fill % ─────────────────────────────────── */
   amountPct = computed(() =>

@@ -7,8 +7,6 @@ import { CreditRiskPageComponent } from './Credit/pages/credit-risk-page/credit-
 import { EcheancePageComponent }   from './Echeance/pages/echeance-page/echeance-page.component';
 import { ChatbotPageComponent }    from './Chatbot/pages/chatbot-page/chatbot-page.component';
 import { KycLoanPageComponent }    from './KycLoan/pages/kyc-loan-page/kyc-loan-page.component';
-import { SimulateurHomePageComponent } from './Simulateur/pages/simulateur-home-page/simulateur-home-page.component';
-import { SimulateurFormPageComponent } from './Simulateur/pages/simulateur-form-page/simulateur-form-page.component';
 
 const routes: Routes = [
   { path: 'create',    component: CreditPageComponent },
@@ -17,8 +15,6 @@ const routes: Routes = [
   { path: 'echeances', component: EcheancePageComponent },
   { path: 'chatbot',   component: ChatbotPageComponent },
   { path: 'kyc',          component: KycLoanPageComponent },
-  { path: 'simulateur',         component: SimulateurHomePageComponent },
-  { path: 'simulateur/:type',   component: SimulateurFormPageComponent },
   { path: '',                   redirectTo: 'list', pathMatch: 'full' },
 ];
 

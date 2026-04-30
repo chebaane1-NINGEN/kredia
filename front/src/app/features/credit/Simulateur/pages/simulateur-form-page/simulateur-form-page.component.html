@@ -59,12 +59,13 @@
             id="sim-amount"
             type="number"
             formControlName="amount"
-            placeholder="ex. 15 000"
+            placeholder="ex. 5 000"
             min="100"
+            max="10000"
             step="100"
           />
           <small *ngIf="form.controls.amount.touched && form.controls.amount.invalid">
-            Montant minimum : 100 TND.
+            Le montant doit être entre 100 et 10 000 TND.
           </small>
         </label>
 

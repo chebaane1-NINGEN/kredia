@@ -108,7 +108,7 @@ public class CreditService {
         Credit credit = new Credit();
         credit.setUser(demande.getUser());
         credit.setAmount(demande.getAmount());
-        credit.setInterestRate(12.0f);
+        credit.setInterestRate(15.0f);
         credit.setTermMonths(demande.getTermMonths());
         credit.setStartDate(demande.getStartDate());
         credit.setEndDate(demande.getEndDate());
