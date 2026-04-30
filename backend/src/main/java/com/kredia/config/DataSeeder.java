@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -34,8 +35,13 @@ public class DataSeeder {
     @Bean
     @Profile("!test")
     CommandLineRunner initData(DataSeederService seederService,
-                                SchemaFixer schemaFixer) {
+                                SchemaFixer schemaFixer,
+                                @Value("${app.seed-data.enabled:true}") boolean seedDataEnabled) {
         return args -> {
+            if (!seedDataEnabled) {
+                log.info("Data seeding is disabled (app.seed-data.enabled=false)");
+                return;
+            }
             try {
                 log.info("Checking database for initial data...");
                 schemaFixer.fixSchema();
