@@ -3,7 +3,9 @@
     <article
       *ngFor="let snapshot of marketSnapshots; let index = index; trackBy: trackByLabel"
       class="market-card"
-      [class.market-card--active]="index === 0">
+      [class.market-card--active]="index === 0"
+      [class.selected]="selectedAssetSymbol === snapshot.code"
+      (click)="selectAsset(snapshot.code)">
       <div class="market-card__icon">{{ snapshot.code }}</div>
       <div class="market-card__body">
         <div class="market-card__title-row">
@@ -105,7 +107,11 @@
       </header>
 
       <div class="mover-list">
-        <div *ngFor="let mover of volumeLeaders; trackBy: trackBySymbol" class="mover-row">
+        <div 
+          *ngFor="let mover of volumeLeaders; trackBy: trackBySymbol" 
+          class="mover-row"
+          [class.selected]="selectedAssetSymbol === mover.symbol"
+          (click)="selectAsset(mover.symbol)">
           <div class="mover-row__identity">
             <div class="mover-row__avatar">{{ mover.symbol.slice(0, 2) }}</div>
             <div>
@@ -133,7 +139,11 @@
       </header>
 
       <div class="mover-list">
-        <div *ngFor="let mover of volatileLeaders; trackBy: trackBySymbol" class="mover-row">
+        <div 
+          *ngFor="let mover of volatileLeaders; trackBy: trackBySymbol" 
+          class="mover-row"
+          [class.selected]="selectedAssetSymbol === mover.symbol"
+          (click)="selectAsset(mover.symbol)">
           <div class="mover-row__identity">
             <div class="mover-row__avatar mover-row__avatar--alt">{{ mover.symbol.slice(0, 2) }}</div>
             <div>

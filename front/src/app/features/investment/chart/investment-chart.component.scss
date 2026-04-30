@@ -25,10 +25,23 @@
   padding: 16px 18px;
   border-radius: 28px;
   min-height: 78px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+
+  &:hover {
+    border-color: #2f8f7f;
+  }
 }
 
 .market-card--active {
   background: #f4f4f4;
+}
+
+.market-card.selected {
+  background: #f4f4f4;
+  border-color: #2f8f7f;
+  box-shadow: 0 4px 12px rgba(47, 143, 127, 0.15);
 }
 
 .market-card__icon,
@@ -283,6 +296,18 @@
   gap: 18px;
   padding: 8px 0 14px;
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: rgba(47, 143, 127, 0.05);
+  }
+
+  &.selected {
+    background-color: rgba(47, 143, 127, 0.1);
+    padding-left: 8px;
+    border-left: 3px solid #2f8f7f;
+  }
 }
 
 .mover-row:last-child {

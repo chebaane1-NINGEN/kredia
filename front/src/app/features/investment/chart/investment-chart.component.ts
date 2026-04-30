@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { combineLatest, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -37,6 +38,9 @@ export class InvestmentChartComponent implements OnInit {
   private readonly positionVm = inject(PortfolioPositionVm);
   private readonly orderVm = inject(InvestmentOrderVm);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly http = inject(HttpClient);
+
+  selectedAssetSymbol = '';
 
   marketSnapshots: MarketSnapshot[] = [
     { label: 'CAC 40', value: '8 072,63 EUR', change: '-0,39%', trend: 'negative', code: '40' },
@@ -68,6 +72,21 @@ export class InvestmentChartComponent implements OnInit {
     this.loadDashboard();
   }
 
+  selectAsset(symbol: string): void {
+    if (!symbol) return;
+    
+    this.selectedAssetSymbol = symbol;
+    
+    // Update asset name from market snapshots
+    const asset = this.marketSnapshots.find(m => m.code === symbol);
+    if (asset) {
+      this.assetName = asset.label;
+    }
+    
+    // Load chart data for this asset
+    this.loadAssetChart(symbol);
+  }
+
   private loadDashboard(): void {
     this.loading = true;
 
@@ -77,62 +96,92 @@ export class InvestmentChartComponent implements OnInit {
 
     combineLatest([assets$, positions$, orders$]).subscribe({
       next: ([assets, positions, orders]) => {
-        // Market snapshots from assets (fallback to defaults if none)
+        console.log('Assets from backend:', assets);
+        console.log('Positions from backend:', positions);
+        
+        // Market snapshots from assets
         if (Array.isArray(assets) && assets.length > 0) {
           this.marketSnapshots = assets.slice(0, 4).map((a: any, i: number) => ({
             label: a.assetName ?? a.name ?? a.symbol,
             value: a.currentPrice != null ? `${a.currentPrice} EUR` : '-',
-            change: a.change ?? '-',
-            trend: (a.change && String(a.change).startsWith('-')) ? 'negative' : 'positive',
-            code: String(a.symbol ?? i)
+            change: a.change ?? '+0.00%',
+            trend: (a.change && String(a.change).includes('-')) ? 'negative' : 'positive',
+            code: String(a.symbol ?? a.id ?? i)
           }));
+          
+          // Initialize with first asset's data
+          if (this.marketSnapshots.length > 0) {
+            const firstAsset = this.marketSnapshots[0];
+            this.assetName = firstAsset.label;
+            this.assetPrice = parseFloat(String(firstAsset.value)) || 0;
+          }
         }
 
-        // Volume leaders approximate from assets order
+        // Volume leaders from assets sorted by volume
         this.volumeLeaders = (Array.isArray(assets) ? assets : []).slice(0, 6).map((a: any) => ({
           name: a.assetName ?? a.name ?? a.symbol,
           symbol: a.symbol ?? 'NA',
           value: a.currentPrice != null ? `${a.currentPrice} EUR` : '-',
-          change: a.change ?? '+0,00%',
-          trend: (a.change && String(a.change).startsWith('-')) ? 'negative' : 'positive'
+          change: a.change ?? '+0.00%',
+          trend: (a.change && String(a.change).includes('-')) ? 'negative' : 'positive'
         }));
 
-        // Volatile leaders from positions by absolute percent change
+        // Volatile leaders from positions
         if (Array.isArray(positions) && positions.length > 0) {
           const byVol = positions.slice().sort((p1: any, p2: any) => Math.abs(p2.profitLossPercentage ?? 0) - Math.abs(p1.profitLossPercentage ?? 0));
           this.volatileLeaders = byVol.slice(0, 6).map((p: any) => ({
-            name: p.assetSymbol,
-            symbol: p.assetSymbol,
+            name: p.assetSymbol ?? 'NA',
+            symbol: p.assetSymbol ?? 'NA',
             value: p.currentMarketPrice != null ? `${p.currentMarketPrice} EUR` : '-',
             change: p.profitLossPercentage != null ? `${Number(p.profitLossPercentage).toFixed(2)}%` : '-',
             trend: (p.profitLossPercentage ?? 0) >= 0 ? 'positive' : 'negative'
           }));
-
-          // Build a simple price series from positions currentMarketPrice (fallback)
-          const series = positions.map((p: any) => Number(p.currentMarketPrice ?? p.avgPurchasePrice ?? 0)).filter(n => !Number.isNaN(n));
-          if (series.length > 0) {
-            this.prices = series;
-            // create labels matching series length
-            this.labels = series.map((_, idx) => `${8 + idx}:00`);
-            this.assetPrice = series[series.length - 1];
-            // use avg profitLossPercentage as priceChange proxy
-            const avgPct = positions.reduce((s: number, p: any) => s + (Number(p.profitLossPercentage ?? 0)), 0) / positions.length;
-            this.priceChange = Number(avgPct.toFixed(2));
-          }
         }
 
-        // Fallbacks if nothing returned
-        if (!this.volumeLeaders.length) this.volumeLeaders = [];
-        if (!this.volatileLeaders.length) this.volatileLeaders = [];
+        // Initially load first asset's chart if available
+        if (this.marketSnapshots.length > 0 && !this.selectedAssetSymbol) {
+          this.loadAssetChart(this.marketSnapshots[0].code);
+        }
 
         this.loading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error loading dashboard:', err);
         this.loading = false;
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private loadAssetChart(symbol: string): void {
+    if (!symbol) return;
+    
+    this.http.get<number[]>(`/api/investments/market/chart/${symbol}?range=1d&interval=1m`)
+      .pipe(
+        catchError((err) => {
+          console.error('Error fetching chart:', err);
+          this.prices = [];
+          return of([]);
+        })
+      )
+      .subscribe((data: number[]) => {
+        if (data && data.length > 0) {
+          this.prices = data;
+          
+          // Calculate price change from opening to closing
+          const firstPrice = parseFloat(String(data[0]));
+          const lastPrice = parseFloat(String(data[data.length - 1]));
+          this.assetPrice = lastPrice;
+          this.priceChange = ((lastPrice - firstPrice) / firstPrice) * 100;
+          
+          // Update labels for x-axis
+          this.labels = Array.from({ length: Math.min(10, data.length) }, (_, i) => 
+            `${String(i * Math.floor(data.length / 10) || i).padStart(2, '0')}:00`
+          );
+        }
+        this.cdr.markForCheck();
+      });
   }
 
   get changeClass(): MarketTrend {
@@ -144,14 +193,16 @@ export class InvestmentChartComponent implements OnInit {
   }
 
   get minPrice(): number {
-    return Math.min(...this.prices);
+    return this.prices.length > 0 ? Math.min(...this.prices) : 0;
   }
 
   get maxPrice(): number {
-    return Math.max(...this.prices);
+    return this.prices.length > 0 ? Math.max(...this.prices) : 1;
   }
 
   get svgPoints(): string {
+    if (this.prices.length === 0) return '';
+    
     const width = 1240;
     const height = 420;
     const padding = 28;
@@ -167,6 +218,8 @@ export class InvestmentChartComponent implements OnInit {
   }
 
   get areaPath(): string {
+    if (this.prices.length === 0) return '';
+    
     const width = 1240;
     const height = 420;
     const padding = 28;
@@ -198,10 +251,11 @@ export class InvestmentChartComponent implements OnInit {
   }
 
   getPointCx(index: number): number {
-    return 28 + (index * 1184) / (this.prices.length - 1);
+    return this.prices.length > 1 ? 28 + (index * 1184) / (this.prices.length - 1) : 28;
   }
 
   getPointCy(price: number): number {
+    if (this.prices.length === 0) return 420 - 28;
     return 420 - 28 - ((price - this.minPrice) * 364) / (this.maxPrice - this.minPrice || 1);
   }
 

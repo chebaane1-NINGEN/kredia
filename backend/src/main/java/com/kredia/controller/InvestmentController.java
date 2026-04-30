@@ -9,6 +9,7 @@ import com.kredia.enums.AssetCategory;
 import com.kredia.enums.OrderStatus;
 import com.kredia.enums.RiskLevel;
 import com.kredia.service.InvestmentService;
+import com.kredia.service.MarketPriceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +23,12 @@ import java.util.Map;
 public class InvestmentController {
 
     private final InvestmentService investmentService;
+    private final MarketPriceService marketPriceService;
 
     @Autowired
-    public InvestmentController(InvestmentService investmentService) {
+    public InvestmentController(InvestmentService investmentService, MarketPriceService marketPriceService) {
         this.investmentService = investmentService;
+        this.marketPriceService = marketPriceService;
     }
 
     // ==================== InvestmentAsset Endpoints ====================
@@ -316,6 +319,22 @@ public class InvestmentController {
             return new ResponseEntity<>(summary, status);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // ==================== Market Chart Endpoints ====================
+
+    @GetMapping("/market/chart/{symbol}")
+    public ResponseEntity<List<java.math.BigDecimal>> getHistoricalPrices(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "1d") String range,
+            @RequestParam(defaultValue = "1m") String interval
+    ) {
+        try {
+            List<java.math.BigDecimal> prices = marketPriceService.getHistoricalPrices(symbol, range, interval);
+            return new ResponseEntity<>(prices, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
         }
     }
 }
