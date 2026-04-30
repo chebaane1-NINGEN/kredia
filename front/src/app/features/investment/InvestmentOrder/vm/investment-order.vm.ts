@@ -7,6 +7,10 @@ import { InvestmentOrder } from '../models/investment-order.model';
 export class InvestmentOrderVm {
   private readonly api = inject(InvestmentOrderApi);
 
+  create(order: InvestmentOrder): Observable<InvestmentOrder> {
+    return this.api.create(order);
+  }
+
   findAll(): Observable<InvestmentOrder[]> {
     return this.api.findAll();
   }

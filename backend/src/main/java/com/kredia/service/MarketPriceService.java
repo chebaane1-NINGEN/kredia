@@ -13,8 +13,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -75,6 +77,68 @@ public class MarketPriceService {
             logger.error("Yahoo historical error for {}: {}", symbol, e.getMessage());
             throw new RuntimeException("Impossible de récupérer l'historique pour " + symbol + " : " + e.getMessage());
         }
+    }
+
+    /**
+     * Recherche Yahoo Finance sur les symboles/noms d'actifs.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> searchAssets(String query, int limit) {
+        try {
+            if (query == null || query.trim().isEmpty()) {
+                return List.of();
+            }
+
+            URI uri = UriComponentsBuilder
+                    .fromHttpUrl("https://query1.finance.yahoo.com/v1/finance/search")
+                    .queryParam("q", query.trim())
+                    .queryParam("quotesCount", Math.max(1, Math.min(limit, 12)))
+                    .queryParam("newsCount", 0)
+                    .build(true)
+                    .toUri();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            headers.set("Accept", "application/json");
+
+            ResponseEntity<Map<String, Object>> responseEntity = restTemplate.exchange(
+                    uri,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    new ParameterizedTypeReference<>() {}
+            );
+
+            Map<String, Object> response = responseEntity.getBody();
+            if (response == null) {
+                return List.of();
+            }
+
+            Object quotesObject = response.get("quotes");
+            if (!(quotesObject instanceof List<?> quotes)) {
+                return List.of();
+            }
+
+            return quotes.stream()
+                    .filter(item -> item instanceof Map<?, ?>)
+                    .map(item -> (Map<String, Object>) item)
+                    .map(this::normalizeSearchResult)
+                    .toList();
+        } catch (Exception e) {
+            logger.error("Yahoo search error for {}: {}", query, e.getMessage());
+            throw new RuntimeException("Impossible de rechercher les actifs pour '" + query + "' : " + e.getMessage());
+        }
+    }
+
+    private Map<String, Object> normalizeSearchResult(Map<String, Object> quote) {
+        Map<String, Object> normalized = new java.util.LinkedHashMap<>();
+        normalized.put("symbol", quote.getOrDefault("symbol", ""));
+        normalized.put("shortName", quote.getOrDefault("shortname", quote.getOrDefault("symbol", "")));
+        normalized.put("longName", quote.getOrDefault("longname", quote.getOrDefault("shortname", quote.getOrDefault("symbol", ""))));
+        normalized.put("exchange", quote.getOrDefault("exchDisp", quote.getOrDefault("exchange", "")));
+        normalized.put("type", quote.getOrDefault("quoteType", quote.getOrDefault("typeDisp", "")));
+        normalized.put("currency", quote.getOrDefault("currency", ""));
+        normalized.put("marketPrice", quote.get("regularMarketPrice"));
+        return normalized;
     }
 
     /**
