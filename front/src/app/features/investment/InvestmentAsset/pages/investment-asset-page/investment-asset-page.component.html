@@ -1,4 +1,142 @@
-<div class="page-container">
-  <h1>Investment Asset</h1>
-  <p>This is a placeholder for the Investment Asset component.</p>
-</div>
+<section class="investment-page">
+  <header class="page-header">
+    <div class="title-group">
+      <h1>Investment Assets</h1>
+      <p>Suivi des instruments disponibles pour la stratégie d'investissement.</p>
+    </div>
+
+    <div class="actions-group">
+      <button class="page-action-btn" type="button" (click)="showCreateForm()">Ajouter</button>
+      <button class="page-action-btn" type="button" (click)="loadAssets()">Actualiser</button>
+    </div>
+  </header>
+
+  <section class="kpi-grid">
+    <article class="kpi-card">
+      <p class="kpi-label">Assets totaux</p>
+      <p class="kpi-value">{{ assets.length }}</p>
+      <p class="kpi-meta">Catalogue disponible</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Actions (STOCK)</p>
+      <p class="kpi-value">{{ stocksCount }}</p>
+      <p class="kpi-meta">Catégorie la plus suivie</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Risque élevé</p>
+      <p class="kpi-value">{{ highRiskCount }}</p>
+      <p class="kpi-meta">HIGH / VERY_HIGH</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Catégories</p>
+      <p class="kpi-value">{{ uniqueCategoriesCount }}</p>
+      <p class="kpi-meta">Diversification disponible</p>
+    </article>
+  </section>
+
+  <section class="panel">
+    <div *ngIf="formVisible" class="asset-form">
+      <h3>{{ isEditing ? 'Modifier l\'asset' : 'Nouveau asset' }}</h3>
+      <div class="form-grid">
+        <div class="field">
+          <label>Symbole</label>
+          <input type="text" [(ngModel)]="editingAsset.symbol" />
+        </div>
+
+        <div class="field">
+          <label>Nom</label>
+          <input type="text" [(ngModel)]="editingAsset.assetName" />
+        </div>
+
+        <div class="field">
+          <label>Catégorie</label>
+          <select [(ngModel)]="editingAsset.category">
+            <option *ngFor="let c of categoryOptions" [value]="c">{{ c }}</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Risque</label>
+          <select [(ngModel)]="editingAsset.riskLevel">
+            <option *ngFor="let r of riskOptions" [value]="r">{{ r }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn" type="button" (click)="saveAsset()">Enregistrer</button>
+        <button class="btn btn--muted" type="button" (click)="cancelForm()">Annuler</button>
+      </div>
+    </div>
+
+    <div class="panel-body filters-grid">
+      <div class="field">
+        <label for="asset-search">Recherche</label>
+        <input
+          id="asset-search"
+          type="text"
+          [value]="searchTerm"
+          (input)="onSearchInput($event)"
+          placeholder="Nom, symbole ou devise"
+        />
+      </div>
+
+      <div class="field">
+        <label for="asset-category">Catégorie</label>
+        <select id="asset-category" [value]="categoryFilter" (change)="onCategoryFilterChange($event)">
+          <option *ngFor="let category of categoryOptions" [value]="category">
+            {{ category }}
+          </option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="asset-risk">Risque</label>
+        <select id="asset-risk" [value]="riskFilter" (change)="onRiskFilterChange($event)">
+          <option *ngFor="let risk of riskOptions" [value]="risk">
+            {{ risk }}
+          </option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div *ngIf="loading" class="state">Chargement des assets...</div>
+    <div *ngIf="!loading && errorMessage" class="state state--error">{{ errorMessage }}</div>
+    <div *ngIf="!loading && !errorMessage && filteredAssets.length === 0" class="state">
+      Aucun asset ne correspond aux filtres.
+    </div>
+
+    <div *ngIf="!loading && !errorMessage && filteredAssets.length > 0" class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Symbole</th>
+            <th>Nom</th>
+            <th>Catégorie</th>
+            <th>Risque</th>
+            <th>Créé le</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let asset of filteredAssets">
+            <td><strong>{{ asset.symbol }}</strong></td>
+            <td>{{ asset.assetName }}</td>
+            <td>{{ asset.category }}</td>
+            <td><span [class]="getRiskBadgeClass(asset.riskLevel)">{{ asset.riskLevel }}</span></td>
+            <td>{{ asset.createdAt ? (asset.createdAt | date:'short') : '-' }}</td>
+            <td>
+              <button class="btn btn--small" type="button" (click)="showEditForm(asset)">Modifier</button>
+              <button class="btn btn--small btn--danger" type="button" (click)="deleteAsset(asset)">Supprimer</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

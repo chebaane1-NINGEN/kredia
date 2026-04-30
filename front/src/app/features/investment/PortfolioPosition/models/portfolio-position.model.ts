@@ -1,12 +1,12 @@
 export interface PortfolioPosition {
-  positionId?: number;
+  positionId: number;
   userId: number;
-  assetId: number;
-  assetName: string;
-  quantity: number;
-  averageBuyPrice: number;
-  currentPrice: number;
-  totalValue: number;
-  profitLoss: number;
-  updatedAt?: string;
+  assetSymbol: string;
+  currentQuantity: number;
+  avgPurchasePrice: number;
+  currentMarketPrice?: number | null;
+  currentValue?: number | null;
+  profitLossDollars?: number | null;
+  profitLossPercentage?: number | null;
+  createdAt?: string;
 }

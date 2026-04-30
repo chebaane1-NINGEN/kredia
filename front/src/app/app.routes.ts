@@ -88,7 +88,13 @@ export const routes: Routes = [
     loadChildren: () => import('./features/support/ReclamationMessage/reclamation-message.routes').then(m => m.routes)
   },
 
+
   // ── Investment ─────────────────────────────────────────
+  {
+    path: 'investissement/chart',
+    canActivate: [authGuard],
+    loadChildren: () => import('./features/investment/investment.routes').then(m => m.routes)
+  },
   {
     path: 'investissement/assets',
     canActivate: [authGuard],

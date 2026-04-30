@@ -14,4 +14,16 @@ export class InvestmentAssetVm {
   findById(id: number): Observable<InvestmentAsset> {
     return this.api.findById(id);
   }
+
+  create(asset: Partial<InvestmentAsset>) {
+    return this.api.create(asset);
+  }
+
+  update(id: number, asset: Partial<InvestmentAsset>) {
+    return this.api.update(id, asset);
+  }
+
+  delete(id: number) {
+    return this.api.delete(id);
+  }
 }

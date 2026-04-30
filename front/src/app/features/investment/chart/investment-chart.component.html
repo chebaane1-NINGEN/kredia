@@ -1,0 +1,589 @@
+<section class="investment-dashboard">
+  <section class="asset-search">
+    <div class="asset-search__field">
+      <span class="asset-search__icon">⌕</span>
+      <input
+        #assetSearchInput
+        type="text"
+        class="asset-search__input"
+        placeholder="Rechercher un asset Yahoo Finance (AAPL, MSFT, NVDA...)"
+        [value]="searchQuery"
+        (input)="onSearchInput(assetSearchInput.value)"
+        (focus)="onSearchFocus()"
+        autocomplete="off"
+        spellcheck="false" />
+      <button *ngIf="searchQuery" type="button" class="asset-search__clear" (click)="clearSearch()" aria-label="Effacer la recherche">×</button>
+    </div>
+
+    @if (searchOpen) {
+      <div class="asset-search__dropdown">
+        @if (searchLoading) {
+          <div class="asset-search__state">Recherche Yahoo Finance...</div>
+        } @else if (searchResults.length > 0) {
+          <button
+            *ngFor="let result of searchResults"
+            type="button"
+            class="asset-search__result"
+            (mousedown)="selectSearchResult(result)">
+            <div class="asset-search__result-main">
+              <strong>{{ result.shortName || result.longName }}</strong>
+              <span>{{ result.symbol }}</span>
+            </div>
+            <div class="asset-search__result-meta">
+              <span>{{ result.exchange || result.type }}</span>
+              <span *ngIf="result.marketPrice != null">{{ result.marketPrice | number:'1.2-2' }}</span>
+            </div>
+          </button>
+        } @else {
+          <div class="asset-search__state">Aucun résultat Yahoo Finance pour cette recherche.</div>
+        }
+      </div>
+    }
+  </section>
+
+  <header class="market-strip">
+    @if (loading) {
+      <article class="market-card market-card--skeleton" aria-hidden="true" *ngFor="let _ of [1,2,3,4]"></article>
+    } @else {
+    <article
+      *ngFor="let snapshot of marketSnapshots; let index = index; trackBy: trackByLabel"
+      class="market-card"
+      [class.market-card--active]="index === 0"
+      [class.selected]="selectedAssetSymbol === snapshot.code"
+      (click)="selectAsset(snapshot.code)">
+      <div class="market-card__icon">{{ snapshot.code }}</div>
+      <div class="market-card__body">
+        <div class="market-card__title-row">
+          <h2>{{ snapshot.label }}</h2>
+          <span class="market-card__badge">D</span>
+        </div>
+        <div class="market-card__price-row">
+          @if (loadingPrices.has(snapshot.code)) {
+            <span class="market-card__value skeleton skeleton--price-short"></span>
+            <span class="market-card__change skeleton skeleton--price-short"></span>
+          } @else {
+            <span class="market-card__value">{{ snapshot.value }}</span>
+            <span class="market-card__change" [class.is-positive]="snapshot.trend === 'positive'" [class.is-negative]="snapshot.trend === 'negative'">
+              {{ snapshot.change }}
+            </span>
+          }
+        </div>
+      </div>
+    </article>
+    }
+
+    <button 
+      class="market-strip__order-btn"
+      type="button"
+      (click)="openOrderModal()"
+      [disabled]="!selectedAssetSymbol"
+      title="Créer un nouvel ordre">
+      + Order
+    </button>
+  </header>
+
+  <section class="chart-shell">
+    @if (loading || chartLoading) {
+      <div class="chart-loader" aria-label="Chargement du graphique">
+        <div class="chart-loader__header">
+          <div class="skeleton skeleton--line skeleton--short"></div>
+          <div class="skeleton skeleton--line skeleton--medium"></div>
+          <div class="skeleton skeleton--line skeleton--short"></div>
+        </div>
+        <div class="chart-loader__body">
+          <div class="chart-loader__axis">
+            <span *ngFor="let _ of [1,2,3,4,5,6]" class="skeleton skeleton--tick"></span>
+          </div>
+          <div class="chart-loader__canvas">
+            <div class="skeleton skeleton--chart"></div>
+          </div>
+        </div>
+      </div>
+    } @else if (prices.length > 0) {
+      <div class="chart-shell__header">
+        <div class="chart-shell__intro">
+          <p class="eyebrow">Marché en direct</p>
+          <h1>{{ assetPrice | number:'1.2-2' }} EUR</h1>
+          <div class="price-line">
+            <span class="price-line__direction" [class.is-positive]="priceChange >= 0" [class.is-negative]="priceChange < 0">
+              {{ priceChange >= 0 ? '+' : '' }}{{ priceChange | number:'1.2-2' }}%
+            </span>
+            <span class="price-line__label">{{ assetName }}</span>
+            <span class="price-line__separator">•</span>
+            <span class="price-line__label">{{ marketDirection }}</span>
+          </div>
+        </div>
+        <button
+          class="chart-shell__favorite-btn"
+          [disabled]="isAddingToFavorites"
+          [class.is-loading]="isAddingToFavorites"
+          [class.is-favorited]="assetAlreadyFavorited"
+          (click)="onAddToFavorites()"
+          [attr.title]="assetAlreadyFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'">
+          @if (isAddingToFavorites) {
+            <span class="favorite-btn__spinner"></span>
+          } @else if (assetAlreadyFavorited) {
+            <span class="favorite-btn__icon">★</span>
+            <span class="favorite-btn__text">Retirer</span>
+          } @else {
+            <span class="favorite-btn__icon">☆</span>
+            <span class="favorite-btn__text">Ajouter aux favoris</span>
+          }
+        </button>
+      </div>
+
+      <div class="chart-stage">
+        <div class="y-axis">
+          <span *ngFor="let label of yAxisLabels">{{ label | number:'1.0-0' }}</span>
+        </div>
+
+        <div class="chart-stage__plot">
+          <svg viewBox="0 0 1240 420" preserveAspectRatio="none" aria-label="Graphique de performance">
+            <defs>
+              <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" [attr.stop-color]="chartFillColor" stop-opacity="0.30"></stop>
+                <stop offset="100%" [attr.stop-color]="chartFillColor" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+
+            <g class="grid-lines">
+              <line *ngFor="let label of yAxisLabels" x1="0" [attr.y1]="getPointCy(label)" x2="1240" [attr.y2]="getPointCy(label)"></line>
+            </g>
+
+            <path [attr.d]="areaPath" fill="url(#priceGradient)" opacity="0.8"></path>
+
+            <polyline
+              [attr.points]="svgPoints"
+              fill="none"
+              [attr.stroke]="chartStrokeColor"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"></polyline>
+
+            <circle
+              *ngFor="let price of prices; let index = index"
+              [attr.cx]="getPointCx(index)"
+              [attr.cy]="getPointCy(price)"
+              [attr.r]="index === prices.length - 1 ? 5 : 0"
+              [attr.fill]="index === prices.length - 1 ? chartStrokeColor : 'transparent'">
+            </circle>
+          </svg>
+
+          <div class="x-axis">
+            <span
+              *ngFor="let label of xAxisLabels"
+              class="x-axis__label"
+              [style.left.%]="label.position">
+              {{ label.label }}
+            </span>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="chart-empty">
+        Aucune donnée de marché disponible pour le moment.
+      </div>
+    }
+
+    <div class="timeframe-row">
+      <button
+        *ngFor="let timeframe of timeframes"
+        type="button"
+        class="timeframe-btn"
+        [class.active]="selectedTimeframe === timeframe"
+        [disabled]="loading || chartLoading"
+        (click)="setTimeframe(timeframe)">
+        {{ timeframe }}
+      </button>
+    </div>
+  </section>
+
+  <!-- ==================== AI Gemini Market Analysis Block ==================== -->
+  <section class="gemini-analysis-block" *ngIf="selectedAssetSymbol">
+    <div class="gemini-header">
+      <div class="gemini-header__title">
+        <h2>Analyse IA Gemini</h2>
+        <span class="gemini-header__icon">✨</span>
+      </div>
+      <button
+        type="button"
+        class="gemini-header__refresh"
+        [disabled]="geminiLoading"
+        [class.is-loading]="geminiLoading"
+        (click)="loadGeminiAnalysis()"
+        [title]="geminiLoading ? 'Chargement en cours...' : 'Rafraîchir l\'analyse'">
+        @if (geminiLoading) {
+          <span class="spinner"></span>
+        } @else {
+          <span>↻</span>
+        }
+      </button>
+    </div>
+
+    @if (geminiError) {
+      <div class="gemini-error">
+        <p>{{ geminiError }}</p>
+        <button type="button" class="gemini-error__retry" (click)="loadGeminiAnalysis()">Réessayer</button>
+      </div>
+    } @else if (geminiLoading) {
+      <div class="gemini-skeleton">
+        <div class="skeleton skeleton--gemini-banner"></div>
+        <div class="skeleton skeleton--gemini-card"></div>
+        <div class="skeleton skeleton--gemini-card"></div>
+        <div class="skeleton skeleton--gemini-card"></div>
+      </div>
+    } @else if (geminiAnalysis) {
+      <div class="gemini-banner" [ngClass]="getTrendBadgeClass(geminiAnalysis.sentiment)">
+        <div class="gemini-banner__sentiment">
+          <span class="gemini-banner__label">Sentiment global</span>
+          <span class="gemini-banner__value">{{ geminiSentimentLabel }}</span>
+        </div>
+
+        <div class="gemini-banner__confidence">
+          <span class="gemini-banner__label">Confiance</span>
+          <span class="gemini-banner__value">{{ geminiAnalysis.confidence_score }}</span>
+        </div>
+
+        <div class="gemini-banner__date">
+          <span class="gemini-banner__label">Mis à jour</span>
+          <span>{{ geminiAnalysis.as_of | date:'dd MMM yyyy' }}</span>
+          <span>{{ geminiAnalysis.as_of | date:'HH:mm' }}</span>
+        </div>
+      </div>
+
+      <div class="gemini-accordion">
+        <button
+          type="button"
+          class="gemini-accordion__toggle"
+          [class.is-open]="geminiDetailOpen"
+          (click)="geminiDetailOpen = !geminiDetailOpen">
+          <span class="gemini-accordion__label">Voir le détail complet</span>
+          <span class="gemini-accordion__icon">{{ geminiDetailOpen ? '▼' : '►' }}</span>
+        </button>
+
+        @if (geminiDetailOpen) {
+          <div class="gemini-accordion__content">
+            <article class="gemini-summary-card">
+              <div class="gemini-summary-card__header">
+                <h3>Résumé stratégique</h3>
+                <span>Marchés actions, obligataires et macro</span>
+              </div>
+              <p>{{ geminiAnalysis.overall_summary }}</p>
+            </article>
+
+            <div class="gemini-kpi-grid">
+              <article class="gemini-kpi-card">
+                <h3 class="gemini-kpi-card__title">Indices majeurs</h3>
+                <div class="gemini-indices-list">
+                  @for (indexItem of geminiAnalysis.market_equities?.major_indices || []; track indexItem.name) {
+                    <div class="gemini-index-row">
+                      <div class="gemini-index-row__meta">
+                        <strong>{{ indexItem.name }}</strong>
+                        <span class="gemini-index-row__trend" [ngClass]="getTrendBadgeClass(indexItem.trend)">{{ indexItem.trend }}</span>
+                      </div>
+                      <div class="gemini-index-row__values">
+                        <span [class.is-positive]="(indexItem.change_1d_pct || 0) >= 0" [class.is-negative]="(indexItem.change_1d_pct || 0) < 0">
+                          1D {{ formatPercentage(indexItem.change_1d_pct) }}
+                        </span>
+                        <span>YTD {{ formatPercentage(indexItem.change_ytd_pct) }}</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </article>
+
+              <article class="gemini-kpi-card">
+                <h3 class="gemini-kpi-card__title">Marché obligataire</h3>
+                <p class="gemini-kpi-card__content">{{ geminiAnalysis.bond_market?.summary || '-' }}</p>
+                <div class="gemini-bond-table" *ngIf="geminiAnalysis.bond_market?.yield_curves?.length">
+                  <div class="gemini-bond-table__head">
+                    <span>Région</span>
+                    <span>2Y</span>
+                    <span>10Y</span>
+                    <span>Courbe</span>
+                  </div>
+                  @for (curve of geminiAnalysis.bond_market.yield_curves; track curve.region) {
+                    <div class="gemini-bond-table__row">
+                      <span>{{ curve.region }}</span>
+                      <span>{{ formatYield(curve.y2) }}</span>
+                      <span>{{ formatYield(curve.y10) }}</span>
+                      <span class="gemini-bond-table__shape">{{ curve.shape }} / {{ curve.slope_bps }} bps</span>
+                    </div>
+                  }
+                </div>
+              </article>
+
+              <article class="gemini-kpi-card">
+                <h3 class="gemini-kpi-card__title">Macro & politique</h3>
+                <div class="gemini-macro-block">
+                  <div class="gemini-macro-block__item">
+                    <span>Inflation</span>
+                    <strong>{{ geminiAnalysis.macro_political_factors?.inflation?.trend || '-' }}</strong>
+                  </div>
+                  <div class="gemini-macro-block__item">
+                    <span>Emploi</span>
+                    <strong>{{ geminiAnalysis.macro_political_factors?.employment?.trend || '-' }}</strong>
+                  </div>
+                </div>
+
+                <div class="gemini-chip-list" *ngIf="geminiAnalysis.macro_political_factors?.geopolitics?.length">
+                  @for (risk of geminiAnalysis.macro_political_factors.geopolitics; track risk.theme) {
+                    <span class="gemini-chip" [ngClass]="getSeverityClass(risk.severity)">{{ risk.theme }}</span>
+                  }
+                </div>
+              </article>
+            </div>
+
+            <div class="gemini-grid-2">
+              <article class="gemini-panel-box">
+                <h3>Scénario 6-12 mois</h3>
+                <div class="gemini-scenario">
+                  <strong>Base case</strong>
+                  <p>{{ geminiAnalysis.outlook_6_12m?.base_case || geminiAnalysis.outlook }}</p>
+                </div>
+                <div class="gemini-scenario">
+                  <strong>Bull case</strong>
+                  <p>{{ geminiAnalysis.outlook_6_12m?.bull_case || '-' }}</p>
+                </div>
+                <div class="gemini-scenario">
+                  <strong>Bear case</strong>
+                  <p>{{ geminiAnalysis.outlook_6_12m?.bear_case || '-' }}</p>
+                </div>
+              </article>
+
+              <article class="gemini-panel-box">
+                <h3>Risques & recommandations</h3>
+
+                <div class="gemini-subsection">
+                  <span class="gemini-subsection__label">Risk flags</span>
+                  <div class="gemini-chip-list">
+                    @for (flag of geminiAnalysis.risk_flags || []; track $index) {
+                      <span class="gemini-chip is-neutral">{{ flag }}</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="gemini-subsection" *ngIf="geminiAnalysis.recommendations?.length">
+                  <span class="gemini-subsection__label">Actions suggérées</span>
+                  <ul class="gemini-recommendations__list">
+                    @for (rec of geminiAnalysis.recommendations.slice(0, 4); track $index) {
+                      <li class="gemini-recommendations__item">{{ rec }}</li>
+                    }
+                  </ul>
+                </div>
+              </article>
+            </div>
+
+            <div class="gemini-detail-section" *ngIf="geminiAnalysis.market_equities?.tech_ai_vs_traditional">
+              <h4>Tech / IA vs traditionnels</h4>
+              <div class="gemini-compare-grid">
+                <div>
+                  <strong>Tech & IA</strong>
+                  <p>{{ geminiAnalysis.market_equities.tech_ai_vs_traditional.tech_ai?.momentum }}</p>
+                  <p>{{ geminiAnalysis.market_equities.tech_ai_vs_traditional.tech_ai?.valuation_signal }}</p>
+                </div>
+                <div>
+                  <strong>Traditionnels</strong>
+                  <p>{{ geminiAnalysis.market_equities.tech_ai_vs_traditional.traditional?.momentum }}</p>
+                  <p>{{ geminiAnalysis.market_equities.tech_ai_vs_traditional.traditional?.valuation_signal }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="gemini-detail-section" *ngIf="geminiAnalysis.macro_political_factors?.policy_events?.length">
+              <h4>Événements de politique</h4>
+              <ul>
+                @for (event of geminiAnalysis.macro_political_factors.policy_events; track $index) {
+                  <li>{{ event }}</li>
+                }
+              </ul>
+            </div>
+
+            <div class="gemini-detail-section" *ngIf="geminiAnalysis.macro_political_factors?.notes">
+              <h4>Notes macro</h4>
+              <p>{{ geminiAnalysis.macro_political_factors.notes }}</p>
+            </div>
+
+            <div class="gemini-detail-meta">
+              <span>Source: {{ geminiAnalysis.source || 'Gemini AI' }}</span>
+              <span>Modèle: {{ geminiAnalysis.model || '-' }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="movers-grid">
+    <article class="movers-panel">
+      <header class="panel-heading">
+        <h2>Actions à plus fort volume</h2>
+        <span>›</span>
+      </header>
+
+      <div class="mover-list">
+        <div 
+          *ngFor="let mover of volumeLeaders; trackBy: trackBySymbol" 
+          class="mover-row"
+          [class.selected]="selectedAssetSymbol === mover.symbol"
+          (click)="selectAsset(mover.symbol)">
+          <div class="mover-row__identity">
+            <div class="mover-row__avatar">{{ mover.symbol.slice(0, 2) }}</div>
+            <div>
+              <h3>{{ mover.name }}</h3>
+              <span class="mover-row__symbol">{{ mover.symbol }}</span>
+            </div>
+          </div>
+
+          <div class="mover-row__metrics">
+            <span class="mover-row__value">{{ mover.value }}</span>
+            <span class="mover-row__change" [class.is-positive]="mover.trend === 'positive'" [class.is-negative]="mover.trend === 'negative'">
+              {{ mover.change }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <a href="#" class="panel-link">Voir toutes les actions les plus activement tradées ›</a>
+    </article>
+
+    <article class="movers-panel">
+      <header class="panel-heading">
+        <h2>Actions les plus volatiles</h2>
+        <span>›</span>
+      </header>
+
+      <div class="mover-list">
+        <div 
+          *ngFor="let mover of volatileLeaders; trackBy: trackBySymbol" 
+          class="mover-row"
+          [class.selected]="selectedAssetSymbol === mover.symbol"
+          (click)="selectAsset(mover.symbol)">
+          <div class="mover-row__identity">
+            <div class="mover-row__avatar mover-row__avatar--alt">{{ mover.symbol.slice(0, 2) }}</div>
+            <div>
+              <h3>{{ mover.name }}</h3>
+              <span class="mover-row__symbol">{{ mover.symbol }}</span>
+            </div>
+          </div>
+
+          <div class="mover-row__metrics">
+            <span class="mover-row__value">{{ mover.value }}</span>
+            <span class="mover-row__change" [class.is-positive]="mover.trend === 'positive'" [class.is-negative]="mover.trend === 'negative'">
+              {{ mover.change }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <a href="#" class="panel-link">Voir toutes les actions dont le prix a le plus changé ›</a>
+    </article>
+  </section>
+</section>
+<!-- Order Modal -->
+@if (showOrderModal) {
+  <div class="order-modal-overlay" (click)="closeOrderModal()">
+    <div class="order-modal" (click)="$event.stopPropagation()">
+      <div class="order-modal__header">
+        <h2>Créer un ordre</h2>
+        <button 
+          type="button" 
+          class="order-modal__close"
+          (click)="closeOrderModal()"
+          aria-label="Fermer">
+          ×
+        </button>
+      </div>
+
+      <div class="order-modal__body">
+        <div class="order-modal__asset-info">
+          <span class="order-modal__asset-symbol">{{ selectedAssetSymbol }}</span>
+          <span class="order-modal__asset-price">{{ assetPrice | number:'1.2-2' }} EUR</span>
+        </div>
+
+        @if (orderModalError) {
+          <div class="order-modal__error">{{ orderModalError }}</div>
+        }
+
+        <form (ngSubmit)="submitOrder()" class="order-modal__form">
+          <!-- Order Type Toggle -->
+          <div class="order-modal__type-selector">
+            <button
+              type="button"
+              class="order-type-btn"
+              [class.is-active]="orderFormData.orderType === 'BUY'"
+              (click)="toggleOrderType()">
+              <span class="order-type-btn__icon">📈</span>
+              <span class="order-type-btn__label">Acheter</span>
+            </button>
+            <button
+              type="button"
+              class="order-type-btn"
+              [class.is-active]="orderFormData.orderType === 'SELL'"
+              (click)="toggleOrderType()">
+              <span class="order-type-btn__icon">📉</span>
+              <span class="order-type-btn__label">Vendre</span>
+            </button>
+          </div>
+
+          <!-- Quantity Input -->
+          <div class="order-modal__field">
+            <label for="quantity">Quantité</label>
+            <input
+              id="quantity"
+              type="number"
+              min="0.001"
+              step="0.001"
+              [(ngModel)]="orderFormData.quantity"
+              name="quantity"
+              class="order-modal__input"
+              placeholder="Entrez la quantité"
+              required />
+          </div>
+
+          <!-- Price Input -->
+          <div class="order-modal__field">
+            <label for="price">
+              Prix limite (EUR)
+              <span class="order-modal__hint">Optionnel - Prix marché par défaut</span>
+            </label>
+            <input
+              id="price"
+              type="number"
+              min="0"
+              step="0.01"
+              [(ngModel)]="orderFormData.price"
+              name="price"
+              class="order-modal__input"
+              placeholder="Laisser vide pour prix marché" />
+          </div>
+
+          <!-- Total Estimation -->
+          <div class="order-modal__total">
+            <span class="order-modal__total-label">Total estimé</span>
+            <span class="order-modal__total-value">
+              {{ ((orderFormData.price || assetPrice) * orderFormData.quantity) | number:'1.2-2' }} EUR
+            </span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="order-modal__actions">
+            <button
+              type="button"
+              class="order-modal__btn order-modal__btn--cancel"
+              (click)="closeOrderModal()">
+              Annuler
+            </button>
+            <button
+              type="submit"
+              class="order-modal__btn order-modal__btn--submit"
+              [class.is-loading]="orderModalLoading"
+              [disabled]="orderModalLoading || orderFormData.quantity <= 0">
+              {{ orderModalLoading ? 'Création...' : 'Créer l\'ordre' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}

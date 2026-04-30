@@ -1,4 +1,88 @@
-<div class="page-container">
-  <h1>Investment Strategy</h1>
-  <p>This is a placeholder for the Investment Strategy component.</p>
-</div>
+<section class="investment-page">
+  <header class="page-header">
+    <div class="title-group">
+      <h1>Investment Strategies</h1>
+      <p>Gestion des profils de risque et des rendements attendus.</p>
+    </div>
+
+    <button class="page-action-btn" type="button" (click)="loadStrategies()">Actualiser</button>
+  </header>
+
+  <section class="kpi-grid">
+    <article class="kpi-card">
+      <p class="kpi-label">Stratégies</p>
+      <p class="kpi-value">{{ strategies.length }}</p>
+      <p class="kpi-meta">Configurations actives</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Budget moyen</p>
+      <p class="kpi-value">{{ averageBudget | number:'1.2-2' }}</p>
+      <p class="kpi-meta">Capacité d'allocation</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Risque élevé</p>
+      <p class="kpi-value">{{ highRiskCount }}</p>
+      <p class="kpi-meta">Surveillance renforcée</p>
+    </article>
+
+    <article class="kpi-card">
+      <p class="kpi-label">Actives</p>
+      <p class="kpi-value">{{ activeStrategiesCount }}</p>
+      <p class="kpi-meta">Automatisation en cours</p>
+    </article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-body filters-grid">
+      <div class="field">
+        <label for="strategy-search">Recherche</label>
+        <input
+          id="strategy-search"
+          type="text"
+          [value]="searchTerm"
+          (input)="onSearchInput($event)"
+          placeholder="Nom ou description"
+        />
+      </div>
+
+      <div class="field">
+        <label for="strategy-risk">Niveau de risque</label>
+        <select id="strategy-risk" [value]="riskFilter" (change)="onRiskFilterChange($event)">
+          <option *ngFor="let risk of riskOptions" [value]="risk">{{ risk }}</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div *ngIf="loading" class="state">Chargement des stratégies...</div>
+    <div *ngIf="!loading && errorMessage" class="state state--error">{{ errorMessage }}</div>
+    <div *ngIf="!loading && !errorMessage && filteredStrategies.length === 0" class="state">
+      Aucune stratégie ne correspond à votre recherche.
+    </div>
+
+    <div *ngIf="!loading && !errorMessage && filteredStrategies.length > 0" class="panel-body strategy-grid">
+      <article class="strategy-card" *ngFor="let strategy of filteredStrategies">
+        <header>
+          <h3>{{ strategy.strategyName }}</h3>
+          <span [class]="getRiskBadgeClass(strategy.riskProfile)">{{ strategy.riskProfile }}</span>
+        </header>
+
+        <p>
+          Budget max: {{ strategy.maxBudget ?? 0 | number:'1.2-2' }} ·
+          Max assets: {{ strategy.maxAssets }} ·
+          Auto-orders: {{ strategy.autoCreateOrders ? 'Oui' : 'Non' }}
+        </p>
+
+        <div class="progress">
+          <span>Stop loss: {{ strategy.stopLossPct ?? 0 | number:'1.2-2' }}%</span>
+          <div class="progress-track">
+            <div class="progress-fill" [style.width.%]="stopLossPercent(strategy.stopLossPct)"></div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+</section>

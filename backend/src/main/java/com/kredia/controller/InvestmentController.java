@@ -9,6 +9,7 @@ import com.kredia.enums.AssetCategory;
 import com.kredia.enums.OrderStatus;
 import com.kredia.enums.RiskLevel;
 import com.kredia.service.InvestmentService;
+import com.kredia.service.MarketPriceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,16 +23,25 @@ import java.util.Map;
 public class InvestmentController {
 
     private final InvestmentService investmentService;
+    private final MarketPriceService marketPriceService;
 
     @Autowired
-    public InvestmentController(InvestmentService investmentService) {
+    public InvestmentController(InvestmentService investmentService, MarketPriceService marketPriceService) {
         this.investmentService = investmentService;
+        this.marketPriceService = marketPriceService;
     }
 
     // ==================== InvestmentAsset Endpoints ====================
     
     @PostMapping("/assets")
     public ResponseEntity<InvestmentAsset> createAsset(@RequestBody InvestmentAsset asset) {
+        // Set default values if not provided
+        if (asset.getCategory() == null) {
+            asset.setCategory(AssetCategory.STOCK);
+        }
+        if (asset.getRiskLevel() == null) {
+            asset.setRiskLevel(RiskLevel.MEDIUM);
+        }
         InvestmentAsset createdAsset = investmentService.createAsset(asset);
         return new ResponseEntity<>(createdAsset, HttpStatus.CREATED);
     }
@@ -47,6 +57,17 @@ public class InvestmentController {
     public ResponseEntity<List<InvestmentAsset>> getAllAssets() {
         List<InvestmentAsset> assets = investmentService.getAllAssets();
         return new ResponseEntity<>(assets, HttpStatus.OK);
+    }
+
+    @GetMapping("/assets/check-favorite/{symbol}")
+    public ResponseEntity<?> checkAssetFavorite(@PathVariable String symbol) {
+        return investmentService.getAssetBySymbol(symbol)
+                .map(asset -> ResponseEntity.ok(Map.of(
+                        "exists", true,
+                        "symbol", asset.getSymbol(),
+                        "assetId", asset.getAssetId()
+                )))
+                .orElse(ResponseEntity.ok(Map.of("exists", false)));
     }
 
     @PutMapping("/assets/{id}")
@@ -316,6 +337,35 @@ public class InvestmentController {
             return new ResponseEntity<>(summary, status);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // ==================== Market Chart Endpoints ====================
+
+    @GetMapping("/market/search")
+    public ResponseEntity<List<Map<String, Object>>> searchMarketAssets(
+            @RequestParam("q") String query,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        try {
+            List<Map<String, Object>> results = marketPriceService.searchAssets(query, limit);
+            return new ResponseEntity<>(results, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
+        }
+    }
+
+    @GetMapping("/market/chart/{symbol}")
+    public ResponseEntity<List<java.math.BigDecimal>> getHistoricalPrices(
+            @PathVariable String symbol,
+            @RequestParam(defaultValue = "1d") String range,
+            @RequestParam(defaultValue = "1m") String interval
+    ) {
+        try {
+            List<java.math.BigDecimal> prices = marketPriceService.getHistoricalPrices(symbol, range, interval);
+            return new ResponseEntity<>(prices, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
         }
     }
 }

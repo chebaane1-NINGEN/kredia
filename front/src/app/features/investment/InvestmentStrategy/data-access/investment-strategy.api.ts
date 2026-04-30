@@ -9,10 +9,10 @@ export class InvestmentStrategyApi {
   constructor(private readonly http: HttpClient) {}
 
   findAll(): Observable<InvestmentStrategy[]> {
-    return this.http.get<InvestmentStrategy[]>(`${API_BASE_URL}/api/investment-strategies`);
+    return this.http.get<InvestmentStrategy[]>(`${API_BASE_URL}/api/investments/strategies`);
   }
 
   findById(id: number): Observable<InvestmentStrategy> {
-    return this.http.get<InvestmentStrategy>(`${API_BASE_URL}/api/investment-strategies/${id}`);
+    return this.http.get<InvestmentStrategy>(`${API_BASE_URL}/api/investments/strategies/${id}`);
   }
 }

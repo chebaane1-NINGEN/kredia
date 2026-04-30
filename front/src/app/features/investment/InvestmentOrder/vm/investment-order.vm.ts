@@ -7,6 +7,10 @@ import { InvestmentOrder } from '../models/investment-order.model';
 export class InvestmentOrderVm {
   private readonly api = inject(InvestmentOrderApi);
 
+  create(order: InvestmentOrder): Observable<InvestmentOrder> {
+    return this.api.create(order);
+  }
+
   findAll(): Observable<InvestmentOrder[]> {
     return this.api.findAll();
   }
@@ -15,7 +19,7 @@ export class InvestmentOrderVm {
     return this.api.findByUser(userId);
   }
 
-  cancel(id: number): Observable<InvestmentOrder> {
-    return this.api.cancel(id);
+  cancel(order: InvestmentOrder): Observable<InvestmentOrder> {
+    return this.api.cancel(order);
   }
 }
