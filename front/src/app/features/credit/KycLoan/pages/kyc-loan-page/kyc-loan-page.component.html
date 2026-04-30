@@ -42,8 +42,7 @@
       <div class="field">
         <label>Document Type</label>
         <div class="doc-type-grid">
-          <button *ngFor="let d of docTypes" class="doc-pill"
-            [class.active]="selectedDocType === d.documentType"
+          <button *ngFor="let d of docTypes" class="doc-pill" [class.active]="selectedDocType === d.documentType"
             (click)="selectedDocType = d.documentType" type="button">
             <span class="doc-pill__icon">{{ d.icon }}</span>
             <span class="doc-pill__label">{{ d.label }}</span>
@@ -51,10 +50,8 @@
         </div>
       </div>
 
-      <div class="drop-zone"
-        [class.drag-over]="dragOver" [class.has-file]="!!selectedFile"
-        (dragover)="onDragOver($event)" (dragleave)="onDragLeave()"
-        (drop)="onDrop($event)" (click)="fileInput.click()">
+      <div class="drop-zone" [class.drag-over]="dragOver" [class.has-file]="!!selectedFile"
+        (dragover)="onDragOver($event)" (dragleave)="onDragLeave()" (drop)="onDrop($event)" (click)="fileInput.click()">
         <input #fileInput type="file" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" (change)="onFileInput($event)" />
         <ng-container *ngIf="!selectedFile">
           <div class="drop-zone__icon">☁️</div>
@@ -68,13 +65,15 @@
               <span class="file-preview__name">{{ selectedFile.name }}</span>
               <span class="file-preview__size">{{ fileSizeLabel(selectedFile.size) }}</span>
             </div>
-            <button class="file-preview__remove" (click)="$event.stopPropagation(); removeFile()" title="Remove">✕</button>
+            <button class="file-preview__remove" (click)="$event.stopPropagation(); removeFile()"
+              title="Remove">✕</button>
           </div>
         </ng-container>
       </div>
 
       <div class="alert alert--error" *ngIf="error">⚠️ {{ error }}</div>
-      <div class="alert alert--error" *ngIf="hasCreditsError">⚠️ You must have at least one credit or application to upload a document.</div>
+      <div class="alert alert--error" *ngIf="hasCreditsError">⚠️ You must have at least one credit or application to
+        upload a document.</div>
 
       <button class="btn-upload" [disabled]="!selectedFile || uploading || hasCreditsError" (click)="upload()">
         <span *ngIf="!uploading">🚀 Upload Document</span>
@@ -102,28 +101,27 @@
       <div class="kyc-filter-bar" *ngIf="uploadedDocs.length > 0">
         <div class="kyc-filter-group">
           <span class="kyc-filter-label">Credit:</span>
-          <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
+          <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'"
+            (click)="setCreditFilter('ALL')">All</button>
           <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn"
-            [class.active]="creditFilter === id.toString()"
-            (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+            [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
         </div>
         <div class="kyc-filter-group" *ngIf="uniqueDemandeIds.length > 0">
           <span class="kyc-filter-label">Application:</span>
-          <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'" (click)="setDemandeFilter('ALL')">All</button>
+          <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'"
+            (click)="setDemandeFilter('ALL')">All</button>
           <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn"
-            [class.active]="demandeFilter === id.toString()"
-            (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
+            [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id
+            }}</button>
         </div>
         <div class="kyc-filter-group">
           <span class="kyc-filter-label">Type:</span>
-          <button *ngFor="let t of typeOptions" class="kyc-filter-btn"
-            [class.active]="typeFilter === t.value"
+          <button *ngFor="let t of typeOptions" class="kyc-filter-btn" [class.active]="typeFilter === t.value"
             (click)="setTypeFilter(t.value)">{{ t.label }}</button>
         </div>
         <div class="kyc-filter-group">
           <span class="kyc-filter-label">Status:</span>
-          <button *ngFor="let s of statusOptions" class="kyc-filter-btn"
-            [class.active]="statusFilter === s.value"
+          <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value"
             (click)="setStatusFilter(s.value)">{{ s.label }}</button>
         </div>
       </div>
@@ -135,13 +133,19 @@
       <div class="docs-table-wrap" *ngIf="filteredDocs.length > 0">
         <table class="docs-table">
           <thead>
-            <tr><th>#</th><th>Type</th><th>Credit</th><th>Application</th><th>Status</th><th>Date</th><th>Action</th></tr>
+            <tr>
+              <th>#</th>
+              <th>Type</th>
+              <th>Credit</th>
+              <th>Application</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let doc of filteredDocs"
-                class="doc-row"
-                [class.doc-row--selected]="verifyResult?.kycLoanId === doc.kycLoanId"
-                (click)="selectDoc(doc)">
+            <tr *ngFor="let doc of filteredDocs" class="doc-row"
+              [class.doc-row--selected]="verifyResult?.kycLoanId === doc.kycLoanId" (click)="selectDoc(doc)">
               <td>{{ doc.kycLoanId }}</td>
               <td>{{ docLabel(doc.documentType) }}</td>
               <td>{{ doc.creditId ? '#' + doc.creditId : '—' }}</td>
@@ -154,12 +158,19 @@
               <td>{{ doc.submittedAt | date:'MM/dd/yy HH:mm' }}</td>
               <td (click)="$event.stopPropagation()">
                 <div class="table-actions" *ngIf="doc.verifiedStatus === 'PENDING'; else verifiedBadge">
-                  <button class="btn-verify-sm ai"      (click)="verify(doc.kycLoanId)"  [disabled]="verifying">Test AI</button>
-                  <button class="btn-verify-sm approve" (click)="approve(doc.kycLoanId)" [disabled]="verifying">Approve</button>
-                  <button class="btn-verify-sm reject"  (click)="reject(doc.kycLoanId)"  [disabled]="verifying">Reject</button>
+                  <button class="btn-verify-sm ai" (click)="verify(doc.kycLoanId)" [disabled]="verifying">Test
+                    AI</button>
+                  <button class="btn-verify-sm approve" (click)="approve(doc.kycLoanId)"
+                    [disabled]="verifying">Approve</button>
+                  <button class="btn-verify-sm reject" (click)="reject(doc.kycLoanId)"
+                    [disabled]="verifying">Reject</button>
                 </div>
                 <ng-template #verifiedBadge>
-                  <span class="doc-badge">{{ doc.verifiedStatus }}</span>
+                  <div class="table-actions">
+                    <span class="doc-badge">{{ doc.verifiedStatus }}</span>
+                    <button *ngIf="doc.verifiedStatus === 'REJECTED' && doc.aiEvaluation" class="btn-reject-reason"
+                      (click)="showReason(doc)">View Reason</button>
+                  </div>
                 </ng-template>
               </td>
             </tr>
@@ -183,28 +194,26 @@
     <div class="kyc-filter-bar">
       <div class="kyc-filter-group">
         <span class="kyc-filter-label">Credit:</span>
-        <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
+        <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'"
+          (click)="setCreditFilter('ALL')">All</button>
         <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn"
-          [class.active]="creditFilter === id.toString()"
-          (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+          [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
       </div>
       <div class="kyc-filter-group" *ngIf="uniqueDemandeIds.length > 0">
         <span class="kyc-filter-label">Application:</span>
-        <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'" (click)="setDemandeFilter('ALL')">All</button>
+        <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'"
+          (click)="setDemandeFilter('ALL')">All</button>
         <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn"
-          [class.active]="demandeFilter === id.toString()"
-          (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
+          [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
       </div>
       <div class="kyc-filter-group">
         <span class="kyc-filter-label">Type:</span>
-        <button *ngFor="let t of typeOptions" class="kyc-filter-btn"
-          [class.active]="typeFilter === t.value"
+        <button *ngFor="let t of typeOptions" class="kyc-filter-btn" [class.active]="typeFilter === t.value"
           (click)="setTypeFilter(t.value)">{{ t.label }}</button>
       </div>
       <div class="kyc-filter-group">
         <span class="kyc-filter-label">Status:</span>
-        <button *ngFor="let s of statusOptions" class="kyc-filter-btn"
-          [class.active]="statusFilter === s.value"
+        <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value"
           (click)="setStatusFilter(s.value)">{{ s.label }}</button>
       </div>
     </div>
@@ -212,13 +221,19 @@
     <div class="docs-table-wrap">
       <table class="docs-table" *ngIf="filteredDocs.length > 0">
         <thead>
-          <tr><th>#</th><th>Type</th><th>Credit</th><th>Application</th><th>Status</th><th>Date</th><th>Action</th></tr>
+          <tr>
+            <th>#</th>
+            <th>Type</th>
+            <th>Credit</th>
+            <th>Application</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let doc of filteredDocs"
-              class="doc-row"
-              [class.doc-row--selected]="verifyResult?.kycLoanId === doc.kycLoanId"
-              (click)="selectDoc(doc)">
+          <tr *ngFor="let doc of filteredDocs" class="doc-row"
+            [class.doc-row--selected]="verifyResult?.kycLoanId === doc.kycLoanId" (click)="selectDoc(doc)">
             <td>{{ doc.kycLoanId }}</td>
             <td>{{ docLabel(doc.documentType) }}</td>
             <td>{{ doc.creditId ? '#' + doc.creditId : '—' }}</td>
@@ -230,9 +245,8 @@
             </td>
             <td>{{ doc.submittedAt | date:'MM/dd/yy HH:mm' }}</td>
             <td (click)="$event.stopPropagation()">
-              <button *ngIf="doc.verifiedStatus === 'REJECTED' && doc.aiEvaluation" 
-                      class="btn-reject-reason" 
-                      (click)="showReason(doc)">View Reason</button>
+              <button *ngIf="doc.verifiedStatus === 'REJECTED' && doc.aiEvaluation" class="btn-reject-reason"
+                (click)="showReason(doc)">View Reason</button>
             </td>
           </tr>
         </tbody>
@@ -317,27 +331,48 @@
     [class]="'verdict-banner--' + statusClass(verifyResult.verifiedStatus)">
     <div class="verdict-banner__emoji">
       {{ verifyResult.verifiedStatus === 'APPROVED' ? '✅' :
-         verifyResult.verifiedStatus === 'REJECTED' ? '❌' : '⏳' }}
+      verifyResult.verifiedStatus === 'REJECTED' ? '❌' : '⏳' }}
     </div>
     <div class="verdict-banner__content">
       <h3>{{ verifyResult.verifiedStatus === 'APPROVED' ? 'Document Approved!' :
-             verifyResult.verifiedStatus === 'REJECTED' ? 'Document Rejected' : 'AI Analysis Complete' }}</h3>
+        verifyResult.verifiedStatus === 'REJECTED' ? 'Document Rejected' : 'AI Analysis Complete' }}</h3>
+
+      <div class="verdict-meta">
+        <span class="meta-tag">ID: #{{ verifyResult.kycLoanId }}</span>
+        <span class="meta-tag">Type: {{ docLabel(verifyResult.documentType) }}</span>
+        <span class="meta-tag" *ngIf="verifyResult.creditId">Credit: #{{ verifyResult.creditId }}</span>
+        <span class="meta-tag" *ngIf="verifyResult.demandeId">App: #{{ verifyResult.demandeId }}</span>
+      </div>
 
       <!-- AI message if present -->
-      <ng-container *ngIf="verifyResult.verificationMessage; else defaultMsg">
+      <ng-container *ngIf="verifyResult.verificationMessage || verifyResult.aiEvaluation; else defaultMsg">
         <div class="ai-message">
           <span class="ai-badge">🤖 AI Analysis</span>
-          <p class="ai-text">{{ verifyResult.verificationMessage }}</p>
+          
+          <!-- Show verificationMessage if present -->
+          <p class="ai-text" *ngIf="verifyResult.verificationMessage">{{ verifyResult.verificationMessage }}</p>
+          
+          <!-- Only show aiEvaluation if it's different from verificationMessage -->
+          <p class="ai-text" *ngIf="verifyResult.aiEvaluation && verifyResult.aiEvaluation !== verifyResult.verificationMessage">
+            {{ verifyResult.aiEvaluation }}
+          </p>
         </div>
       </ng-container>
 
       <ng-template #defaultMsg>
         <p>{{ verifyResult.verifiedStatus === 'APPROVED'
-              ? 'Your document has been successfully validated.'
-              : verifyResult.verifiedStatus === 'REJECTED'
-              ? 'This document could not be validated. Please submit another one.'
-              : 'Your document is being reviewed.' }}</p>
+          ? 'Your document has been successfully validated.'
+          : verifyResult.verifiedStatus === 'REJECTED'
+          ? 'This document could not be validated. Please submit another one.'
+          : 'Your document is being reviewed.' }}</p>
       </ng-template>
+
+      <div class="verdict-footer" *ngIf="verifyResult.documentPath">
+        <a [href]="verifyResult.documentPath" target="_blank" class="doc-link-verdict">
+          🔍 View Original Document
+        </a>
+        <span class="submission-date">Submitted on {{ verifyResult.submittedAt | date:'MM/dd/yyyy HH:mm' }}</span>
+      </div>
     </div>
   </div>
 </ng-template>

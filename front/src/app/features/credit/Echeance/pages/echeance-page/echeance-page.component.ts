@@ -25,6 +25,8 @@ export class EcheancePageComponent implements OnInit {
 
   /** creditId passed as query param — null = no filter */
   filterCreditId: number | null = null;
+  /** echeanceId passed as query param — null = no filter */
+  filterEcheanceId: number | null = null;
 
   /** Installments of the selected credit */
   items: EcheancePaymentResponse[] = [];
@@ -75,17 +77,44 @@ export class EcheancePageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Utiliser queryParamMap observable (pas snapshot) pour détecter les changements de creditId
+    // Utiliser queryParamMap observable (pas snapshot) pour détecter les changements
     this.route.queryParamMap.subscribe(params => {
-      const param = params.get('creditId');
-      this.filterCreditId = param ? +param : null;
+      const creditParam = params.get('creditId');
+      this.filterCreditId = creditParam ? +creditParam : null;
+
+      const echeanceParam = params.get('echeanceId');
+      this.filterEcheanceId = echeanceParam ? +echeanceParam : null;
 
       if (this.filterCreditId) {
         this.loadEcheances(this.filterCreditId);
+      } else if (this.filterEcheanceId) {
+        this.loadByEcheanceId(this.filterEcheanceId);
       } else if (this.auth.isClient()) {
         this.loadClientCredits();
       } else {
         this.loadAll();
+      }
+    });
+  }
+
+  loadByEcheanceId(echeanceId: number): void {
+    this.loading = true;
+    this.error   = null;
+    this.cdr.markForCheck();
+
+    const userId = this.auth.getCurrentUserId();
+    const source$ = this.auth.isClient() && userId ? this.vm.getByUserId(userId) : this.vm.getAll();
+
+    source$.subscribe({
+      next: (data) => {
+        this.items = (data ?? []).filter(i => i.echeance.echeanceId === echeanceId);
+        this.loading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.loading = false;
+        this.error = 'Error loading the specific installment.';
+        this.cdr.markForCheck();
       }
     });
   }
@@ -155,13 +184,21 @@ export class EcheancePageComponent implements OnInit {
     });
   }
 
-  loadAll(): void {
+  loadAll(filterEcheanceId: number | null = null): void {
     this.loading = true;
     this.error   = null;
     this.cdr.markForCheck();
 
     this.vm.getAll().subscribe({
-      next:  (data) => { this.items = data ?? []; this.loading = false; this.cdr.markForCheck(); },
+      next:  (data) => { 
+        let allItems = data ?? [];
+        if (filterEcheanceId) {
+          allItems = allItems.filter(i => i.echeance.echeanceId === filterEcheanceId);
+        }
+        this.items = allItems; 
+        this.loading = false; 
+        this.cdr.markForCheck(); 
+      },
       error: () => { this.loading = false; this.error = 'Error loading data.'; this.cdr.markForCheck(); }
     });
   }
@@ -173,8 +210,13 @@ export class EcheancePageComponent implements OnInit {
 
   back(): void {
     this.filterCreditId = null;
+    this.filterEcheanceId = null;
     this.items = [];
-    this.loadClientCredits();
+    if (this.auth.isClient()) {
+      this.loadClientCredits();
+    } else {
+      this.loadAll();
+    }
   }
 
   // ── Payment ───────────────────────────────────────────

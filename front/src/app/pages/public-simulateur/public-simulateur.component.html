@@ -8,10 +8,10 @@
       <div class="hero-band__text">
         <span class="hero-pill">
           <span class="hero-pill__dot"></span>
-          Simulateur de crédit gratuit
+          Free Credit Simulator
         </span>
-        <h1>Combien souhaitez-vous<br><span class="accent">emprunter&nbsp;?</span></h1>
-        <p>Ajustez les curseurs pour voir instantanément votre mensualité, le coût total et les intérêts. Taux fixe&nbsp;: <strong>15 % / an</strong>.</p>
+        <h1>How much would you like<br><span class="accent">to borrow?</span></h1>
+        <p>Adjust the sliders to instantly see your monthly payment, total cost, and interest. Fixed rate: <strong>15% / year</strong>.</p>
       </div>
 
       <!-- Floating badge -->
@@ -23,8 +23,8 @@
           </svg>
         </div>
         <div>
-          <span class="badge-value">15 %</span>
-          <span class="badge-label">Taux annuel fixe</span>
+          <span class="badge-value">15%</span>
+          <span class="badge-label">Annual Fixed Rate</span>
         </div>
       </div>
     </div>
@@ -41,8 +41,8 @@
 
         <!-- Type selector -->
         <div class="type-selector">
-          <button class="type-btn" [class.active]="repaymentType() === 'MENSUALITE_CONSTANTE'" (click)="setType('MENSUALITE_CONSTANTE')">Mensualité Constante</button>
-          <button class="type-btn" [class.active]="repaymentType() === 'AMORTISSEMENT_CONSTANT'" (click)="setType('AMORTISSEMENT_CONSTANT')">Amortissement Constant</button>
+          <button class="type-btn" [class.active]="repaymentType() === 'MENSUALITE_CONSTANTE'" (click)="setType('MENSUALITE_CONSTANTE')">Constant Monthly</button>
+          <button class="type-btn" [class.active]="repaymentType() === 'AMORTISSEMENT_CONSTANT'" (click)="setType('AMORTISSEMENT_CONSTANT')">Constant Amortization</button>
           <button class="type-btn" [class.active]="repaymentType() === 'IN_FINE'" (click)="setType('IN_FINE')">In Fine</button>
         </div>
 
@@ -56,10 +56,10 @@
                 <line x1="12" y1="6" x2="12" y2="8"></line>
                 <line x1="12" y1="16" x2="12" y2="18"></line>
               </svg>
-              Montant souhaité (TND)
+              Desired Amount (TND)
             </label>
             <div class="slider-block__value-box">
-              <span class="slider-value">{{ fmtAmount(amount()) }}</span>
+              <input type="number" class="slider-input" [value]="amount()" (input)="onAmountChange($event)" [min]="AMOUNT_MIN" [max]="AMOUNT_MAX" [step]="AMOUNT_STEP" />
               <span class="slider-unit">TND</span>
             </div>
           </div>
@@ -93,11 +93,11 @@
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              Durée (mois)
+              Term (months)
             </label>
             <div class="slider-block__value-box">
-              <span class="slider-value">{{ termMonths() }}</span>
-              <span class="slider-unit">mois</span>
+              <input type="number" class="slider-input" [value]="termMonths()" (input)="onTermChange($event)" [min]="TERM_MIN" [max]="TERM_MAX" [step]="TERM_STEP" />
+              <span class="slider-unit">months</span>
             </div>
           </div>
 
@@ -114,26 +114,16 @@
               [style.--pct]="termPct() + '%'"
             />
             <div class="range-limits">
-              <span>{{ TERM_MIN }} mois</span>
-              <span>{{ TERM_MAX }} mois</span>
+              <span>{{ TERM_MIN }} months</span>
+              <span>{{ TERM_MAX }} months</span>
             </div>
           </div>
         </div>
 
-        <!-- Divider -->
-        <div class="panel-divider"></div>
-
         <!-- CTA buttons -->
         <div class="panel-actions">
-          <button id="btn-full-sim" class="btn-full-sim" (click)="goToFullSimulateur()">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-              <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-              <path d="M3 9h18M9 21V9"></path>
-            </svg>
-            Simulateur détaillé
-          </button>
           <button id="btn-apply" class="btn-apply" (click)="goToLogin()">
-            Faire une demande
+            Apply Now
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
               <line x1="5" y1="12" x2="19" y2="12"></line>
               <polyline points="12 5 19 12 12 19"></polyline>
@@ -148,17 +138,30 @@
         <!-- Main monthly payment -->
         <div class="result-main">
           <span class="result-main__label">
-            {{ repaymentType() === 'AMORTISSEMENT_CONSTANT' ? '1ère mensualité estimée' : (repaymentType() === 'IN_FINE' ? 'Mensualité (intérêts)' : 'Mensualité estimée') }}
+            {{ repaymentType() === 'AMORTISSEMENT_CONSTANT' ? 'Estimated 1st payment' : (repaymentType() === 'IN_FINE' ? 'Monthly Payment (interest)' : 'Estimated Monthly Payment') }}
           </span>
           <div class="result-main__amount">
             <span class="result-main__value">{{ fmtMoney(firstPayment()) }}</span>
-            <span class="result-main__currency">TND / mois</span>
+            <span class="result-main__currency">TND / month</span>
           </div>
-          <div class="result-main__sub" *ngIf="repaymentType() === 'IN_FINE'">
-            + Dernière échéance : {{ fmtMoney(lastPayment()) }} TND
+          <div class="result-main__details" *ngIf="repaymentType() === 'IN_FINE'">
+            <div class="detail-box">
+              <span class="detail-label">Last Installment</span>
+              <span class="detail-val">+ {{ fmtMoney(lastPayment()) }} TND</span>
+            </div>
           </div>
-          <div class="result-main__sub" *ngIf="repaymentType() === 'AMORTISSEMENT_CONSTANT'">
-            Dernière mensualité : {{ fmtMoney(lastPayment()) }} TND
+          <div class="result-main__details" *ngIf="repaymentType() === 'AMORTISSEMENT_CONSTANT'">
+            <div class="detail-box">
+              <span class="detail-label">Last Payment</span>
+              <span class="detail-val">{{ fmtMoney(lastPayment()) }} TND</span>
+            </div>
+            <div class="detail-box">
+              <span class="detail-label">Monthly Decrease</span>
+              <span class="detail-val">
+                - {{ fmtMoney(monthlyDecrease()) }} TND
+                <span style="font-size: 0.75rem; opacity: 0.85; font-weight: 600; margin-left: 2px;">(-{{ fmtMoney(decreasePct()) }}%)</span>
+              </span>
+            </div>
           </div>
           <div class="result-main__bar">
             <div class="result-main__bar-fill"></div>
@@ -170,7 +173,7 @@
           <div class="kpi-row">
             <div class="kpi-dot kpi-dot--capital"></div>
             <div class="kpi-info">
-              <span class="kpi-info__label">Capital emprunté</span>
+              <span class="kpi-info__label">Borrowed Capital</span>
               <span class="kpi-info__value">{{ fmtMoney(amount()) }} TND</span>
             </div>
           </div>
@@ -178,7 +181,7 @@
           <div class="kpi-row">
             <div class="kpi-dot kpi-dot--interest"></div>
             <div class="kpi-info">
-              <span class="kpi-info__label">Total intérêts</span>
+              <span class="kpi-info__label">Total Interest</span>
               <span class="kpi-info__value interest-val">{{ fmtMoney(totalInterest()) }} TND</span>
             </div>
           </div>
@@ -186,7 +189,7 @@
           <div class="kpi-row kpi-row--total">
             <div class="kpi-dot kpi-dot--total"></div>
             <div class="kpi-info">
-              <span class="kpi-info__label">Coût total du crédit</span>
+              <span class="kpi-info__label">Total Credit Cost</span>
               <span class="kpi-info__value total-val">{{ fmtMoney(totalPaid()) }} TND</span>
             </div>
           </div>
@@ -215,13 +218,13 @@
           </svg>
           <div class="donut-legend">
             <span class="legend-dot" style="background:#1b6ca8"></span><span>Capital</span>
-            <span class="legend-dot" style="background:#e53e3e"></span><span>Intérêts</span>
+            <span class="legend-dot" style="background:#e53e3e"></span><span>Interest</span>
           </div>
         </div>
 
         <!-- Disclaimer -->
         <p class="disclaimer">
-          * Simulation à titre indicatif. Le taux effectif global peut varier selon votre profil.
+          * Indicative simulation. The actual rate may vary based on your profile.
         </p>
       </div>
 

@@ -28,7 +28,7 @@ export class CreditPageComponent implements OnInit {
   ];
 
   readonly form = this.fb.nonNullable.group({
-    amount:        [0,                      [Validators.required, Validators.min(0.01)]],
+    amount:        [500,                    [Validators.required, Validators.min(500), Validators.max(10000)]],
     termMonths:    [0,                      [Validators.required, Validators.min(1)]],
     startDate:     ['',                     Validators.required],
     repaymentType: ['MENSUALITE_CONSTANTE' as RepaymentType, Validators.required],

@@ -6,6 +6,7 @@ import com.kredia.enums.CreditStatus;
 import com.kredia.enums.RepaymentType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
@@ -48,7 +49,8 @@ public class DemandeCredit {
     }
 
     @NotNull(message = "Le montant est obligatoire")
-    @Positive(message = "Le montant doit être positif")
+    @Min(value = 500, message = "Le montant minimum est de 500 DT")
+    @Max(value = 10000, message = "Le montant maximum est de 10000 DT")
     private Float amount;
 
     @NotNull(message = "La durée en mois est obligatoire")

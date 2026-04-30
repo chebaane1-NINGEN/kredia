@@ -38,7 +38,9 @@ public class CloudinaryService {
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
                 ObjectUtils.asMap(
                         "folder", folder,
-                        "resource_type", resourceType
+                        "resource_type", resourceType,
+                        "type", "upload",
+                        "access_mode", "public"
                 ));
         return (String) uploadResult.get("secure_url");
     }

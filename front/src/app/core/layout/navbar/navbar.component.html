@@ -16,7 +16,31 @@
       <span *ngIf="!darkModeService.isDarkMode()">🌙</span>
       <span *ngIf="darkModeService.isDarkMode()">☀️</span>
     </button>
-    <button class="icon-btn" title="Notifications">🔔</button>
+    <div class="notification-wrapper">
+      <button class="icon-btn" title="Notifications" (click)="toggleNotifications()">
+        🔔
+        <span class="notification-dot" *ngIf="hasUnread"></span>
+      </button>
+
+      <div class="notification-dropdown" *ngIf="showDropdown">
+        <div class="dropdown-header">Notifications</div>
+        <div class="dropdown-list" *ngIf="recentUpdates.length > 0; else noNotifs">
+          <div class="dropdown-item" *ngFor="let item of recentUpdates" (click)="goToTarget(item)">
+            <div class="item-icon">{{ item.type === 'CREDIT' ? '💳' : (item.type === 'KYC' ? '📄' : '💰') }}</div>
+            <div class="item-content">
+              <span class="item-title">{{ item.title }}</span>
+              <span class="item-date">{{ item.date | date:'short' }}</span>
+            </div>
+            <div class="item-status" [ngClass]="item.status.toLowerCase()">
+              {{ item.status }}
+            </div>
+          </div>
+        </div>
+        <ng-template #noNotifs>
+          <div class="dropdown-empty">No new notifications</div>
+        </ng-template>
+      </div>
+    </div>
   </div>
 
 </header>
