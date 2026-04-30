@@ -53,6 +53,46 @@ export class CreditListPageComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  // ── Rejection Reason Modal ──────────────────────────────
+  selectedReasonDemande: DemandeCredit | null = null;
+  rejectionReasonText = '';
+  rejectionReasonLoading = false;
+
+  showDemandeReason(d: DemandeCredit): void {
+    this.selectedReasonDemande = d;
+    this.rejectionReasonLoading = true;
+    this.rejectionReasonText = '';
+    this.cdr.markForCheck();
+
+    this.kycVm.getByDemandeId(d.creditId!).subscribe({
+      next: (docs) => {
+        let reasons: string[] = [];
+        if (d.isFeePaid === false) {
+          reasons.push('Application fees not paid');
+        }
+        if (docs && docs.some(doc => doc.verifiedStatus === 'REJECTED')) {
+          reasons.push('KYC documents rejected');
+        }
+        if (reasons.length === 0) {
+          reasons.push('Rejected by administrator');
+        }
+        this.rejectionReasonText = reasons.join(' & ');
+        this.rejectionReasonLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.rejectionReasonText = 'Error loading reason.';
+        this.rejectionReasonLoading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  closeDemandeReason(): void {
+    this.selectedReasonDemande = null;
+    this.cdr.markForCheck();
+  }
+
   ngOnInit(): void { this.loadData(); }
 
   setViewMode(mode: 'ALL' | 'PENDING'): void {

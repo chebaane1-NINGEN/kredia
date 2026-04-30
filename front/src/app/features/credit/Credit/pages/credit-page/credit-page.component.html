@@ -30,12 +30,6 @@
       </label>
 
       <label>
-        <span>End Date</span>
-        <input type="date" formControlName="endDate" />
-        <small *ngIf="form.controls.endDate.touched && form.controls.endDate.invalid">End date is required.</small>
-      </label>
-
-      <label>
         <span>Repayment Type</span>
         <select formControlName="repaymentType">
           <option *ngFor="let t of repaymentTypes" [value]="t.value">{{ t.label }}</option>
@@ -55,6 +49,18 @@
       </label>
     </div>
 
+    <!-- ── Frais de dossier ────────────────────────────── -->
+    <div class="fee-display" *ngIf="(form.controls.amount.value ?? 0) > 0">
+      <div class="fee-summary">
+        <p>Requested Amount: <strong>{{ form.controls.amount.value | number:'1.2-2' }} DT</strong></p>
+        <p>Application Fee (2%): <strong>{{ applicationFee | number:'1.2-2' }} DT</strong></p>
+      </div>
+      <label class="fee-checkbox">
+        <input type="checkbox" formControlName="isFeePaid" />
+        <span>Pay the application fee now ({{ applicationFee | number:'1.2-2' }} DT)</span>
+      </label>
+    </div>
+
     <div class="info-box">
       <span>ℹ️</span>
       <p>A fixed interest rate of 12% will be applied automatically when your request is approved by an agent or administrator.</p>
@@ -62,7 +68,10 @@
 
     <div class="actions">
       <button type="submit" class="btn primary" [disabled]="submitting">
-        {{ submitting ? 'Submitting...' : 'Submit Application' }}
+        <ng-container *ngIf="submitting">Submitting...</ng-container>
+        <ng-container *ngIf="!submitting">
+          {{ form.controls.isFeePaid.value ? 'Pay Fee & Submit Application' : 'Submit without paying fee' }}
+        </ng-container>
       </button>
       <button type="reset" class="btn outline" [disabled]="submitting">Reset</button>
     </div>

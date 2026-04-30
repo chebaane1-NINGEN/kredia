@@ -31,11 +31,15 @@ export class CreditPageComponent implements OnInit {
     amount:        [0,                      [Validators.required, Validators.min(0.01)]],
     termMonths:    [0,                      [Validators.required, Validators.min(1)]],
     startDate:     ['',                     Validators.required],
-    endDate:       ['',                     Validators.required],
     repaymentType: ['MENSUALITE_CONSTANTE' as RepaymentType, Validators.required],
     income:        [0,                      [Validators.required, Validators.min(0.01)]],
-    dependents:    [0,                      [Validators.required, Validators.min(0)]]
+    dependents:    [0,                      [Validators.required, Validators.min(0)]],
+    isFeePaid:     [false]
   });
+
+  get applicationFee(): number {
+    return (this.form.get('amount')?.value || 0) * 0.02;
+  }
 
   ngOnInit(): void {
     if (!this.auth.getCurrentUserId()) {
@@ -65,14 +69,25 @@ export class CreditPageComponent implements OnInit {
     this.cdr.markForCheck();
 
     const raw = this.form.getRawValue();
+    
+    // Auto-compute end date based on start date and term
+    let computedEndDate = '';
+    if (raw.startDate && raw.termMonths) {
+      const date = new Date(raw.startDate);
+      date.setMonth(date.getMonth() + raw.termMonths);
+      computedEndDate = date.toISOString().split('T')[0];
+    }
+
     const payload: DemandeCredit = {
       amount:        raw.amount,
       termMonths:    raw.termMonths,
       startDate:     raw.startDate,
-      endDate:       raw.endDate,
+      endDate:       computedEndDate,
       repaymentType: raw.repaymentType,
       income:        raw.income,
       dependents:    raw.dependents,
+      isFeePaid:     raw.isFeePaid,
+      applicationFee: this.applicationFee,
       userId,
       status: 'PENDING'
     };
@@ -82,7 +97,7 @@ export class CreditPageComponent implements OnInit {
       .subscribe({
         next: () => {
           this.success = 'Your credit application has been submitted successfully. Our team will review it shortly.';
-          this.form.reset({ repaymentType: 'MENSUALITE_CONSTANTE' as RepaymentType, dependents: 0 });
+          this.form.reset({ repaymentType: 'MENSUALITE_CONSTANTE' as RepaymentType, dependents: 0, isFeePaid: false });
           this.cdr.markForCheck();
         },
         error: (err) => {

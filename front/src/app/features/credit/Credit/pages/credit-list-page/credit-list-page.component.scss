@@ -251,3 +251,14 @@
   border: none;
   &:hover { background: #4f46e5 !important; }
 }
+
+.btn--reject-reason {
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: #ef4444 !important;
+  border: 1px solid #ef4444 !important;
+  font-weight: 600;
+  &:hover {
+    background: #ef4444 !important;
+    color: #fff !important;
+  }
+}

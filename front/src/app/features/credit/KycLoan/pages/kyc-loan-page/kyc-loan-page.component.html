@@ -212,7 +212,7 @@
     <div class="docs-table-wrap">
       <table class="docs-table" *ngIf="filteredDocs.length > 0">
         <thead>
-          <tr><th>#</th><th>Type</th><th>Credit</th><th>Application</th><th>Status</th><th>Date</th></tr>
+          <tr><th>#</th><th>Type</th><th>Credit</th><th>Application</th><th>Status</th><th>Date</th><th>Action</th></tr>
         </thead>
         <tbody>
           <tr *ngFor="let doc of filteredDocs"
@@ -229,6 +229,11 @@
               </span>
             </td>
             <td>{{ doc.submittedAt | date:'MM/dd/yy HH:mm' }}</td>
+            <td (click)="$event.stopPropagation()">
+              <button *ngIf="doc.verifiedStatus === 'REJECTED' && doc.aiEvaluation" 
+                      class="btn-reject-reason" 
+                      (click)="showReason(doc)">View Reason</button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -239,6 +244,25 @@
   </div>
 
 </section>
+
+<!-- ── Modale de raison de rejet ──────────────────────────────── -->
+<div class="modal-overlay" *ngIf="selectedReasonDoc" (click)="closeReason()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>❌ Rejection Reason</h3>
+      <button class="close-btn" (click)="closeReason()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ai-message">
+        <span class="ai-badge">🤖 AI Analysis</span>
+        <p class="ai-text">{{ selectedReasonDoc.aiEvaluation }}</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn primary" (click)="closeReason()">Close</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Shared verification panel template ─────────────────── -->
 <ng-template #verificationPanel>

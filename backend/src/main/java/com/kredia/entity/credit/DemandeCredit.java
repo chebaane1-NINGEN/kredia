@@ -89,9 +89,19 @@ public class DemandeCredit {
 
     private LocalDateTime createdAt;
 
+    @JsonProperty("applicationFee")
+    private Float applicationFee;
+
+    @JsonProperty("isFeePaid")
+    private Boolean isFeePaid;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (status == null) status = CreditStatus.PENDING;
+        if (applicationFee == null && amount != null) {
+            applicationFee = amount * 0.02f;
+        }
+        if (isFeePaid == null) isFeePaid = false;
     }
 }
