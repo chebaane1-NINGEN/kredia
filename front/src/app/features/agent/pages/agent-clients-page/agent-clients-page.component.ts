@@ -118,6 +118,18 @@ export class AgentClientsPageComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  closeEditClientModal(): void {
+    this.showEditClientModal = false;
+    this.selectedClient = null;
+    this.cdr.markForCheck();
+  }
+
+  closeViewClientModal(): void {
+    this.showViewClientModal = false;
+    this.selectedClient = null;
+    this.cdr.markForCheck();
+  }
+
   onAddClientSubmit(formData: any): void {
     this.addClientLoading = true;
     this.addClientError = null;
@@ -237,7 +249,25 @@ export class AgentClientsPageComponent implements OnInit {
 
   // Client actions
   viewClientDetails(client: AgentClient): void {
-    this.router.navigate(['/agent/clients', client.userId]);
+    this.selectedClient = client;
+    this.showViewClientModal = true;
+    this.viewClientLoading = true;
+    this.cdr.markForCheck();
+
+    this.api.getClientDetails(client.userId)
+      .pipe(finalize(() => {
+        this.viewClientLoading = false;
+        this.cdr.markForCheck();
+      }))
+      .subscribe({
+        next: (details) => {
+          this.selectedClient = { ...client, ...details };
+        },
+        error: (err) => {
+          this.notify.error('Error', 'Failed to load client details');
+          this.closeViewClientModal();
+        }
+      });
   }
 
   approveClient(client: AgentClient, event: Event): void {
@@ -387,18 +417,6 @@ export class AgentClientsPageComponent implements OnInit {
           }
         }
       });
-  }
-
-  closeViewClientModal(): void {
-    this.showViewClientModal = false;
-    this.selectedClient = null;
-    this.cdr.markForCheck();
-  }
-
-  closeEditClientModal(): void {
-    this.showEditClientModal = false;
-    this.selectedClient = null;
-    this.cdr.markForCheck();
   }
 
   saveEditedClient(): void {

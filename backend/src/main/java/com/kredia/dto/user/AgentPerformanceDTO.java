@@ -8,6 +8,10 @@ public class AgentPerformanceDTO {
     private double performanceScore;
     private long numberOfClientsHandled;
     private double averageProcessingTimeSeconds;
+    private String scoreFormula;
+    private String processingTimeFormula;
+    private double approvalRate;
+    private double rejectionRate;
 
     public AgentPerformanceDTO() {}
 
@@ -28,4 +32,16 @@ public class AgentPerformanceDTO {
 
     public double getAverageProcessingTimeSeconds() { return averageProcessingTimeSeconds; }
     public void setAverageProcessingTimeSeconds(double averageProcessingTimeSeconds) { this.averageProcessingTimeSeconds = averageProcessingTimeSeconds; }
+
+    public String getScoreFormula() { return scoreFormula; }
+    public void setScoreFormula(String scoreFormula) { this.scoreFormula = scoreFormula; }
+
+    public String getProcessingTimeFormula() { return processingTimeFormula; }
+    public void setProcessingTimeFormula(String processingTimeFormula) { this.processingTimeFormula = processingTimeFormula; }
+
+    public double getApprovalRate() { return approvalRate; }
+    public void setApprovalRate(double approvalRate) { this.approvalRate = approvalRate; }
+
+    public double getRejectionRate() { return rejectionRate; }
+    public void setRejectionRate(double rejectionRate) { this.rejectionRate = rejectionRate; }
 }

@@ -31,6 +31,7 @@ export interface AgentPerformance {
   approvals: number;
   rejections: number;
   approvalRate: number;
+  rejectionRate?: number;
   clientsHandled: number;
   avgProcessingTime: number;
   pendingClients?: number;
@@ -46,6 +47,7 @@ export interface AgentPerformance {
   processingTimeChangeFromLastWeek?: number;
   calculationWindow?: string;
   scoreFormula?: string;
+  processingTimeFormula?: string;
   approvalRateFormula?: string;
   efficiencyFormula?: string;
   dataSources?: string[];

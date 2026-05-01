@@ -31,6 +31,15 @@
       <div class="hero-summary">
         <span>{{ getScoreDeltaLabel() }}</span>
         <p>{{ performance.scoreFormula || 'Approval ratio, client velocity and processing efficiency are all factored in.' }}</p>
+        <details class="formula-details">
+          <summary>How is this calculated?</summary>
+          <div class="formula-explanation">
+            <p><strong>Performance Score Formula:</strong></p>
+            <pre>{{ performance.scoreFormula }}</pre>
+            <p><strong>Processing Time Formula:</strong></p>
+            <pre>{{ performance.processingTimeFormula }}</pre>
+          </div>
+        </details>
       </div>
     </section>
 

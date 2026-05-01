@@ -83,7 +83,9 @@ export class ChatPageComponent implements OnInit, OnDestroy {
   selectUser(user: UserResponse): void {
     this.selectedUser = user;
     this.loadConversation();
-    this.unreadBySender.delete(user.userId);
+    if (user.userId) {
+      this.unreadBySender.delete(user.userId);
+    }
     this.recalculateUnreadCount();
   }
 
@@ -95,7 +97,9 @@ export class ChatPageComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => { this.loadingMessages = false; this.cdr.markForCheck(); }))
       .subscribe(msgs => {
         this.messages = msgs;
-        this.messageApi.markConversationRead(this.selectedUser!.userId).subscribe();
+        if (this.selectedUser?.userId) {
+          this.messageApi.markConversationRead(this.selectedUser.userId).subscribe();
+        }
         this.cdr.markForCheck();
       });
   }

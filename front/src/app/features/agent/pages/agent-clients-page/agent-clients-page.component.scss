@@ -670,6 +670,47 @@
   }
 }
 
+@media (max-width: 1024px) {
+  // Hide less important columns on tablets
+  .table-overflow th:nth-child(5),
+  .table-overflow td:nth-child(5),
+  .table-overflow th:nth-child(6),
+  .table-overflow td:nth-child(6) {
+    display: none;
+  }
+
+  // Adjust widths for remaining columns
+  .table-overflow th:nth-child(1),
+  .table-overflow td:nth-child(1) {
+    width: 25%;
+  }
+
+  .table-overflow th:nth-child(2),
+  .table-overflow td:nth-child(2) {
+    width: 25%;
+  }
+
+  .table-overflow th:nth-child(3),
+  .table-overflow td:nth-child(3) {
+    width: 15%;
+  }
+
+  .table-overflow th:nth-child(4),
+  .table-overflow td:nth-child(4) {
+    width: 15%;
+  }
+
+  .table-overflow th:nth-child(7),
+  .table-overflow td:nth-child(7) {
+    width: 10%;
+  }
+
+  .table-overflow th:nth-child(8),
+  .table-overflow td:nth-child(8) {
+    width: 10%;
+  }
+}
+
 @media (max-width: 640px) {
   .agent-clients-page {
     padding: 1rem;

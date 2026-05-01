@@ -480,22 +480,52 @@ public class UserServiceImpl implements UserService {
     public Page<UserResponseDTO> agentClients(Long actorId, Optional<String> email, Optional<UserStatus> status, Pageable pageable) {
         User agent = findUser(actorId);
         
-        Page<User> clients;
+        // Build dynamic query based on filters
+        var queryBuilder = new StringBuilder();
+        var params = new HashMap<String, Object>();
         
-        if (email.isPresent() && status.isPresent()) {
-            clients = userRepository.findAllByRoleAndEmailContainingIgnoreCaseAndStatusAndDeletedFalse(
-                UserRole.CLIENT, email.get(), status.get(), pageable);
-        } else if (email.isPresent()) {
-            clients = userRepository.findAllByRoleAndEmailContainingIgnoreCaseAndDeletedFalse(
-                UserRole.CLIENT, email.get(), pageable);
-        } else if (status.isPresent()) {
-            clients = userRepository.findAllByRoleAndStatusAndDeletedFalse(
-                UserRole.CLIENT, status.get(), pageable);
-        } else {
-            clients = userRepository.findAllByRoleAndDeletedFalse(UserRole.CLIENT, pageable);
+        queryBuilder.append("SELECT u FROM User u WHERE u.role = :role AND u.deleted = false AND u.assignedAgent = :agent");
+        params.put("role", UserRole.CLIENT);
+        params.put("agent", agent);
+        
+        // Email filter
+        if (email.isPresent() && !email.get().trim().isEmpty()) {
+            queryBuilder.append(" AND (LOWER(u.email) LIKE LOWER(:email) OR LOWER(u.firstName) LIKE LOWER(:email) OR LOWER(u.lastName) LIKE LOWER(:email) OR LOWER(u.phoneNumber) LIKE LOWER(:email))");
+            params.put("email", "%" + email.get().trim() + "%");
         }
         
-        return clients.map(this::toDto);
+        // Status filter
+        if (status.isPresent()) {
+            queryBuilder.append(" AND u.status = :status");
+            params.put("status", status.get());
+        }
+        
+        queryBuilder.append(" ORDER BY u.createdAt DESC");
+        
+        var query = entityManager.createQuery(queryBuilder.toString(), User.class);
+        params.forEach(query::setParameter);
+        
+        // Apply pagination
+        query.setFirstResult((int) pageable.getOffset());
+        query.setMaxResults(pageable.getPageSize());
+        
+        List<User> clients = query.getResultList();
+        
+        // Count query
+        var countQueryBuilder = new StringBuilder();
+        countQueryBuilder.append("SELECT COUNT(u) FROM User u WHERE u.role = :role AND u.deleted = false AND u.assignedAgent = :agent");
+        if (email.isPresent() && !email.get().trim().isEmpty()) {
+            countQueryBuilder.append(" AND (LOWER(u.email) LIKE LOWER(:email) OR LOWER(u.firstName) LIKE LOWER(:email) OR LOWER(u.lastName) LIKE LOWER(:email) OR LOWER(u.phoneNumber) LIKE LOWER(:email))");
+        }
+        if (status.isPresent()) {
+            countQueryBuilder.append(" AND u.status = :status");
+        }
+        
+        var countQuery = entityManager.createQuery(countQueryBuilder.toString(), Long.class);
+        params.forEach(countQuery::setParameter);
+        long total = countQuery.getSingleResult();
+        
+        return new PageImpl<>(clients, pageable, total).map(this::toDto);
     }
 
     @Override
@@ -688,17 +718,29 @@ public class UserServiceImpl implements UserService {
         dto.setTotalActions((int) totalActions);
         dto.setNumberOfClientsHandled((int) clientsHandled);
 
-        // FIX #1: Calculate correct performance score (approvals * 100) / (approvals + rejections)
+        // Performance Score Calculation: (Approvals / Total Decisions) * 100
         double score = 0;
         long totalDecisions = approvals + rejections;
         if (totalDecisions > 0) {
-            score = (approvals * 100.0) / totalDecisions;
+            score = Math.round((approvals * 100.0) / totalDecisions * 100.0) / 100.0;
         }
         dto.setPerformanceScore(score);
 
-        // FIX #2: Use realistic average processing time instead of hardcoded 300
-        double avgProcessingTime = totalActions > 0 ? 1800.0 : 0; // 30 minutes default when active
+        // Average Processing Time: Based on actual activity timestamps
+        double avgProcessingTime = calculateAverageProcessingTime(agentId, totalActions);
         dto.setAverageProcessingTimeSeconds(avgProcessingTime);
+
+        // Add detailed explanations
+        dto.setScoreFormula("Performance Score = (Approvals ÷ Total Decisions) × 100\n" +
+                          "Where Total Decisions = Approvals + Rejections\n" +
+                          "Current: (" + approvals + " ÷ " + totalDecisions + ") × 100 = " + String.format("%.2f", score) + "%");
+
+        dto.setProcessingTimeFormula("Average Processing Time = Total Time Spent ÷ Total Actions\n" +
+                                   "Calculated from activity timestamps in the system");
+
+        // Additional metrics for transparency
+        dto.setApprovalRate(totalDecisions > 0 ? Math.round((approvals * 100.0) / totalDecisions * 100.0) / 100.0 : 0);
+        dto.setRejectionRate(totalDecisions > 0 ? Math.round((rejections * 100.0) / totalDecisions * 100.0) / 100.0 : 0);
 
         return dto;
     }
