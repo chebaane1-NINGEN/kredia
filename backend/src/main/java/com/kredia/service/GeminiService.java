@@ -149,9 +149,10 @@ public class GeminiService {
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
                 if (response.statusCode() == 429) {
-                    log.warn("Gemini API Rate Limit (429) reached on attempt {}. Retrying in {}ms...", attempt, retryDelayMs);
+                    long apiRetryDelayMs = extractRetryDelay(response.body());
+                    log.warn("Gemini API Rate Limit (429) reached on attempt {}. API requests retry in {}ms", attempt, apiRetryDelayMs);
                     if (attempt < maxRetries) {
-                        Thread.sleep(retryDelayMs * attempt); // Exponential backoff
+                        Thread.sleep(apiRetryDelayMs);
                         continue;
                     }
                 }
@@ -261,55 +262,94 @@ public class GeminiService {
     public String recommendRepaymentType(String clientDescription) {
         log.info("Requesting repayment type recommendation from Gemini...");
 
-        try {
-            String prompt = buildRecommendationPrompt(clientDescription);
-            
-            JsonObject requestBody = new JsonObject();
-            JsonArray contents = new JsonArray();
-            JsonObject content = new JsonObject();
-            JsonArray parts = new JsonArray();
-            JsonObject textPart = new JsonObject();
-            
-            textPart.addProperty("text", prompt);
-            parts.add(textPart);
-            content.add("parts", parts);
-            contents.add(content);
-            requestBody.add("contents", contents);
+        int maxRetries = 2; // Reduced to 2 attempts to respect free tier quota
 
-            String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                String prompt = buildRecommendationPrompt(clientDescription);
+                
+                JsonObject requestBody = new JsonObject();
+                JsonArray contents = new JsonArray();
+                JsonObject content = new JsonObject();
+                JsonArray parts = new JsonArray();
+                JsonObject textPart = new JsonObject();
+                
+                textPart.addProperty("text", prompt);
+                parts.add(textPart);
+                content.add("parts", parts);
+                contents.add(content);
+                requestBody.add("contents", contents);
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(apiUrl))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
-                    .build();
+                String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(apiUrl))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                        .build();
 
-            if (response.statusCode() != 200) {
-                log.error("Gemini API error: {}", response.body());
-                return "Une erreur (" + response.statusCode() + ") est survenue avec l'IA: " + response.body();
+                log.info("Sending recommendation request to Gemini API (Attempt {})...", attempt);
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 429) {
+                    long retryDelayMs = extractRetryDelay(response.body());
+                    log.warn("Gemini API Rate Limit (429) reached on attempt {}. API requests retry in {}ms", attempt, retryDelayMs);
+                    if (attempt < maxRetries) {
+                        log.info("Waiting before retry...");
+                        Thread.sleep(retryDelayMs);
+                        continue;
+                    } else {
+                        log.info("Max retries reached. Please wait and try again later.");
+                        return "API quota exceeded. Please try again in a few minutes.";
+                    }
+                }
+
+                if (response.statusCode() != 200) {
+                    log.error("Gemini API error (Status {}): {}", response.statusCode(), response.body());
+                    return "An error (" + response.statusCode() + ") occurred with the AI service. Please try again later.";
+                }
+
+                return parseGeminiResponse(response.body());
+
+            } catch (InterruptedException e) {
+                log.warn("Recommendation request interrupted on attempt {}", attempt);
+                Thread.currentThread().interrupt();
+                return "Request was interrupted. Please try again.";
+            } catch (Exception e) {
+                log.error("Gemini recommendation failed on attempt {}: {}", attempt, e.getMessage());
+                if (attempt == maxRetries) {
+                    return "Sorry, I'm unable to generate a recommendation at the moment. Please try again later.";
+                }
             }
-
-            return parseGeminiResponse(response.body());
-
-        } catch (Exception e) {
-            log.error("Gemini recommendation failed: {}", e.getMessage(), e);
-            return "Désolé, je ne peux pas formuler de recommandation pour le moment.";
         }
+
+        return "Sorry, I'm unable to generate a recommendation at the moment. Please try again later.";
     }
 
     /**
      * Construit le prompt pour la recommandation du type de remboursement.
      */
     private String buildRecommendationPrompt(String description) {
-        return "Tu es un conseiller financier expert en crédit. " +
-               "Un client te décrit sa situation financière, ses besoins et ses revenus/charges ainsi:\n\"" + description + "\"\n\n" +
-               "Basé de manière stricte sur cette description, recommande-lui le meilleur type de remboursement parmi ces trois options EXACTES:\n\n" +
-               "1. AMORTISSEMENT_CONSTANT : Le client rembourse une part fixe du capital emprunté chaque mois. Les intérêts diminuent avec le temps, donc les mensualités baissent progressivement. Idéal pour ceux qui veulent payer moins d'intérêts au global et peuvent assumer des grosses mensualités au début.\n" +
-               "2. MENSUALITE_CONSTANTE : Le client paie exactement le même montant total chaque mois (capital + intérêts cumulés). La part d'intérêts diminue et la part de capital augmente avec le temps. Idéal pour ceux qui veulent de la prévisibilité et un budget mensuel fixe.\n" +
-               "3. IN_FINE : Le client ne paie que les intérêts pendant toute la durée du crédit, et rembourse l'intégralité du capital emprunté en une seule fois à la toute dernière échéance. Idéal pour les investissements (ex: locatif) avec une grosse rentrée d'argent ou une revente prévue à la fin.\n\n" +
-               "Ta réponse doit d'abord nommer l'option EXACTE en majuscule, puis expliquer de manière claire, empathique et concise pourquoi ce choix est le plus adapté pour sa situation particulière. Ne mentionne pas d'autres types de crédits existants hors de ces 3 choix.";
+        return "You are an expert financial advisor specializing in credit and loan repayment strategies.\n\n" +
+               "IMPORTANT LANGUAGE RULE: Detect the language of the client's description below and respond ENTIRELY in that same language. " +
+               "If the description is in French, respond in French. If it is in English, respond in English. Never mix languages.\n\n" +
+               "IMPORTANT NAMING RULE: Use the repayment type names in the SAME language as your response:\n" +
+               "- For French responses: Use AMORTISSEMENT_CONSTANT, MENSUALITE_CONSTANTE, IN_FINE\n" +
+               "- For English responses: Use CONSTANT_AMORTIZATION, CONSTANT_PAYMENT, IN_FINE\n\n" +
+               "A client describes their financial situation as follows:\n\"" + description + "\"\n\n" +
+               "Based STRICTLY on this description, recommend the best repayment type among these three exact options:\n\n" +
+               "1. AMORTISSEMENT_CONSTANT (French) / CONSTANT_AMORTIZATION (English): The client repays a fixed portion of the borrowed capital each month. Interest decreases over time, so monthly payments progressively decrease. " +
+               "Best for those who want to pay less total interest and can handle higher payments at the start.\n" +
+               "   (FR: Le client rembourse une part fixe du capital chaque mois. Les intérêts diminuent, donc les mensualités baissent progressivement. Idéal pour payer moins d'intérêts au global.)\n\n" +
+               "2. MENSUALITE_CONSTANTE (French) / CONSTANT_PAYMENT (English): The client pays the exact same total amount every month (capital + interest combined). " +
+               "The interest share decreases and the capital share increases over time. Best for those who want total predictability and a fixed monthly budget.\n" +
+               "   (FR: Le client paie exactement le même montant chaque mois. Idéal pour la prévisibilité et un budget mensuel fixe.)\n\n" +
+               "3. IN_FINE: The client pays ONLY the interest each month for the entire loan duration, then repays the full borrowed capital in a single lump sum at the very last payment. " +
+               "Best for investment purposes (e.g. rental property) where a large cash inflow or sale is expected at the end.\n" +
+               "   (FR: Le client ne paie que les intérêts chaque mois, et rembourse tout le capital en une seule fois à la fin. Idéal pour les investissements locatifs.)\n\n" +
+               "Your response must first name the EXACT option in uppercase (in the appropriate language), then explain clearly, empathetically and concisely why this choice is the most suitable for the client's specific situation. " +
+               "Do not mention any other credit types outside these 3 options. " +
+               "Remember: respond in the SAME language as the client's description and use the corresponding repayment type names.";
     }
 
     /**
@@ -402,6 +442,39 @@ public class GeminiService {
         }
         return responseBody;
     }
+
+    /**
+     * Extrait le délai de retry suggéré par l'API Gemini (par défaut 60 secondes pour le free tier)
+     */
+    private long extractRetryDelay(String responseBody) {
+        try {
+            JsonObject jsonResponse = gson.fromJson(responseBody, JsonObject.class);
+            if (jsonResponse != null && jsonResponse.has("error")) {
+                JsonObject error = jsonResponse.getAsJsonObject("error");
+                if (error.has("details")) {
+                    JsonArray details = error.getAsJsonArray("details");
+                    for (int i = 0; i < details.size(); i++) {
+                        JsonObject detail = details.get(i).getAsJsonObject();
+                        if (detail.has("@type") && detail.get("@type").getAsString().contains("RetryInfo")) {
+                            if (detail.has("retryDelay")) {
+                                String retryDelay = detail.get("retryDelay").getAsString();
+                                // Parse format like "50.824478513s" to milliseconds
+                                if (retryDelay.endsWith("s")) {
+                                    double seconds = Double.parseDouble(retryDelay.substring(0, retryDelay.length() - 1));
+                                    return (long) (seconds * 1000);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not extract retry delay from API response: {}", e.getMessage());
+        }
+        // Default to 60 seconds for free tier quota reset
+        return 60000;
+    }
+
 
     /**
      * Prompt structuré pour imposer un JSON exploitable côté backend.
