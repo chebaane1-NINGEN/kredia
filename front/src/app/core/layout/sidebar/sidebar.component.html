@@ -48,6 +48,7 @@
           <li><a routerLink="/credit/echeances" routerLinkActive="active">Installments</a></li>
           <li><a routerLink="/credit/kyc" routerLinkActive="active">KYC Loan</a></li>
           <li *ngIf="authService.isClient()"><a routerLink="/credit/chatbot" routerLinkActive="active">Chatbot</a></li>
+          <li *ngIf="authService.isClient()"><a routerLink="/simulateur" routerLinkActive="active">🧮 Simulateur</a></li>
         </ul>
       </li>
 
