@@ -8,8 +8,8 @@ import {
   computed,
 } from '@angular/core';
 import { Router } from '@angular/router';
-
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../../core/services/auth.service';
 
 const ANNUAL_RATE = 0.15;
 
@@ -24,6 +24,7 @@ const ANNUAL_RATE = 0.15;
 export class PublicSimulateurComponent {
   private readonly router = inject(Router);
   private readonly cdr    = inject(ChangeDetectorRef);
+  private readonly auth   = inject(AuthService);
 
   /* ── Sliders state ───────────────────────────────────────── */
   readonly AMOUNT_MIN  = 1_000;
@@ -135,12 +136,12 @@ export class PublicSimulateurComponent {
     this.termMonths.set(+(event.target as HTMLInputElement).value);
   }
 
-  goToFullSimulateur(): void {
-    this.router.navigate(['/credit/simulateur']);
-  }
-
   goToLogin(): void {
-    this.router.navigate(['/login']);
+    if (this.auth.isClient()) {
+      this.router.navigate(['/credit/create']);
+    } else {
+      this.router.navigate(['/login']);
+    }
   }
 
   setType(type: 'MENSUALITE_CONSTANTE' | 'AMORTISSEMENT_CONSTANT' | 'IN_FINE'): void {
