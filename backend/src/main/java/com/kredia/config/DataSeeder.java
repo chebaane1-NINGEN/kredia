@@ -36,7 +36,7 @@ public class DataSeeder {
     @Profile("!test")
     CommandLineRunner initData(DataSeederService seederService,
                                 SchemaFixer schemaFixer,
-                                @Value("${app.seed-data.enabled:true}") boolean seedDataEnabled) {
+                                @Value("${app.seed-data.enabled:false}") boolean seedDataEnabled) {
         return args -> {
             if (!seedDataEnabled) {
                 log.info("Data seeding is disabled (app.seed-data.enabled=false)");
