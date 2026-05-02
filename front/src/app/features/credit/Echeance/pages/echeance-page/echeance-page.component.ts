@@ -15,7 +15,7 @@ import { Credit } from '../../../Credit/models/credit.model';
 export class EcheancePageComponent implements OnInit {
   private readonly vm        = inject(EcheanceVm);
   private readonly creditVm  = inject(CreditVm);
-  private readonly cdr       = inject(ChangeDetectorRef);
+  public readonly cdr        = inject(ChangeDetectorRef);
   private readonly route     = inject(ActivatedRoute);
   readonly auth              = inject(AuthService);
 
@@ -40,25 +40,70 @@ export class EcheancePageComponent implements OnInit {
   // ── Sort & Filter ─────────────────────────────────────
   dateSortOrder: 'asc' | 'desc' = 'asc';
   statusFilter: string = 'ALL';
+  creditFilter: string = 'ALL';
+  userFilter:   string = 'ALL';
+
+  get uniqueCreditIds(): number[] {
+    const ids = new Set<number>();
+    this.items.forEach(i => {
+      const cid = (i.echeance as any).creditId;
+      if (cid) ids.add(cid);
+    });
+    return Array.from(ids).sort((a, b) => a - b);
+  }
+
+  get uniqueUserIds(): number[] {
+    const ids = new Set<number>();
+    this.items.forEach(i => {
+      const uid = (i.echeance as any).userId;
+      if (uid) ids.add(uid);
+    });
+    return Array.from(ids).sort((a, b) => a - b);
+  }
+
+  readonly typeOptions = [
+    { value: 'ALL',                     label: 'All Types' },
+    { value: 'AMORTISSEMENT_CONSTANT',  label: 'Constant Amort.' },
+    { value: 'MENSUALITE_CONSTANTE',    label: 'Constant Monthly' },
+    { value: 'IN_FINE',                 label: 'In Fine' },
+  ];
 
   readonly statusOptions = [
     { value: 'ALL',           label: 'All' },
-    { value: 'PENDING',       label: '⏳ Pending' },
-    { value: 'PAID',          label: '✅ Paid' },
-    { value: 'OVERDUE',       label: '🔴 Overdue' },
-    { value: 'PARTIALLY_PAID',label: '🟡 Partial' },
+    { value: 'PENDING',       label: 'Pending' },
+    { value: 'PAID',          label: 'Paid' },
+    { value: 'OVERDUE',       label: 'Overdue' },
+    { value: 'PARTIALLY_PAID',label: 'Partial' },
   ];
 
   get sortedItems(): EcheancePaymentResponse[] {
-    const filtered = this.statusFilter === 'ALL'
+    let filtered = this.statusFilter === 'ALL'
       ? [...this.items]
       : this.items.filter(i => i.echeance.status === this.statusFilter);
+
+    if (this.creditFilter !== 'ALL') {
+      filtered = filtered.filter(i => (i.echeance as any).creditId?.toString() === this.creditFilter);
+    }
+
+    if (this.userFilter !== 'ALL') {
+      filtered = filtered.filter(i => (i.echeance as any).userId?.toString() === this.userFilter);
+    }
 
     return filtered.sort((a, b) => {
       const dateA = new Date(a.echeance.dueDate).getTime();
       const dateB = new Date(b.echeance.dueDate).getTime();
       return this.dateSortOrder === 'asc' ? dateA - dateB : dateB - dateA;
     });
+  }
+
+  setCreditFilter(cid: string): void {
+    this.creditFilter = cid;
+    this.cdr.markForCheck();
+  }
+
+  setUserFilter(uid: string): void {
+    this.userFilter = uid;
+    this.cdr.markForCheck();
   }
 
   toggleDateSort(): void {
@@ -240,7 +285,8 @@ export class EcheancePageComponent implements OnInit {
       },
       error: (err) => {
         this.payingId = null;
-        this.error    = err?.error ?? 'Error processing the payment.';
+        const msg = err?.error?.message || err?.error || err?.message || 'Error processing the payment.';
+        this.error = typeof msg === 'string' ? msg : JSON.stringify(msg);
         this.cdr.markForCheck();
       }
     });
@@ -249,10 +295,10 @@ export class EcheancePageComponent implements OnInit {
   // ── Helpers ────────────────────────────────────────────
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      'PAID':           '✅ Paid',
-      'PENDING':        '⏳ Pending',
-      'OVERDUE':        '🔴 Overdue',
-      'PARTIALLY_PAID': '🟡 Partially Paid'
+      'PAID':           'Paid',
+      'PENDING':        'Pending',
+      'OVERDUE':        'Overdue',
+      'PARTIALLY_PAID': 'Partially Paid'
     };
     return labels[status] ?? status;
   }
@@ -264,6 +310,16 @@ export class EcheancePageComponent implements OnInit {
       'IN_FINE':                'In Fine'
     };
     return type ? (labels[type] ?? type) : '—';
+  }
+
+  statusClass(status: string | undefined): string {
+    if (!status) return 'status-badge--pending';
+    return 'status-badge--' + status.toLowerCase();
+  }
+
+  rowClass(status: string | undefined): string {
+    if (!status) return '';
+    return 'row--' + status.toLowerCase();
   }
 }
 

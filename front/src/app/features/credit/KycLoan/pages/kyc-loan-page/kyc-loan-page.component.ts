@@ -25,37 +25,38 @@ export interface DocEntry {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class KycLoanPageComponent implements OnInit {
-  private readonly vm  = inject(KycLoanVm);
+  private readonly vm = inject(KycLoanVm);
   private readonly cdr = inject(ChangeDetectorRef);
-  readonly auth        = inject(AuthService);
+  readonly auth = inject(AuthService);
   private readonly creditVm = inject(CreditVm);
   private readonly route = inject(ActivatedRoute);
 
   // ── État UI ────────────────────────────────────────────
   // Pour CLIENT : userId est lu depuis le JWT. Pour admin, on garde la saisie manuelle.
-  creditId        = 1;
-  userId          = 1;
+  creditId = 1;
+  userId = 1;
   selectedDocType: DocumentTypeLoan = 'ID_PROOF';
   selectedFile: File | null = null;
-  dragOver        = false;
+  dragOver = false;
 
-  uploading       = false;
-  verifying       = false;
+  uploading = false;
+  verifying = false;
   hasCreditsError = false;
   error: string | null = null;
   uploadedDoc: KycLoanResponse | null = null;
   verifyResult: KycLoanResponse | null = null;
   uploadedDocs: KycLoanResponse[] = [];
+  loadingKycId: number | null = null;
   clientCredits: Credit[] = [];
   clientDemandes: DemandeCredit[] = [];
 
   // ── Données statiques de présentation ─────────────────
   readonly docTypes: DocEntry[] = [
-    { documentType: 'ID_PROOF',       label: 'ID Card / Passport',   icon: '🪪' },
-    { documentType: 'INCOME_PROOF',   label: 'Proof of Income',      icon: '💰' },
-    { documentType: 'SPOUSE_INCOME',  label: "Spouse's Income",      icon: '👫' },
-    { documentType: 'BANK_STATEMENT', label: 'Bank Statement',       icon: '🏦' },
-    { documentType: 'OTHER',          label: 'Other Document',       icon: '📎' }
+    { documentType: 'ID_PROOF', label: 'ID Card / Passport', icon: '🪪' },
+    { documentType: 'INCOME_PROOF', label: 'Proof of Income', icon: '💰' },
+    { documentType: 'SPOUSE_INCOME', label: "Spouse's Income", icon: '👫' },
+    { documentType: 'BANK_STATEMENT', label: 'Bank Statement', icon: '🏦' },
+    { documentType: 'OTHER', label: 'Other Document', icon: '📎' }
   ];
 
   pendingSelectionKycLoanId: number | null = null;
@@ -174,18 +175,18 @@ export class KycLoanPageComponent implements OnInit {
   }
 
   setFile(file: File): void {
-    this.selectedFile  = file;
-    this.uploadedDoc   = null;
-    this.verifyResult  = null;
-    this.error         = null;
+    this.selectedFile = file;
+    this.uploadedDoc = null;
+    this.verifyResult = null;
+    this.error = null;
     this.cdr.markForCheck();
   }
 
   removeFile(): void {
-    this.selectedFile  = null;
-    this.uploadedDoc   = null;
-    this.verifyResult  = null;
-    this.error         = null;
+    this.selectedFile = null;
+    this.uploadedDoc = null;
+    this.verifyResult = null;
+    this.error = null;
     this.cdr.markForCheck();
   }
 
@@ -193,9 +194,9 @@ export class KycLoanPageComponent implements OnInit {
   upload(): void {
     if (!this.selectedFile || !this.creditId || !this.userId) return;
 
-    this.uploading    = true;
-    this.error        = null;
-    this.uploadedDoc  = null;
+    this.uploading = true;
+    this.error = null;
+    this.uploadedDoc = null;
     this.verifyResult = null;
     this.cdr.markForCheck();
 
@@ -203,7 +204,7 @@ export class KycLoanPageComponent implements OnInit {
       .pipe(finalize(() => { this.uploading = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: (doc) => {
-          this.uploadedDoc  = doc;
+          this.uploadedDoc = doc;
           this.uploadedDocs = [doc, ...this.uploadedDocs];
           this.cdr.markForCheck();
         },
@@ -216,15 +217,20 @@ export class KycLoanPageComponent implements OnInit {
 
   verify(kycLoanId: number): void {
     this.verifying = true;
-    this.error     = null;
+    this.loadingKycId = kycLoanId;
+    this.error = null;
     this.cdr.markForCheck();
 
     this.vm.verify(kycLoanId)
-      .pipe(finalize(() => { this.verifying = false; this.cdr.markForCheck(); }))
+      .pipe(finalize(() => {
+        this.verifying = false;
+        this.loadingKycId = null;
+        this.cdr.markForCheck();
+      }))
       .subscribe({
         next: (result) => {
-          this.verifyResult  = result;
-          this.uploadedDocs  = this.uploadedDocs.map(d =>
+          this.verifyResult = result;
+          this.uploadedDocs = this.uploadedDocs.map(d =>
             d.kycLoanId === result.kycLoanId ? result : d
           );
           this.cdr.markForCheck();
@@ -238,10 +244,15 @@ export class KycLoanPageComponent implements OnInit {
 
   approve(kycLoanId: number): void {
     this.verifying = true;
+    this.loadingKycId = kycLoanId;
     this.error = null;
     this.cdr.markForCheck();
     this.vm.approve(kycLoanId)
-      .pipe(finalize(() => { this.verifying = false; this.cdr.markForCheck(); }))
+      .pipe(finalize(() => {
+        this.verifying = false;
+        this.loadingKycId = null;
+        this.cdr.markForCheck();
+      }))
       .subscribe({
         next: (result) => {
           this.verifyResult = result;
@@ -254,10 +265,15 @@ export class KycLoanPageComponent implements OnInit {
 
   reject(kycLoanId: number): void {
     this.verifying = true;
+    this.loadingKycId = kycLoanId;
     this.error = null;
     this.cdr.markForCheck();
     this.vm.reject(kycLoanId)
-      .pipe(finalize(() => { this.verifying = false; this.cdr.markForCheck(); }))
+      .pipe(finalize(() => {
+        this.verifying = false;
+        this.loadingKycId = null;
+        this.cdr.markForCheck();
+      }))
       .subscribe({
         next: (result) => {
           this.verifyResult = result;
@@ -269,25 +285,25 @@ export class KycLoanPageComponent implements OnInit {
   }
 
   // ── Filters ───────────────────────────────────────────
-  statusFilter: string  = 'ALL';
-  typeFilter: string    = 'ALL';
-  creditFilter: string  = 'ALL';
+  statusFilter: string = 'ALL';
+  typeFilter: string = 'ALL';
+  creditFilter: string = 'ALL';
   demandeFilter: string = 'ALL';
 
   readonly statusOptions = [
-    { value: 'ALL',      label: 'All' },
-    { value: 'PENDING',  label: '⏳ Pending' },
+    { value: 'ALL', label: 'All' },
+    { value: 'PENDING', label: '⏳ Pending' },
     { value: 'APPROVED', label: '✅ Approved' },
     { value: 'REJECTED', label: '❌ Rejected' },
   ];
 
   readonly typeOptions = [
-    { value: 'ALL',           label: 'All Types' },
-    { value: 'ID_PROOF',      label: '🪪 ID Card' },
-    { value: 'INCOME_PROOF',  label: '💰 Income' },
+    { value: 'ALL', label: 'All Types' },
+    { value: 'ID_PROOF', label: '🪪 ID Card' },
+    { value: 'INCOME_PROOF', label: '💰 Income' },
     { value: 'SPOUSE_INCOME', label: '👫 Spouse' },
-    { value: 'BANK_STATEMENT',label: '🏦 Bank Statement' },
-    { value: 'OTHER',         label: '📎 Other' },
+    { value: 'BANK_STATEMENT', label: '🏦 Bank Statement' },
+    { value: 'OTHER', label: '📎 Other' },
   ];
 
   get uniqueCreditIds(): number[] {
@@ -302,9 +318,9 @@ export class KycLoanPageComponent implements OnInit {
 
   get filteredDocs(): KycLoanResponse[] {
     return this.uploadedDocs.filter(doc => {
-      const matchStatus  = this.statusFilter  === 'ALL' || doc.verifiedStatus === this.statusFilter;
-      const matchType    = this.typeFilter    === 'ALL' || doc.documentType   === this.typeFilter;
-      const matchCredit  = this.creditFilter  === 'ALL' || doc.creditId  === +this.creditFilter;
+      const matchStatus = this.statusFilter === 'ALL' || doc.verifiedStatus === this.statusFilter;
+      const matchType = this.typeFilter === 'ALL' || doc.documentType === this.typeFilter;
+      const matchCredit = this.creditFilter === 'ALL' || doc.creditId === +this.creditFilter;
       const matchDemande = this.demandeFilter === 'ALL' || doc.demandeId === +this.demandeFilter;
       return matchStatus && matchType && matchCredit && matchDemande;
     });
@@ -315,13 +331,13 @@ export class KycLoanPageComponent implements OnInit {
   }
 
   setStatusFilter(v: string): void { this.statusFilter = v; this.cdr.markForCheck(); }
-  setTypeFilter(v: string):   void { this.typeFilter   = v; this.cdr.markForCheck(); }
+  setTypeFilter(v: string): void { this.typeFilter = v; this.cdr.markForCheck(); }
   setCreditFilter(v: string): void { this.creditFilter = v; this.cdr.markForCheck(); }
   setDemandeFilter(v: string): void { this.demandeFilter = v; this.cdr.markForCheck(); }
 
   selectDoc(doc: KycLoanResponse): void {
     this.verifyResult = doc;
-    this.uploadedDoc  = null;
+    this.uploadedDoc = null;
     this.cdr.markForCheck();
   }
 
@@ -359,8 +375,8 @@ export class KycLoanPageComponent implements OnInit {
   }
 
   fileSizeLabel(bytes: number): string {
-    if (bytes < 1024)            return `${bytes} B`;
-    if (bytes < 1024 * 1024)     return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
 

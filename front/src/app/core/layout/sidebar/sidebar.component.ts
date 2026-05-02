@@ -31,18 +31,20 @@ export class SidebarComponent implements OnInit {
     const firstName = this.authService.getCurrentUserFirstName();
     const lastName = this.authService.getCurrentUserLastName();
     const role = this.authService.getCurrentUserRole();
-    
-    // Si on a récupéré le prénom et le nom depuis le token (nouveaux comptes / après nouveau login)
+
+    const displayRole = role
+      ? role.replace('ROLE_', '').charAt(0).toUpperCase() + role.replace('ROLE_', '').slice(1).toLowerCase()
+      : 'Connected';
+
     if (firstName && lastName) {
       return {
         name: `${firstName} ${lastName}`,
-        role: role,
+        role: displayRole,
         initials: `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
       };
     }
-    
-    // Fallback : au cas où l'ancien token n'a pas ces informations
-    return { name: 'Utilisateur', role: role || 'Connecté', initials: 'U' };
+
+    return { name: 'User', role: 'Connected', initials: '👤' };
   }
   ngOnInit(): void {
     this.router.events.pipe(

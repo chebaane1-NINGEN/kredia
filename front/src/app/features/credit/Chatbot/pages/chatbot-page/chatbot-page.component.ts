@@ -22,21 +22,21 @@ declare global {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChatbotPageComponent implements OnDestroy {
-  private readonly vm   = inject(ChatbotVm);
-  private readonly cdr  = inject(ChangeDetectorRef);
-  private readonly fb   = inject(FormBuilder);
+  private readonly vm = inject(ChatbotVm);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly fb = inject(FormBuilder);
   private readonly zone = inject(NgZone);
 
   // ── État UI ────────────────────────────────────────────
-  loading    = false;
+  loading = false;
   error: string | null = null;
   response: ChatbotRecommendation | null = null;
 
   // ── État vocal ─────────────────────────────────────────
-  isRecording        = false;
-  speechSupported    = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  isRecording = false;
+  speechSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   voiceError: string | null = null;
-  interimText        = '';
+  interimText = '';
   private recognition: any = null;
 
   readonly form = this.fb.nonNullable.group({
@@ -63,9 +63,9 @@ export class ChatbotPageComponent implements OnDestroy {
     }
 
     this.recognition = new SpeechRecognition();
-    this.recognition.lang          = 'fr-FR';
+    this.recognition.lang = 'fr-FR';
     this.recognition.interimResults = true;
-    this.recognition.continuous     = true;
+    this.recognition.continuous = true;
     this.recognition.maxAlternatives = 1;
 
     this.recognition.onstart = () => {
@@ -79,7 +79,7 @@ export class ChatbotPageComponent implements OnDestroy {
     this.recognition.onresult = (event: any) => {
       this.zone.run(() => {
         let finalText = this.form.controls.description.value;
-        let interim   = '';
+        let interim = '';
 
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript;
@@ -148,9 +148,9 @@ export class ChatbotPageComponent implements OnDestroy {
       return;
     }
 
-    this.error    = null;
+    this.error = null;
     this.response = null;
-    this.loading  = true;
+    this.loading = true;
     this.cdr.markForCheck();
 
     const { description } = this.form.getRawValue();
@@ -160,7 +160,7 @@ export class ChatbotPageComponent implements OnDestroy {
       .subscribe({
         next: (res) => {
           if (res?.error) { this.error = res.error; }
-          else            { this.response = res;    }
+          else { this.response = res; }
           this.cdr.markForCheck();
         },
         error: () => {

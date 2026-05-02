@@ -18,24 +18,24 @@ const ANNUAL_RATE = 0.15;
   standalone: true,
   imports: [CommonModule],
   templateUrl: './public-simulateur.component.html',
-  styleUrl:    './public-simulateur.component.scss',
+  styleUrl: './public-simulateur.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PublicSimulateurComponent {
   private readonly router = inject(Router);
-  private readonly cdr    = inject(ChangeDetectorRef);
-  private readonly auth   = inject(AuthService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly auth = inject(AuthService);
 
   /* ── Sliders state ───────────────────────────────────────── */
-  readonly AMOUNT_MIN  = 1_000;
-  readonly AMOUNT_MAX  = 10_000;
+  readonly AMOUNT_MIN = 1_000;
+  readonly AMOUNT_MAX = 10_000;
   readonly AMOUNT_STEP = 100;
 
-  readonly TERM_MIN    = 3;
-  readonly TERM_MAX    = 120;
-  readonly TERM_STEP   = 1;
+  readonly TERM_MIN = 3;
+  readonly TERM_MAX = 120;
+  readonly TERM_STEP = 1;
 
-  amount     = signal(5_000);
+  amount = signal(5_000);
   termMonths = signal(24);
   repaymentType = signal<'MENSUALITE_CONSTANTE' | 'AMORTISSEMENT_CONSTANT' | 'IN_FINE'>('MENSUALITE_CONSTANTE');
 

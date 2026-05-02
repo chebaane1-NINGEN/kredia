@@ -1,83 +1,168 @@
-<section class="credit-page">
-  <a routerLink="/credit/list" class="btn-back-credits">← Back to Credits</a>
+<div class="pub-sim">
+  <!-- ═══════════════════════════════════════════════════════════
+       HERO BAND
+  ══════════════════════════════════════════════════════════ -->
+  <header class="hero-band">
+    <div class="hero-band__inner">
+      <div class="hero-band__text">
+        <span class="hero-pill">
+          <span class="hero-pill__dot"></span>
+          Direct Application
+        </span>
+        <h1>Credit — <br><span class="accent">New Request</span></h1>
+        <p>Submit your application in minutes. Our AI will guide you through the process.</p>
+      </div>
 
-  <header>
-    <h1>Credit Application</h1>
-    <p>Fill in the details below to submit your credit request. The interest rate will be applied automatically upon approval.</p>
+      <div class="hero-band__badge">
+        <div class="badge-ring">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div>
+          <span class="badge-value">Fast Track</span>
+          <span class="badge-label">Approval</span>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" class="credit-form">
-    <div class="alert success" *ngIf="success">{{ success }}</div>
-    <div class="alert error"   *ngIf="error">{{ error }}</div>
+  <div class="sim-card-wrapper">
+    <div class="sim-card" style="padding: 40px; display: block;">
+      <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 32px;">
+        <div>
+          <h2 class="panel-title">Application Form</h2>
+          <p class="panel-subtitle">Fill in your details to start the credit evaluation.</p>
+          <div class="ai-policy-hint">
+            <span class="ai-policy-hint__icon">🤖</span>
+            <div class="ai-policy-hint__content">
+              <span class="ai-policy-hint__title">Lending Policy</span>
+              <p class="ai-policy-hint__text">A fixed interest rate of 15% is applied upon approval.</p>
+            </div>
+          </div>
+        </div>
+        <a routerLink="/credit/list" class="btn-back-credits">
+          <span class="btn-back__icon">←</span> Portfolio
+        </a>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="credit-form-refined">
+        <div class="alert-container" *ngIf="success || error">
+          <div class="alert success" *ngIf="success">{{ success }}</div>
+          <div class="alert error"   *ngIf="error">{{ error }}</div>
+        </div>
 
     <div class="grid">
-      <label>
-        <span>Amount</span>
-        <input type="number" formControlName="amount" placeholder="e.g. 5000" min="500" max="10000" />
-        <small *ngIf="form.controls.amount.touched && form.controls.amount.invalid">
-          <span *ngIf="form.controls.amount.errors?.['required']">Amount is required.</span>
-          <span *ngIf="form.controls.amount.errors?.['min']">Minimum amount is 500 DT.</span>
-          <span *ngIf="form.controls.amount.errors?.['max']">Maximum amount is 10,000 DT.</span>
-        </small>
-      </label>
+      <!-- Amount -->
+      <div class="form-field-card amount-theme">
+        <label>
+          <span class="field-label-text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Amount
+          </span>
+          <input type="number" formControlName="amount" placeholder="e.g. 5000" min="500" max="10000" />
+          <small *ngIf="form.controls.amount.touched && form.controls.amount.invalid">
+            <span *ngIf="form.controls.amount.errors?.['required']">Amount is required.</span>
+            <span *ngIf="form.controls.amount.errors?.['min']">Minimum amount is 500 DT.</span>
+            <span *ngIf="form.controls.amount.errors?.['max']">Maximum amount is 10,000 DT.</span>
+          </small>
+        </label>
+      </div>
 
-      <label>
-        <span>Term (months)</span>
-        <input type="number" formControlName="termMonths" placeholder="e.g. 24" min="1" />
-        <small *ngIf="form.controls.termMonths.touched && form.controls.termMonths.invalid">A valid term is required (min. 1 month).</small>
-      </label>
+      <!-- Term -->
+      <div class="form-field-card term-theme">
+        <label>
+          <span class="field-label-text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Term (months)
+          </span>
+          <input type="number" formControlName="termMonths" placeholder="e.g. 24" min="1" />
+          <small *ngIf="form.controls.termMonths.touched && form.controls.termMonths.invalid">A valid term is required (min. 1 month).</small>
+        </label>
+      </div>
 
-      <label>
-        <span>Start Date</span>
-        <input type="date" formControlName="startDate" />
-        <small *ngIf="form.controls.startDate.touched && form.controls.startDate.invalid">Start date is required.</small>
-      </label>
+      <!-- Start Date -->
+      <div class="form-field-card date-theme">
+        <label>
+          <span class="field-label-text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Start Date
+          </span>
+          <input type="date" formControlName="startDate" />
+          <small *ngIf="form.controls.startDate.touched && form.controls.startDate.invalid">Start date is required.</small>
+        </label>
+      </div>
 
-      <label>
-        <span>Repayment Type</span>
-        <select formControlName="repaymentType">
-          <option *ngFor="let t of repaymentTypes" [value]="t.value">{{ t.label }}</option>
-        </select>
-      </label>
+      <!-- Repayment Type -->
+      <div class="form-field-card type-theme">
+        <label>
+          <span class="field-label-text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            Repayment Type
+          </span>
+          <select formControlName="repaymentType">
+            <option *ngFor="let t of repaymentTypes" [value]="t.value">{{ t.label }}</option>
+          </select>
+        </label>
+      </div>
 
-      <label>
-        <span>Monthly Income</span>
-        <input type="number" formControlName="income" placeholder="e.g. 2500" min="1" />
-        <small *ngIf="form.controls.income.touched && form.controls.income.invalid">Monthly income is required.</small>
-      </label>
+      <!-- Monthly Income -->
+      <div class="form-field-card income-theme">
+        <label>
+          <span class="field-label-text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Monthly Income
+          </span>
+          <input type="number" formControlName="income" placeholder="e.g. 2500" min="1" />
+          <small *ngIf="form.controls.income.touched && form.controls.income.invalid">Monthly income is required.</small>
+        </label>
+      </div>
 
-      <label>
-        <span>Dependents</span>
-        <input type="number" formControlName="dependents" placeholder="e.g. 2" min="0" />
-        <small *ngIf="form.controls.dependents.touched && form.controls.dependents.invalid">A valid value is required (min. 0).</small>
-      </label>
+      <!-- Dependents -->
+      <div class="form-field-card dependents-theme">
+        <label>
+          <span class="field-label-text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Dependents
+          </span>
+          <input type="number" formControlName="dependents" placeholder="e.g. 2" min="0" />
+          <small *ngIf="form.controls.dependents.touched && form.controls.dependents.invalid">A valid value is required (min. 0).</small>
+        </label>
+      </div>
     </div>
 
     <!-- ── Frais de dossier ────────────────────────────── -->
-    <div class="fee-display" *ngIf="(form.controls.amount.value ?? 0) > 0">
-      <div class="fee-summary">
-        <p>Requested Amount: <strong>{{ form.controls.amount.value | number:'1.2-2' }} DT</strong></p>
-        <p>Application Fee (2%): <strong>{{ applicationFee | number:'1.2-2' }} DT</strong></p>
+    <div class="premium-fee-card" *ngIf="form.controls.amount.value && form.controls.amount.value > 0">
+      <div class="fee-main">
+        <div class="fee-item">
+          <span class="fee-label">Requested Amount</span>
+          <span class="fee-value">{{ form.controls.amount.value | number:'1.2-2' }} DT</span>
+        </div>
+        <div class="fee-divider"></div>
+        <div class="fee-item">
+          <span class="fee-label">Application Fee (2%)</span>
+          <span class="fee-value highlighted">{{ applicationFee | number:'1.2-2' }} DT</span>
+        </div>
       </div>
-      <label class="fee-checkbox">
-        <input type="checkbox" formControlName="isFeePaid" />
-        <span>Pay the application fee now ({{ applicationFee | number:'1.2-2' }} DT)</span>
+      <label class="fee-opt-in">
+        <div class="custom-checkbox">
+          <input type="checkbox" formControlName="isFeePaid" />
+          <div class="checkbox-box"></div>
+        </div>
+        <span>Settle application fee now ({{ applicationFee | number:'1.2-2' }} DT)</span>
       </label>
     </div>
 
-    <div class="info-box">
-      <span>ℹ️</span>
-      <p>A fixed interest rate of 15% will be applied automatically when your request is approved by an agent or administrator.</p>
-    </div>
 
-    <div class="actions">
-      <button type="submit" class="btn primary" [disabled]="submitting">
-        <ng-container *ngIf="submitting">Submitting...</ng-container>
-        <ng-container *ngIf="!submitting">
-          {{ form.controls.isFeePaid.value ? 'Pay Fee & Submit Application' : 'Submit without paying fee' }}
-        </ng-container>
-      </button>
-      <button type="reset" class="btn outline" [disabled]="submitting">Reset</button>
-    </div>
-  </form>
-</section>
+      <div class="panel-actions" style="margin-top: 32px; display: flex; gap: 16px;">
+        <button type="submit" class="btn-apply" [disabled]="submitting" style="flex: 1; justify-content: center;">
+          <span *ngIf="!submitting">
+            {{ form.controls.isFeePaid.value ? 'Pay Fee & Submit' : 'Submit Application' }}
+          </span>
+          <span *ngIf="submitting">Processing...</span>
+        </button>
+        <button type="reset" class="btn-secondary" [disabled]="submitting" style="padding-inline: 32px;">Reset</button>
+      </div>
+    </form>
+  </div>
+</div>

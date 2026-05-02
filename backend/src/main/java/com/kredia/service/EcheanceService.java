@@ -7,6 +7,7 @@ import com.kredia.enums.CreditStatus;
 import com.kredia.enums.EcheanceStatus;
 import com.kredia.repository.CreditRepository;
 import com.kredia.repository.EcheanceRepository;
+import com.kredia.service.IEmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,14 +24,14 @@ public class EcheanceService {
 
     private final EcheanceRepository echeanceRepository;
     private final CreditRepository creditRepository;
-    private final EmailService emailService;
+    private final IEmailService emailService;
 
     private final java.util.Set<Long> emailSyncRejectedSent = java.util.Collections
             .newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
 
     @Autowired
     public EcheanceService(EcheanceRepository echeanceRepository, CreditRepository creditRepository,
-            EmailService emailService) {
+            IEmailService emailService) {
         this.echeanceRepository = echeanceRepository;
         this.creditRepository = creditRepository;
         this.emailService = emailService;
@@ -169,15 +170,17 @@ public class EcheanceService {
                 Credit credit = creditRepository.findById(creditId).orElse(null);
                 if (credit != null && credit.getUser() != null) {
                     com.kredia.entity.user.User user = credit.getUser();
-                    user.getEmail();
-                    user.getFirstName();
-                    user.getLastName();
+                    log.info("Sending rejected chronological email to: {}", user.getEmail());
                     emailService.sendPaymentRejectedChronologicalEmail(user, echeance);
+                    log.info("Rejected chronological email dispatched for echeance {}", echeance.getEcheanceId());
+                } else {
+                    log.warn("Cannot send rejected email: credit or user is null for echeance {}", echeance.getEcheanceId());
                 }
+            } else {
+                log.warn("Cannot send rejected email: credit is null for echeance {}", echeance.getEcheanceId());
             }
         } catch (Exception e) {
-            log.error("Failed to prepare and send rejected chronological email for Echeance {}: {}",
-                    echeance.getEcheanceId(), e.getMessage());
+            log.error("Failed to send rejected chronological email for Echeance {}: {}", echeance.getEcheanceId(), e.getMessage(), e);
         }
     }
 
@@ -346,7 +349,7 @@ public class EcheanceService {
         if (hasUnpaidPrevious) {
             dispatchRejectedChronologicalEmailSafe(echeance);
             throw new RuntimeException(
-                    "Impossible d'effectuer le paiement. Vous devez d'abord régler les échéances précédentes (en retard ou partiellement payées).");
+                    "Unable to process payment. You must first settle all previous installments that are overdue or partially paid.");
         }
 
         java.math.BigDecimal currentAmountPaid = echeance.getAmountPaid() != null ? echeance.getAmountPaid()

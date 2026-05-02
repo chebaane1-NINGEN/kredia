@@ -1,377 +1,279 @@
-<section class="kyc-page">
+<div class="pub-sim">
 
-  <!-- HERO -->
-  <div class="kyc-hero">
-    <div class="kyc-hero__icon">🔐</div>
-    <h1 class="kyc-hero__title">KYC Verification</h1>
-    <p class="kyc-hero__subtitle">
-      Submit your official documents to validate your credit application.
-    </p>
-  </div>
-
-  <!-- ══════════════════════════════════════════════════════════ -->
-  <!-- CLIENT VIEW: Upload (left) + Verification Result (right)  -->
-  <!-- ══════════════════════════════════════════════════════════ -->
-  <div class="kyc-layout" *ngIf="auth.isClient()">
-
-    <!-- UPLOAD FORM -->
-    <div class="kyc-card upload-card">
-      <h2 class="card-title">📤 Submit a Document</h2>
-
-      <div class="client-info-banner">
-        <span class="client-info-banner__icon">🔒</span>
-        <span>Your documents are linked to your account (ID: <strong>{{ userId }}</strong>)</span>
+  <!-- ═══════════════════════════════════════════════════════════
+       HERO BAND
+  ══════════════════════════════════════════════════════════ -->
+  <header class="hero-band">
+    <div class="hero-band__inner">
+      <div class="hero-band__text">
+        <span class="hero-pill">
+          <span class="hero-pill__dot"></span>
+          {{ auth.isClient() ? 'Secure Verification' : 'Compliance Hub' }}
+        </span>
+        <h1>KYC — <br><span class="accent">{{ auth.isClient() ? 'Identity & Income' : 'Document Audit' }}</span></h1>
+        <p>{{ auth.isClient() ? 'Submit your documents to complete your profile.' : 'Review and manage user verification requests.' }}</p>
       </div>
 
-      <div class="field" *ngIf="clientCredits.length > 0 || pendingRejectedDemandes.length > 0">
-        <label for="clientCreditSelect">Select the related credit</label>
-        <select id="clientCreditSelect" [(ngModel)]="creditId">
-          <optgroup label="── Active Credits ──" *ngIf="clientCredits.length > 0">
-            <option *ngFor="let c of clientCredits" [value]="c.creditId">
-              Credit #{{ c.creditId }} — {{ (c.amount || 0) | number:'1.0-0' }}
-            </option>
-          </optgroup>
-          <optgroup label="── Pending Applications ──" *ngIf="pendingRejectedDemandes.length > 0">
-            <option *ngFor="let d of pendingRejectedDemandes" [value]="d.creditId">
-              Application #{{ d.creditId }} — {{ (d.amount || 0) | number:'1.0-0' }}
-            </option>
-          </optgroup>
-        </select>
+      <div class="hero-band__badge">
+        <div class="badge-ring">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div>
+          <span class="badge-value">{{ auth.isClient() ? 'Secure' : 'Audit' }}</span>
+          <span class="badge-label">{{ auth.isClient() ? 'Encrypted' : 'Verified' }}</span>
+        </div>
       </div>
+    </div>
+  </header>
 
-      <div class="field">
-        <label>Document Type</label>
-        <div class="doc-type-grid">
+  <!-- ═══════════════════════════════════════════════════════════
+       CONTENT CARD
+  ══════════════════════════════════════════════════════════ -->
+  <div class="sim-card-wrapper">
+    
+    <!-- ── CLIENT LAYOUT (Split) ────────────────────────── -->
+    <div class="sim-card" *ngIf="auth.isClient()" style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 0; min-height: 500px;">
+      <div class="main-panel" style="border-right: 1px solid #f0f4f8;">
+        <div class="panel-header">
+          <h2 class="panel-title">Submit a Document</h2>
+          <p class="panel-subtitle">Upload your documents for verification.</p>
+        </div>
+
+        <div class="client-info-banner">
+          <span class="client-info-banner__icon">👤</span>
+          <span>Linked to Account ID: <strong>{{ userId }}</strong></span>
+        </div>
+
+        <!-- Related Credit Selection -->
+        <div class="field" style="margin-bottom: 24px;" *ngIf="clientCredits.length > 0 || pendingRejectedDemandes.length > 0">
+          <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 8px;">Related Credit / Application</label>
+          <select [(ngModel)]="creditId" style="width: 100%; padding: 12px; border-radius: 12px; border: 1.5px solid #e2e8f0; font-family: inherit;">
+            <optgroup label="── Active Credits ──" *ngIf="clientCredits.length > 0">
+              <option *ngFor="let c of clientCredits" [value]="c.creditId">Credit #{{ c.creditId }} — {{ (c.amount || 0) | number:'1.0-0' }}</option>
+            </optgroup>
+            <optgroup label="── Pending Applications ──" *ngIf="pendingRejectedDemandes.length > 0">
+              <option *ngFor="let d of pendingRejectedDemandes" [value]="d.creditId">App #{{ d.creditId }} — {{ (d.amount || 0) | number:'1.0-0' }}</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- Doc Type Grid -->
+        <div class="doc-type-grid" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
           <button *ngFor="let d of docTypes" class="doc-pill" [class.active]="selectedDocType === d.documentType"
             (click)="selectedDocType = d.documentType" type="button">
             <span class="doc-pill__icon">{{ d.icon }}</span>
             <span class="doc-pill__label">{{ d.label }}</span>
           </button>
         </div>
-      </div>
 
-      <div class="drop-zone" [class.drag-over]="dragOver" [class.has-file]="!!selectedFile"
-        (dragover)="onDragOver($event)" (dragleave)="onDragLeave()" (drop)="onDrop($event)" (click)="fileInput.click()">
-        <input #fileInput type="file" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" (change)="onFileInput($event)" />
-        <ng-container *ngIf="!selectedFile">
-          <div class="drop-zone__icon">☁️</div>
-          <p class="drop-zone__text">Drag a file here or <strong>click to browse</strong></p>
-          <p class="drop-zone__hint">PDF, JPG, PNG, DOCX — max 10 MB</p>
-        </ng-container>
-        <ng-container *ngIf="selectedFile">
-          <div class="file-preview">
-            <span class="file-preview__icon">📄</span>
-            <div class="file-preview__info">
-              <span class="file-preview__name">{{ selectedFile.name }}</span>
-              <span class="file-preview__size">{{ fileSizeLabel(selectedFile.size) }}</span>
+        <!-- Drop Zone -->
+        <div class="drop-zone" [class.drag-over]="dragOver" [class.has-file]="!!selectedFile"
+          (dragover)="onDragOver($event)" (dragleave)="onDragLeave()" (drop)="onDrop($event)" (click)="fileInput.click()">
+          <input #fileInput type="file" hidden accept=".pdf,.jpg,.jpeg,.png" (change)="onFileInput($event)" />
+          <ng-container *ngIf="!selectedFile">
+            <div class="drop-zone__icon">📄</div>
+            <p class="drop-zone__text">Drag your file here or <strong>browse</strong></p>
+          </ng-container>
+          <ng-container *ngIf="selectedFile">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+              <span style="font-size: 2rem;">✅</span>
+              <div style="text-align: left;">
+                <p style="margin:0; font-weight: 700; color: #1e293b;">{{ selectedFile.name }}</p>
+                <p style="margin:0; font-size: 0.85rem; color: #64748b;">{{ fileSizeLabel(selectedFile.size) }}</p>
+              </div>
+              <button (click)="$event.stopPropagation(); removeFile()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;">✕</button>
             </div>
-            <button class="file-preview__remove" (click)="$event.stopPropagation(); removeFile()"
-              title="Remove">✕</button>
-          </div>
-        </ng-container>
+          </ng-container>
+        </div>
+
+        <button class="btn-upload" [disabled]="!selectedFile || uploading || hasCreditsError" (click)="upload()">
+          <span *ngIf="!uploading">Verify & Upload</span>
+          <span *ngIf="uploading">Uploading...</span>
+        </button>
       </div>
 
-      <div class="alert alert--error" *ngIf="error">⚠️ {{ error }}</div>
-      <div class="alert alert--error" *ngIf="hasCreditsError">⚠️ You must have at least one credit or application to
-        upload a document.</div>
-
-      <button class="btn-upload" [disabled]="!selectedFile || uploading || hasCreditsError" (click)="upload()">
-        <span *ngIf="!uploading">🚀 Upload Document</span>
-        <span *ngIf="uploading" class="spinner-wrap"><span class="spinner"></span> Uploading...</span>
-      </button>
+      <div class="result-panel">
+         <div class="panel-header">
+            <h2 class="panel-title">Verification Status</h2>
+            <p class="panel-subtitle">Real-time analysis results.</p>
+         </div>
+         <div class="result-empty" *ngIf="!verifyResult && !uploadedDoc">
+            <p>Upload a document to see the analysis.</p>
+         </div>
+         <ng-container *ngTemplateOutlet="verificationPanel"></ng-container>
+      </div>
     </div>
 
-    <!-- VERIFICATION RESULT -->
-    <div class="kyc-card result-card">
-      <h2 class="card-title">📋 Verification Result</h2>
-      <ng-container *ngTemplateOutlet="verificationPanel"></ng-container>
-    </div>
-  </div>
+    <!-- ── ADMIN LAYOUT (Vertical) ─────────────────────── -->
+    <div class="sim-card" *ngIf="!auth.isClient()" style="display: block; padding: 40px;">
+      <div class="panel-header">
+        <h2 class="panel-title">Submission Queue</h2>
+        <p class="panel-subtitle">Filter and review all user documents.</p>
+      </div>
 
-  <!-- ══════════════════════════════════════════════════════════ -->
-  <!-- ADMIN/AGENT VIEW: Full width layout -->
-  <!-- ══════════════════════════════════════════════════════════ -->
-  <div class="kyc-layout-vertical" *ngIf="!auth.isClient()">
-
-    <!-- SUBMITTED DOCUMENTS (top) -->
-    <div class="kyc-card docs-list-card">
-      <h2 class="card-title">🗂️ Submitted Documents</h2>
-
-      <!-- Filter bar -->
-      <div class="kyc-filter-bar" *ngIf="uploadedDocs.length > 0">
+      <!-- Admin Filters -->
+      <div class="kyc-filter-bar" style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 20px;">
         <div class="kyc-filter-group">
           <span class="kyc-filter-label">Credit:</span>
-          <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'"
-            (click)="setCreditFilter('ALL')">All</button>
-          <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn"
-            [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+          <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
+          <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn" [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
         </div>
         <div class="kyc-filter-group" *ngIf="uniqueDemandeIds.length > 0">
           <span class="kyc-filter-label">Application:</span>
-          <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'"
-            (click)="setDemandeFilter('ALL')">All</button>
-          <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn"
-            [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id
-            }}</button>
-        </div>
-        <div class="kyc-filter-group">
-          <span class="kyc-filter-label">Type:</span>
-          <button *ngFor="let t of typeOptions" class="kyc-filter-btn" [class.active]="typeFilter === t.value"
-            (click)="setTypeFilter(t.value)">{{ t.label }}</button>
+          <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'" (click)="setDemandeFilter('ALL')">All</button>
+          <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn" [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
         </div>
         <div class="kyc-filter-group">
           <span class="kyc-filter-label">Status:</span>
-          <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value"
-            (click)="setStatusFilter(s.value)">{{ s.label }}</button>
+          <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value" (click)="setStatusFilter(s.value)">{{ s.label }}</button>
         </div>
       </div>
 
-      <div *ngIf="filteredDocs.length === 0" class="result-empty">
-        <div class="result-empty__icon">📂</div>
-        <p>No documents match the selected filters.</p>
-      </div>
-      <div class="docs-table-wrap" *ngIf="filteredDocs.length > 0">
+      <div class="docs-table-wrap">
         <table class="docs-table">
           <thead>
             <tr>
-              <th>#</th>
+              <th>ID</th>
               <th>Type</th>
-              <th>Credit</th>
-              <th>Application</th>
+              <th>User</th>
               <th>Status</th>
-              <th>Date</th>
-              <th>Action</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let doc of filteredDocs" class="doc-row"
-              [class.doc-row--selected]="verifyResult?.kycLoanId === doc.kycLoanId" (click)="selectDoc(doc)">
-              <td>{{ doc.kycLoanId }}</td>
+            <tr *ngFor="let doc of filteredDocs" class="doc-row" [class.active]="verifyResult?.kycLoanId === doc.kycLoanId" (click)="selectDoc(doc)">
+              <td>#{{ doc.kycLoanId }}</td>
               <td>{{ docLabel(doc.documentType) }}</td>
-              <td>{{ doc.creditId ? '#' + doc.creditId : '—' }}</td>
-              <td>{{ doc.demandeId ? '#' + doc.demandeId : '—' }}</td>
-              <td>
-                <span class="status-badge" [class]="statusClass(doc.verifiedStatus)">
-                  {{ statusLabel(doc.verifiedStatus) }}
-                </span>
-              </td>
-              <td>{{ doc.submittedAt | date:'MM/dd/yy HH:mm' }}</td>
+              <td>User #{{ doc.userId }}</td>
+              <td><span class="status-badge" [class]="statusClass(doc.verifiedStatus)">{{ statusLabel(doc.verifiedStatus) }}</span></td>
               <td (click)="$event.stopPropagation()">
-                <div class="table-actions" *ngIf="doc.verifiedStatus === 'PENDING'; else verifiedBadge">
-                  <button class="btn-verify-sm ai" (click)="verify(doc.kycLoanId)" [disabled]="verifying">Test
-                    AI</button>
-                  <button class="btn-verify-sm approve" (click)="approve(doc.kycLoanId)"
-                    [disabled]="verifying">Approve</button>
-                  <button class="btn-verify-sm reject" (click)="reject(doc.kycLoanId)"
-                    [disabled]="verifying">Reject</button>
+                <div style="display: flex; gap: 6px;" *ngIf="doc.verifiedStatus === 'PENDING'">
+                  <a [href]="doc.documentPath" target="_blank" class="btn-verify-sm ai" style="text-decoration: none; display: flex; align-items: center; justify-content: center;" title="View Document">🔍</a>
+                  <button class="btn-verify-sm ai" (click)="verify(doc.kycLoanId)" [disabled]="loadingKycId != null" title="AI Test">🤖 AI</button>
+                  <button class="btn-verify-sm approve" (click)="approve(doc.kycLoanId)" [disabled]="loadingKycId != null" title="Approve">✅</button>
+                  <button class="btn-verify-sm reject" (click)="reject(doc.kycLoanId)" [disabled]="loadingKycId != null" title="Reject">❌</button>
                 </div>
-                <ng-template #verifiedBadge>
-                  <div class="table-actions">
-                    <span class="doc-badge">{{ doc.verifiedStatus }}</span>
-                    <button *ngIf="doc.verifiedStatus === 'REJECTED' && doc.aiEvaluation" class="btn-reject-reason"
-                      (click)="showReason(doc)">View Reason</button>
-                  </div>
-                </ng-template>
               </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- REVIEW RESULT (BELOW LIST) -->
+      <div style="margin-top: 40px; border-top: 2px solid #f1f5f9; padding-top: 40px;" *ngIf="verifyResult || uploadedDoc || loadingKycId">
+        <div class="panel-header">
+          <h2 class="panel-title">Audit Review</h2>
+          <p class="panel-subtitle">Verification results and AI analysis.</p>
+        </div>
+        
+        <!-- LOADING OVERLAY FOR ADMIN REVIEW -->
+        <div *ngIf="loadingKycId" class="verdict-banner verdict-banner--pending" style="padding: 40px; text-align: center; justify-content: center; align-items: center; flex-direction: column;">
+            <div class="verdict-banner__emoji" style="font-size: 3rem; animation: pulse 1.5s infinite;">⏳</div>
+            <h3 style="margin-top: 16px;">AI Analysis in Progress...</h3>
+            <p style="color: #64748b;">Consulting Gemini API for document verification. Please wait.</p>
+        </div>
+
+        <ng-container *ngIf="!loadingKycId">
+            <ng-container *ngTemplateOutlet="verificationPanel"></ng-container>
+        </ng-container>
+      </div>
+    </div>
+
+    <!-- ── CLIENT HISTORY TABLE ────────────────────────── -->
+    <div class="docs-table-card" *ngIf="auth.isClient() && uploadedDocs.length > 0" style="margin-top: 32px;">
+      <div class="panel-header">
+        <h2 class="panel-title">Your History</h2>
+        <p class="panel-subtitle">Manage and track your submitted documents.</p>
+      </div>
+
+      <!-- Client Filters -->
+      <div class="kyc-filter-bar" style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 16px;">
+        <div class="kyc-filter-group" *ngIf="uniqueCreditIds.length > 0">
+          <span class="kyc-filter-label">Credit:</span>
+          <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
+          <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn" [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+        </div>
+        <div class="kyc-filter-group" *ngIf="uniqueDemandeIds.length > 0">
+          <span class="kyc-filter-label">Application:</span>
+          <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'" (click)="setDemandeFilter('ALL')">All</button>
+          <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn" [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
+        </div>
+        <div class="kyc-filter-group">
+          <span class="kyc-filter-label">Status:</span>
+          <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value" (click)="setStatusFilter(s.value)">{{ s.label }}</button>
+        </div>
+      </div>
+      <div class="docs-table-wrap">
+        <table class="docs-table">
+          <thead><tr><th>ID</th><th>Type</th><th>Ref</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let doc of filteredDocs" class="doc-row" (click)="selectDoc(doc)">
+              <td>#{{ doc.kycLoanId }}</td>
+              <td>{{ docLabel(doc.documentType) }}</td>
+              <td>{{ doc.creditId ? 'Credit #' + doc.creditId : 'App #' + doc.demandeId }}</td>
+              <td><span class="status-badge" [class]="statusClass(doc.verifiedStatus)">{{ statusLabel(doc.verifiedStatus) }}</span></td>
+              <td>{{ doc.submittedAt | date:'MM/dd/yyyy' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- VERIFICATION RESULT (bottom) -->
-    <div class="kyc-card result-card">
-      <h2 class="card-title">📋 Verification Result</h2>
-      <ng-container *ngTemplateOutlet="verificationPanel"></ng-container>
-    </div>
   </div>
 
-  <!-- CLIENT: Submitted Documents below -->
-  <div class="kyc-card docs-list-card" *ngIf="auth.isClient() && uploadedDocs.length > 0">
-    <h2 class="card-title">🗂️ Submitted Documents</h2>
-
-    <!-- Filter bar -->
-    <div class="kyc-filter-bar">
-      <div class="kyc-filter-group">
-        <span class="kyc-filter-label">Credit:</span>
-        <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'"
-          (click)="setCreditFilter('ALL')">All</button>
-        <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn"
-          [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
-      </div>
-      <div class="kyc-filter-group" *ngIf="uniqueDemandeIds.length > 0">
-        <span class="kyc-filter-label">Application:</span>
-        <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'"
-          (click)="setDemandeFilter('ALL')">All</button>
-        <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn"
-          [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
-      </div>
-      <div class="kyc-filter-group">
-        <span class="kyc-filter-label">Type:</span>
-        <button *ngFor="let t of typeOptions" class="kyc-filter-btn" [class.active]="typeFilter === t.value"
-          (click)="setTypeFilter(t.value)">{{ t.label }}</button>
-      </div>
-      <div class="kyc-filter-group">
-        <span class="kyc-filter-label">Status:</span>
-        <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value"
-          (click)="setStatusFilter(s.value)">{{ s.label }}</button>
-      </div>
-    </div>
-
-    <div class="docs-table-wrap">
-      <table class="docs-table" *ngIf="filteredDocs.length > 0">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Type</th>
-            <th>Credit</th>
-            <th>Application</th>
-            <th>Status</th>
-            <th>Date</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let doc of filteredDocs" class="doc-row"
-            [class.doc-row--selected]="verifyResult?.kycLoanId === doc.kycLoanId" (click)="selectDoc(doc)">
-            <td>{{ doc.kycLoanId }}</td>
-            <td>{{ docLabel(doc.documentType) }}</td>
-            <td>{{ doc.creditId ? '#' + doc.creditId : '—' }}</td>
-            <td>{{ doc.demandeId ? '#' + doc.demandeId : '—' }}</td>
-            <td>
-              <span class="status-badge" [class]="statusClass(doc.verifiedStatus)">
-                {{ statusLabel(doc.verifiedStatus) }}
-              </span>
-            </td>
-            <td>{{ doc.submittedAt | date:'MM/dd/yy HH:mm' }}</td>
-            <td (click)="$event.stopPropagation()">
-              <button *ngIf="doc.verifiedStatus === 'REJECTED' && doc.aiEvaluation" class="btn-reject-reason"
-                (click)="showReason(doc)">View Reason</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div *ngIf="filteredDocs.length === 0" class="result-empty">
-        <p>No documents match the selected filters.</p>
-      </div>
-    </div>
-  </div>
-
-</section>
-
-<!-- ── Modale de raison de rejet ──────────────────────────────── -->
-<div class="modal-overlay" *ngIf="selectedReasonDoc" (click)="closeReason()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>❌ Rejection Reason</h3>
-      <button class="close-btn" (click)="closeReason()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="ai-message">
-        <span class="ai-badge">🤖 AI Analysis</span>
-        <p class="ai-text">{{ selectedReasonDoc.aiEvaluation }}</p>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn primary" (click)="closeReason()">Close</button>
-    </div>
-  </div>
 </div>
 
-<!-- ── Shared verification panel template ─────────────────── -->
+<!-- ── SHARED TEMPLATE ────────────────────────────────────── -->
 <ng-template #verificationPanel>
-  <div class="result-empty" *ngIf="!uploadedDoc && !verifyResult">
-    <div class="result-empty__icon">🔍</div>
-    <p>No document submitted yet.<br>Upload a file to get started.</p>
-  </div>
-
-  <ng-container *ngIf="uploadedDoc">
-    <div class="result-doc">
-      <div class="result-doc__header">
-        <span class="doc-badge">{{ docLabel(uploadedDoc.documentType) }}</span>
-        <span class="status-badge" [class]="statusClass(uploadedDoc.verifiedStatus)">
-          {{ statusLabel(uploadedDoc.verifiedStatus) }}
-        </span>
+  <div class="verdict-banner" *ngIf="verifyResult || uploadedDoc"
+    [class]="'verdict-banner--' + statusClass((verifyResult || uploadedDoc)!.verifiedStatus)"
+    style="padding: 24px; flex-direction: column; gap: 20px;">
+    
+    <div style="display: flex; gap: 16px; align-items: center;">
+      <div class="verdict-banner__emoji" style="font-size: 2.5rem;">
+        {{ (verifyResult || uploadedDoc)!.verifiedStatus === 'APPROVED' ? '✅' : 
+           (verifyResult || uploadedDoc)!.verifiedStatus === 'REJECTED' ? '❌' : '⏳' }}
       </div>
-      <div class="result-doc__meta">
-        <div class="meta-item">
-          <span class="meta-label">Document ID</span>
-          <span class="meta-value">#{{ uploadedDoc.kycLoanId }}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Credit</span>
-          <span class="meta-value">#{{ uploadedDoc.creditId }}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Submitted on</span>
-          <span class="meta-value">{{ uploadedDoc.submittedAt | date:'MM/dd/yyyy HH:mm' }}</span>
-        </div>
-      </div>
-      <a *ngIf="uploadedDoc.documentPath" [href]="uploadedDoc.documentPath" target="_blank" class="doc-link">
-        🔗 View Document
-      </a>
-      <div class="admin-actions" *ngIf="!auth.isClient() && uploadedDoc.verifiedStatus === 'PENDING'">
-        <button class="btn-verify-ai" [disabled]="verifying" (click)="verify(uploadedDoc.kycLoanId)">
-          <span *ngIf="!verifying">🤖 Test with AI</span>
-          <span *ngIf="verifying" class="spinner-wrap"><span class="spinner"></span></span>
-        </button>
-        <button class="btn-approve" [disabled]="verifying" (click)="approve(uploadedDoc.kycLoanId)">
-          <span *ngIf="!verifying">✅ Approve</span>
-          <span *ngIf="verifying" class="spinner-wrap"><span class="spinner"></span></span>
-        </button>
-        <button class="btn-reject" [disabled]="verifying" (click)="reject(uploadedDoc.kycLoanId)">
-          <span *ngIf="!verifying">❌ Reject</span>
-          <span *ngIf="verifying" class="spinner-wrap"><span class="spinner"></span></span>
-        </button>
+      <div>
+        <h3 style="margin: 0; font-size: 1.25rem;">{{ (verifyResult || uploadedDoc)!.verifiedStatus === 'APPROVED' ? 'Document Approved' : 
+                  (verifyResult || uploadedDoc)!.verifiedStatus === 'REJECTED' ? 'Document Rejected' : 'Verification Pending' }}</h3>
+        <p style="margin: 4px 0 0; color: #64748b;" *ngIf="!auth.isClient()">Auditing User #{{ (verifyResult || uploadedDoc)?.userId }}</p>
       </div>
     </div>
-  </ng-container>
 
-  <div class="verdict-banner" *ngIf="verifyResult"
-    [class]="'verdict-banner--' + statusClass(verifyResult.verifiedStatus)">
-    <div class="verdict-banner__emoji">
-      {{ verifyResult.verifiedStatus === 'APPROVED' ? '✅' :
-      verifyResult.verifiedStatus === 'REJECTED' ? '❌' : '⏳' }}
-    </div>
-    <div class="verdict-banner__content">
-      <h3>{{ verifyResult.verifiedStatus === 'APPROVED' ? 'Document Approved!' :
-        verifyResult.verifiedStatus === 'REJECTED' ? 'Document Rejected' : 'AI Analysis Complete' }}</h3>
-
-      <div class="verdict-meta">
-        <span class="meta-tag">ID: #{{ verifyResult.kycLoanId }}</span>
-        <span class="meta-tag">Type: {{ docLabel(verifyResult.documentType) }}</span>
-        <span class="meta-tag" *ngIf="verifyResult.creditId">Credit: #{{ verifyResult.creditId }}</span>
-        <span class="meta-tag" *ngIf="verifyResult.demandeId">App: #{{ verifyResult.demandeId }}</span>
+    <div class="verdict-meta" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <div style="display: flex; flex-direction: column;">
+        <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Doc ID</span>
+        <span style="font-size: 1rem; font-weight: 700; color: #1e293b;">#{{ (verifyResult || uploadedDoc)?.kycLoanId }}</span>
       </div>
+      <div style="display: flex; flex-direction: column;" *ngIf="(verifyResult || uploadedDoc)?.creditId">
+        <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Credit ID</span>
+        <span style="font-size: 1rem; font-weight: 700; color: #1e293b;">#{{ (verifyResult || uploadedDoc)?.creditId }}</span>
+      </div>
+      <div style="display: flex; flex-direction: column;" *ngIf="(verifyResult || uploadedDoc)?.demandeId">
+        <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">App ID</span>
+        <span style="font-size: 1rem; font-weight: 700; color: #1e293b;">#{{ (verifyResult || uploadedDoc)?.demandeId }}</span>
+      </div>
+      <div style="display: flex; flex-direction: column;">
+        <span style="font-size: 0.7rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Submitted</span>
+        <span style="font-size: 1rem; font-weight: 700; color: #1e293b;">{{ (verifyResult || uploadedDoc)?.submittedAt | date:'short' }}</span>
+      </div>
+    </div>
+    
+    <div class="ai-message" *ngIf="(verifyResult || uploadedDoc)!.aiEvaluation">
+      <span class="ai-badge">🤖 AI Analysis</span>
+      <p class="ai-text" style="font-size: 1rem;">{{ (verifyResult || uploadedDoc)!.aiEvaluation }}</p>
+    </div>
 
-      <!-- AI message if present -->
-      <ng-container *ngIf="verifyResult.verificationMessage || verifyResult.aiEvaluation; else defaultMsg">
-        <div class="ai-message">
-          <span class="ai-badge">🤖 AI Analysis</span>
-          
-          <!-- Show verificationMessage if present -->
-          <p class="ai-text" *ngIf="verifyResult.verificationMessage">{{ verifyResult.verificationMessage }}</p>
-          
-          <!-- Only show aiEvaluation if it's different from verificationMessage -->
-          <p class="ai-text" *ngIf="verifyResult.aiEvaluation && verifyResult.aiEvaluation !== verifyResult.verificationMessage">
-            {{ verifyResult.aiEvaluation }}
-          </p>
-        </div>
-      </ng-container>
-
-      <ng-template #defaultMsg>
-        <p>{{ verifyResult.verifiedStatus === 'APPROVED'
-          ? 'Your document has been successfully validated.'
-          : verifyResult.verifiedStatus === 'REJECTED'
-          ? 'This document could not be validated. Please submit another one.'
-          : 'Your document is being reviewed.' }}</p>
-      </ng-template>
-
-      <div class="verdict-footer" *ngIf="verifyResult.documentPath">
-        <a [href]="verifyResult.documentPath" target="_blank" class="doc-link-verdict">
-          🔍 View Original Document
-        </a>
-        <span class="submission-date">Submitted on {{ verifyResult.submittedAt | date:'MM/dd/yyyy HH:mm' }}</span>
+    <div style="display: flex; gap: 16px; align-items: center; justify-content: space-between;">
+      <a *ngIf="(verifyResult || uploadedDoc)!.documentPath" [href]="(verifyResult || uploadedDoc)!.documentPath" target="_blank" 
+         style="font-size: 0.9rem; font-weight: 700; color: #1b6ca8; text-decoration: none;">🔍 View Original File</a>
+      
+      <div style="display: flex; gap: 8px;" *ngIf="!auth.isClient() && (verifyResult || uploadedDoc)?.verifiedStatus === 'PENDING'">
+         <button (click)="approve((verifyResult || uploadedDoc)!.kycLoanId)" style="padding: 8px 20px; background: #10b981; color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">Approve</button>
+         <button (click)="reject((verifyResult || uploadedDoc)!.kycLoanId)" style="padding: 8px 20px; background: #ef4444; color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">Reject</button>
       </div>
     </div>
   </div>

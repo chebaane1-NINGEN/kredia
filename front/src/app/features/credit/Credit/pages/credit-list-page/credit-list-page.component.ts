@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { CreditVm } from '../../vm/credit.vm';
 import { Credit, DemandeCredit } from '../../models/credit.model';
@@ -20,6 +20,7 @@ export class CreditListPageComponent implements OnInit {
   readonly auth          = inject(AuthService);
   private readonly kycVm = inject(KycLoanVm);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   filterDemandeId: number | null = null;
 
@@ -138,6 +139,8 @@ export class CreditListPageComponent implements OnInit {
   setViewMode(mode: 'ALL' | 'PENDING'): void {
     this.viewMode = mode;
     this.filterDemandeId = null;
+    this.filterKycLoanId = null;
+    this.router.navigate([], { queryParams: {}, replaceUrl: true });
     this.loadData();
   }
 

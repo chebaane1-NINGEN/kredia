@@ -44,11 +44,58 @@
           <span class="chevron" [class.rotated]="expandedMenus['credit']">▼</span>
         </a>
         <ul class="sub" [class.expanded]="expandedMenus['credit']">
-          <li><a routerLink="/credit/list" routerLinkActive="active">Credits</a></li>
-          <li><a routerLink="/credit/echeances" routerLinkActive="active">Installments</a></li>
-          <li><a routerLink="/credit/kyc" routerLinkActive="active">KYC Loan</a></li>
-          <li *ngIf="authService.isClient()"><a routerLink="/credit/chatbot" routerLinkActive="active">Chatbot</a></li>
-          <li *ngIf="authService.isClient()"><a routerLink="/simulateur" routerLinkActive="active">🧮 Simulateur</a></li>
+          <li>
+            <a routerLink="/credit/list" routerLinkActive="active">
+              <svg class="sub-icon icon-credit" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                <rect x="2" y="5" width="20" height="14" rx="2" stroke="#3b82f6" />
+                <line x1="2" y1="10" x2="22" y2="10" stroke="#3b82f6" />
+                <line x1="6" y1="15" x2="10" y2="15" stroke="#60a5fa" stroke-width="2.5" />
+              </svg>
+              Credits
+            </a>
+          </li>
+          <li>
+            <a routerLink="/credit/echeances" routerLinkActive="active">
+              <svg class="sub-icon icon-echeance" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" stroke="#f59e0b" />
+                <line x1="16" y1="2" x2="16" y2="6" stroke="#f59e0b" />
+                <line x1="8" y1="2" x2="8" y2="6" stroke="#f59e0b" />
+                <line x1="3" y1="10" x2="21" y2="10" stroke="#f59e0b" />
+                <circle cx="8" cy="15" r="1.2" fill="#fbbf24" />
+                <circle cx="12" cy="15" r="1.2" fill="#fbbf24" />
+                <circle cx="16" cy="15" r="1.2" fill="#fbbf24" />
+              </svg>
+              Installments
+            </a>
+          </li>
+          <li>
+            <a routerLink="/credit/kyc" routerLinkActive="active">
+              <svg class="sub-icon icon-kyc" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#8b5cf6" />
+                <polyline points="14 2 14 8 20 8" stroke="#8b5cf6" />
+                <line x1="9" y1="13" x2="15" y2="13" stroke="#a78bfa" />
+                <line x1="9" y1="17" x2="13" y2="17" stroke="#a78bfa" />
+              </svg>
+              KYC Loan
+            </a>
+          </li>
+          <li *ngIf="authService.isClient()">
+            <a routerLink="/credit/chatbot" routerLinkActive="active">
+              <svg class="sub-icon icon-chatbot" viewBox="0 0 24 24" fill="none" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#10b981" />
+                <circle cx="9" cy="10" r="1.2" fill="#10b981" />
+                <circle cx="12" cy="10" r="1.2" fill="#10b981" />
+                <circle cx="15" cy="10" r="1.2" fill="#10b981" />
+              </svg>
+              Chatbot
+            </a>
+          </li>
+          <li *ngIf="authService.isClient()">
+            <a routerLink="/simulateur" routerLinkActive="active">
+              <span class="sub-emoji">🧮</span>
+              Simulateur
+            </a>
+          </li>
         </ul>
       </li>
 
@@ -102,7 +149,6 @@
     </ul>
   </nav>
 
-  <!-- Footer: user + actions -->
   <div class="sidebar-footer">
     <div class="user-info">
       <div class="user-avatar">{{ currentUser.initials }}</div>
