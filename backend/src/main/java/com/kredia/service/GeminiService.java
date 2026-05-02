@@ -41,12 +41,13 @@ public class GeminiService {
     /**
      * Génère un résumé stratégique des marchés mondiaux au format JSON strict.
      *
-     * @param language Langue de sortie (ex: "fr", "en")
-     * @param tone Ton attendu (ex: "professionnel, factuel et nuancé")
+     * @param language          Langue de sortie (ex: "fr", "en")
+     * @param tone              Ton attendu (ex: "professionnel, factuel et nuancé")
      * @param additionalContext Contexte additionnel optionnel
      * @return Objet JSON sérialisable pour l'API REST
      */
-    public Map<String, Object> generateStrategicMarketSummaryJson(String language, String tone, String additionalContext) {
+    public Map<String, Object> generateStrategicMarketSummaryJson(String language, String tone,
+            String additionalContext) {
         log.info("Generating strategic market summary with Gemini {}", modelName);
 
         try {
@@ -59,27 +60,32 @@ public class GeminiService {
             String prompt = buildStrategicMarketPrompt(effectiveLanguage, effectiveTone, effectiveAdditionalContext);
             JsonObject requestBody = buildGeminiTextRequest(prompt);
 
-            String apiUrlV1 = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
+            String apiUrlV1 = "https://generativelanguage.googleapis.com/v1/models/" + modelName
+                    + ":generateContent?key=" + apiKey;
             HttpResponse<String> response = sendGeminiRequest(apiUrlV1, requestBody);
 
             if (response.statusCode() != 200) {
-                log.warn("Gemini API v1 request failed (market summary), retrying with relaxed payload and v1beta. Status={}, body={}",
+                log.warn(
+                        "Gemini API v1 request failed (market summary), retrying with relaxed payload and v1beta. Status={}, body={}",
                         response.statusCode(), response.body());
 
                 JsonObject relaxedRequestBody = buildGeminiBasicTextRequest(prompt);
-                String apiUrlV1beta = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
+                String apiUrlV1beta = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName
+                        + ":generateContent?key=" + apiKey;
                 response = sendGeminiRequest(apiUrlV1beta, relaxedRequestBody);
             }
 
             if (response.statusCode() != 200) {
                 log.error("Gemini API error (market summary): {}", response.body());
-                throw new RuntimeException("Gemini API returned status " + response.statusCode() + ": " + extractGeminiError(response.body()));
+                throw new RuntimeException("Gemini API returned status " + response.statusCode() + ": "
+                        + extractGeminiError(response.body()));
             }
 
             String rawText = parseGeminiResponse(response.body());
             String cleaned = stripCodeFences(rawText);
 
-            Map<String, Object> parsed = gson.fromJson(cleaned, new TypeToken<Map<String, Object>>() {}.getType());
+            Map<String, Object> parsed = gson.fromJson(cleaned, new TypeToken<Map<String, Object>>() {
+            }.getType());
             if (parsed == null || parsed.isEmpty()) {
                 throw new RuntimeException("Gemini returned empty JSON response");
             }
@@ -103,7 +109,8 @@ public class GeminiService {
         }
     }
 
-    private HttpResponse<String> sendGeminiRequest(String apiUrl, JsonObject requestBody) throws IOException, InterruptedException {
+    private HttpResponse<String> sendGeminiRequest(String apiUrl, JsonObject requestBody)
+            throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl))
                 .header("Content-Type", "application/json")
@@ -116,7 +123,7 @@ public class GeminiService {
     /**
      * Vérifie un document KYC avec Gemini Vision
      *
-     * @param documentUrl URL du document à vérifier
+     * @param documentUrl  URL du document à vérifier
      * @param documentType Type de document (INCOME_PROOF, ID_PROOF, etc.)
      * @return Résultat de la vérification (APPROVED: ... ou REJECTED: ...)
      */
@@ -137,7 +144,8 @@ public class GeminiService {
                 String prompt = buildVerificationPrompt(documentType);
                 JsonObject requestBody = buildGeminiRequest(prompt, base64Image, mimeType);
 
-                String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
+                String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName
+                        + ":generateContent?key=" + apiKey;
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(apiUrl))
@@ -149,12 +157,8 @@ public class GeminiService {
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
                 if (response.statusCode() == 429) {
-                    long apiRetryDelayMs = extractRetryDelay(response.body());
-                    log.warn("Gemini API Rate Limit (429) reached on attempt {}. API requests retry in {}ms", attempt, apiRetryDelayMs);
-                    if (attempt < maxRetries) {
-                        Thread.sleep(apiRetryDelayMs);
-                        continue;
-                    }
+                    log.warn("Gemini API Rate Limit (429) reached. Returning early to avoid frontend hang.");
+                    return "ERROR: Quota exceeded. Please wait 1 minute before trying again.";
                 }
 
                 if (response.statusCode() != 200) {
@@ -172,7 +176,10 @@ public class GeminiService {
                 if (attempt == maxRetries) {
                     return "ERROR: " + e.getMessage();
                 }
-                try { Thread.sleep(retryDelayMs); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(retryDelayMs);
+                } catch (InterruptedException ignored) {
+                }
             }
         }
         return "ERROR: Maximum retries reached for Gemini API";
@@ -252,12 +259,12 @@ public class GeminiService {
                         "- 'APPROVED: [short reason]' if the document is valid\n" +
                         "- 'REJECTED: [short reason]' if the document is invalid\n\n" +
                         "Be strict but reasonable in your evaluation. Answer in English.",
-                documentType
-        );
+                documentType);
     }
 
     /**
-     * Analyse la description du client et recommande le meilleur type de remboursement.
+     * Analyse la description du client et recommande le meilleur type de
+     * remboursement.
      */
     public String recommendRepaymentType(String clientDescription) {
         log.info("Requesting repayment type recommendation from Gemini...");
@@ -267,20 +274,21 @@ public class GeminiService {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 String prompt = buildRecommendationPrompt(clientDescription);
-                
+
                 JsonObject requestBody = new JsonObject();
                 JsonArray contents = new JsonArray();
                 JsonObject content = new JsonObject();
                 JsonArray parts = new JsonArray();
                 JsonObject textPart = new JsonObject();
-                
+
                 textPart.addProperty("text", prompt);
                 parts.add(textPart);
                 content.add("parts", parts);
                 contents.add(content);
                 requestBody.add("contents", contents);
 
-                String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName + ":generateContent?key=" + apiKey;
+                String apiUrl = "https://generativelanguage.googleapis.com/v1/models/" + modelName
+                        + ":generateContent?key=" + apiKey;
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(apiUrl))
@@ -293,7 +301,8 @@ public class GeminiService {
 
                 if (response.statusCode() == 429) {
                     long retryDelayMs = extractRetryDelay(response.body());
-                    log.warn("Gemini API Rate Limit (429) reached on attempt {}. API requests retry in {}ms", attempt, retryDelayMs);
+                    log.warn("Gemini API Rate Limit (429) reached on attempt {}. API requests retry in {}ms", attempt,
+                            retryDelayMs);
                     if (attempt < maxRetries) {
                         log.info("Waiting before retry...");
                         Thread.sleep(retryDelayMs);
@@ -306,7 +315,8 @@ public class GeminiService {
 
                 if (response.statusCode() != 200) {
                     log.error("Gemini API error (Status {}): {}", response.statusCode(), response.body());
-                    return "An error (" + response.statusCode() + ") occurred with the AI service. Please try again later.";
+                    return "An error (" + response.statusCode()
+                            + ") occurred with the AI service. Please try again later.";
                 }
 
                 return parseGeminiResponse(response.body());
@@ -331,25 +341,37 @@ public class GeminiService {
      */
     private String buildRecommendationPrompt(String description) {
         return "You are an expert financial advisor specializing in credit and loan repayment strategies.\n\n" +
-               "IMPORTANT LANGUAGE RULE: Detect the language of the client's description below and respond ENTIRELY in that same language. " +
-               "If the description is in French, respond in French. If it is in English, respond in English. Never mix languages.\n\n" +
-               "IMPORTANT NAMING RULE: Use the repayment type names in the SAME language as your response:\n" +
-               "- For French responses: Use AMORTISSEMENT_CONSTANT, MENSUALITE_CONSTANTE, IN_FINE\n" +
-               "- For English responses: Use CONSTANT_AMORTIZATION, CONSTANT_PAYMENT, IN_FINE\n\n" +
-               "A client describes their financial situation as follows:\n\"" + description + "\"\n\n" +
-               "Based STRICTLY on this description, recommend the best repayment type among these three exact options:\n\n" +
-               "1. AMORTISSEMENT_CONSTANT (French) / CONSTANT_AMORTIZATION (English): The client repays a fixed portion of the borrowed capital each month. Interest decreases over time, so monthly payments progressively decrease. " +
-               "Best for those who want to pay less total interest and can handle higher payments at the start.\n" +
-               "   (FR: Le client rembourse une part fixe du capital chaque mois. Les intérêts diminuent, donc les mensualités baissent progressivement. Idéal pour payer moins d'intérêts au global.)\n\n" +
-               "2. MENSUALITE_CONSTANTE (French) / CONSTANT_PAYMENT (English): The client pays the exact same total amount every month (capital + interest combined). " +
-               "The interest share decreases and the capital share increases over time. Best for those who want total predictability and a fixed monthly budget.\n" +
-               "   (FR: Le client paie exactement le même montant chaque mois. Idéal pour la prévisibilité et un budget mensuel fixe.)\n\n" +
-               "3. IN_FINE: The client pays ONLY the interest each month for the entire loan duration, then repays the full borrowed capital in a single lump sum at the very last payment. " +
-               "Best for investment purposes (e.g. rental property) where a large cash inflow or sale is expected at the end.\n" +
-               "   (FR: Le client ne paie que les intérêts chaque mois, et rembourse tout le capital en une seule fois à la fin. Idéal pour les investissements locatifs.)\n\n" +
-               "Your response must first name the EXACT option in uppercase (in the appropriate language), then explain clearly, empathetically and concisely why this choice is the most suitable for the client's specific situation. " +
-               "Do not mention any other credit types outside these 3 options. " +
-               "Remember: respond in the SAME language as the client's description and use the corresponding repayment type names.";
+                "IMPORTANT LANGUAGE RULE: Detect the language of the client's description below and respond ENTIRELY in that same language. "
+                +
+                "If the description is in French, respond in French. If it is in English, respond in English. Never mix languages.\n\n"
+                +
+                "IMPORTANT NAMING RULE: Use the repayment type names in the SAME language as your response:\n" +
+                "- For French responses: Use AMORTISSEMENT_CONSTANT, MENSUALITE_CONSTANTE, IN_FINE\n" +
+                "- For English responses: Use CONSTANT_AMORTIZATION, CONSTANT_PAYMENT, IN_FINE\n\n" +
+                "A client describes their financial situation as follows:\n\"" + description + "\"\n\n" +
+                "Based STRICTLY on this description, recommend the best repayment type among these three exact options:\n\n"
+                +
+                "1. AMORTISSEMENT_CONSTANT (French) / CONSTANT_AMORTIZATION (English): The client repays a fixed portion of the borrowed capital each month. Interest decreases over time, so monthly payments progressively decrease. "
+                +
+                "Best for those who want to pay less total interest and can handle higher payments at the start.\n" +
+                "   (FR: Le client rembourse une part fixe du capital chaque mois. Les intérêts diminuent, donc les mensualités baissent progressivement. Idéal pour payer moins d'intérêts au global.)\n\n"
+                +
+                "2. MENSUALITE_CONSTANTE (French) / CONSTANT_PAYMENT (English): The client pays the exact same total amount every month (capital + interest combined). "
+                +
+                "The interest share decreases and the capital share increases over time. Best for those who want total predictability and a fixed monthly budget.\n"
+                +
+                "   (FR: Le client paie exactement le même montant chaque mois. Idéal pour la prévisibilité et un budget mensuel fixe.)\n\n"
+                +
+                "3. IN_FINE: The client pays ONLY the interest each month for the entire loan duration, then repays the full borrowed capital in a single lump sum at the very last payment. "
+                +
+                "Best for investment purposes (e.g. rental property) where a large cash inflow or sale is expected at the end.\n"
+                +
+                "   (FR: Le client ne paie que les intérêts chaque mois, et rembourse tout le capital en une seule fois à la fin. Idéal pour les investissements locatifs.)\n\n"
+                +
+                "Your response must first name the EXACT option in uppercase (in the appropriate language), then explain clearly, empathetically and concisely why this choice is the most suitable for the client's specific situation. "
+                +
+                "Do not mention any other credit types outside these 3 options. " +
+                "Remember: respond in the SAME language as the client's description and use the corresponding repayment type names.";
     }
 
     /**
@@ -444,7 +466,8 @@ public class GeminiService {
     }
 
     /**
-     * Extrait le délai de retry suggéré par l'API Gemini (par défaut 60 secondes pour le free tier)
+     * Extrait le délai de retry suggéré par l'API Gemini (par défaut 60 secondes
+     * pour le free tier)
      */
     private long extractRetryDelay(String responseBody) {
         try {
@@ -460,7 +483,8 @@ public class GeminiService {
                                 String retryDelay = detail.get("retryDelay").getAsString();
                                 // Parse format like "50.824478513s" to milliseconds
                                 if (retryDelay.endsWith("s")) {
-                                    double seconds = Double.parseDouble(retryDelay.substring(0, retryDelay.length() - 1));
+                                    double seconds = Double
+                                            .parseDouble(retryDelay.substring(0, retryDelay.length() - 1));
                                     return (long) (seconds * 1000);
                                 }
                             }
@@ -474,7 +498,6 @@ public class GeminiService {
         // Default to 60 seconds for free tier quota reset
         return 60000;
     }
-
 
     /**
      * Prompt structuré pour imposer un JSON exploitable côté backend.
@@ -490,14 +513,16 @@ public class GeminiService {
                 "' avec un ton '" + tone + "'.\n" +
                 contextBlock +
                 "IMPORTANT: réponds UNIQUEMENT en JSON valide, sans markdown, sans backticks, sans texte hors JSON.\n" +
-                "Si une donnée chiffrée n'est pas disponible de façon fiable, mets null et explique brièvement dans notes.\n" +
+                "Si une donnée chiffrée n'est pas disponible de façon fiable, mets null et explique brièvement dans notes.\n"
+                +
                 "Le JSON doit respecter EXACTEMENT cette structure (mêmes clés):\n" +
                 "{\n" +
                 "  \"as_of\": \"YYYY-MM-DD\",\n" +
                 "  \"market_equities\": {\n" +
                 "    \"summary\": \"string\",\n" +
                 "    \"major_indices\": [\n" +
-                "      {\"name\": \"string\", \"trend\": \"bullish|neutral|bearish\", \"change_1d_pct\": number_or_null, \"change_ytd_pct\": number_or_null}\n" +
+                "      {\"name\": \"string\", \"trend\": \"bullish|neutral|bearish\", \"change_1d_pct\": number_or_null, \"change_ytd_pct\": number_or_null}\n"
+                +
                 "    ],\n" +
                 "    \"tech_ai_vs_traditional\": {\n" +
                 "      \"tech_ai\": {\"momentum\": \"string\", \"valuation_signal\": \"string\"},\n" +
@@ -507,13 +532,17 @@ public class GeminiService {
                 "  \"bond_market\": {\n" +
                 "    \"summary\": \"string\",\n" +
                 "    \"yield_curves\": [\n" +
-                "      {\"region\": \"string\", \"y2\": number_or_null, \"y10\": number_or_null, \"slope_bps\": number_or_null, \"shape\": \"normal|flat|inverted|mixed\"}\n" +
+                "      {\"region\": \"string\", \"y2\": number_or_null, \"y10\": number_or_null, \"slope_bps\": number_or_null, \"shape\": \"normal|flat|inverted|mixed\"}\n"
+                +
                 "    ],\n" +
-                "    \"credit_spreads\": {\"investment_grade_bps\": number_or_null, \"high_yield_bps\": number_or_null, \"signal\": \"string\"}\n" +
+                "    \"credit_spreads\": {\"investment_grade_bps\": number_or_null, \"high_yield_bps\": number_or_null, \"signal\": \"string\"}\n"
+                +
                 "  },\n" +
                 "  \"macro_political_factors\": {\n" +
-                "    \"inflation\": {\"trend\": \"string\", \"last_value_pct\": number_or_null, \"impact\": \"string\"},\n" +
-                "    \"employment\": {\"trend\": \"string\", \"last_unemployment_pct\": number_or_null, \"impact\": \"string\"},\n" +
+                "    \"inflation\": {\"trend\": \"string\", \"last_value_pct\": number_or_null, \"impact\": \"string\"},\n"
+                +
+                "    \"employment\": {\"trend\": \"string\", \"last_unemployment_pct\": number_or_null, \"impact\": \"string\"},\n"
+                +
                 "    \"geopolitics\": [\n" +
                 "      {\"theme\": \"string\", \"market_impact\": \"string\", \"severity\": \"low|medium|high\"}\n" +
                 "    ],\n" +

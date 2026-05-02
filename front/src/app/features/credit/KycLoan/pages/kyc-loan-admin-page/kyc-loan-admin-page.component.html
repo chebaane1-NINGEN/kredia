@@ -1,0 +1,153 @@
+<div class="pub-sim">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       HERO BAND
+  ══════════════════════════════════════════════════════════ -->
+  <header class="hero-band">
+    <div class="hero-band__inner">
+      <div class="hero-band__text">
+        <span class="hero-pill">
+          <span class="hero-pill__dot"></span>
+          Admin Console
+        </span>
+        <h1>KYC — <br><span class="accent">Management Hub</span></h1>
+        <p>Review and audit documents submitted by all platform users.</p>
+      </div>
+
+      <div class="hero-band__badge">
+        <div class="badge-ring">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div>
+          <span class="badge-value">Audit</span>
+          <span class="badge-label">Compliance</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CONTENT CARD (2-COLUMN ARCHITECTURE)
+  ══════════════════════════════════════════════════════════ -->
+  <div class="sim-card-wrapper">
+    <div class="sim-card" style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 0; min-height: 600px;">
+
+      <!-- ── LEFT PANEL: Global List ───────────────────── -->
+      <div class="main-panel" style="border-right: 1px solid #f0f4f8;">
+        <div class="panel-header">
+          <h2 class="panel-title">Document Queue</h2>
+          <p class="panel-subtitle">Filter and select documents to verify.</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="kyc-filter-bar" style="background: #fff; padding: 16px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 12px;">
+          <div class="kyc-filter-group">
+            <span class="kyc-filter-label">Credit:</span>
+            <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
+            <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn" [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+          </div>
+          <div class="kyc-filter-group" *ngIf="uniqueDemandeIds.length > 0">
+            <span class="kyc-filter-label">App:</span>
+            <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'" (click)="setDemandeFilter('ALL')">All</button>
+            <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn" [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
+          </div>
+          <div class="kyc-filter-group">
+            <span class="kyc-filter-label">Status:</span>
+            <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value" (click)="setStatusFilter(s.value)">{{ s.label }}</button>
+          </div>
+        </div>
+
+        <div class="docs-table-wrap">
+          <table class="docs-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Type</th>
+                <th>User</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let doc of filteredDocs" class="doc-row" [class.active]="verifyResult?.kycLoanId === doc.kycLoanId" (click)="selectDoc(doc)">
+                <td>#{{ doc.kycLoanId }}</td>
+                <td>{{ docLabel(doc.documentType) }}</td>
+                <td><strong>#{{ doc.userId }}</strong></td>
+                <td><span class="status-badge" [class]="statusClass(doc.verifiedStatus)">{{ statusLabel(doc.verifiedStatus) }}</span></td>
+                <td (click)="$event.stopPropagation()">
+                  <div style="display: flex; gap: 4px;">
+                    <button class="btn-verify-sm ai" (click)="verify(doc.kycLoanId)">🤖</button>
+                    <button class="btn-verify-sm approve" (click)="approve(doc.kycLoanId)">✅</button>
+                    <button class="btn-verify-sm reject" (click)="reject(doc.kycLoanId)">❌</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── RIGHT PANEL: Review Result ────────────────── -->
+      <div class="result-panel" style="background: #fcfdfe; border-top: none;">
+        <div class="panel-header">
+          <h2 class="panel-title">Verification Details</h2>
+          <p class="panel-subtitle">AI analysis and audit trail.</p>
+        </div>
+        
+        <div class="result-empty" *ngIf="!verifyResult" style="text-align: center; padding: 40px 20px; color: #94a3b8;">
+           <div style="font-size: 3rem; margin-bottom: 12px; opacity: 0.5;">🔍</div>
+           <p>Select a document from the queue to start auditing.</p>
+        </div>
+
+        <div class="verdict-banner" *ngIf="verifyResult"
+          [class]="'verdict-banner--' + statusClass(verifyResult!.verifiedStatus)"
+          style="padding: 20px; flex-direction: column; gap: 16px;">
+          
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <div class="verdict-banner__emoji" style="font-size: 2rem;">
+              {{ verifyResult!.verifiedStatus === 'APPROVED' ? '✅' : verifyResult!.verifiedStatus === 'REJECTED' ? '❌' : '⏳' }}
+            </div>
+            <h3 style="margin: 0; font-size: 1.1rem;">Reviewing #{{ verifyResult!.kycLoanId }}</h3>
+          </div>
+
+          <div class="verdict-meta" style="display: grid; gap: 8px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">User ID</span>
+              <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">#{{ verifyResult!.userId }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;" *ngIf="verifyResult!.creditId">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Credit ID</span>
+              <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">#{{ verifyResult!.creditId }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;" *ngIf="verifyResult!.demandeId">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">App ID</span>
+              <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">#{{ verifyResult!.demandeId }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Submitted</span>
+              <span style="font-size: 0.85rem; font-weight: 700; color: #1e293b;">{{ verifyResult!.submittedAt | date:'short' }}</span>
+            </div>
+          </div>
+          
+          <div class="ai-message" *ngIf="verifyResult!.aiEvaluation" style="margin-top: 0;">
+            <span class="ai-badge">🤖 AI Analysis</span>
+            <p class="ai-text">{{ verifyResult!.aiEvaluation }}</p>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+            <a [href]="verifyResult!.documentPath" target="_blank" style="font-size: 0.85rem; font-weight: 700; color: #1b6ca8; text-decoration: none;">🔍 View Original</a>
+            
+            <div style="display: flex; gap: 8px;" *ngIf="verifyResult!.verifiedStatus === 'PENDING'">
+               <button (click)="approve(verifyResult!.kycLoanId)" style="padding: 6px 12px; background: #10b981; color: #fff; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">Approve</button>
+               <button (click)="reject(verifyResult!.kycLoanId)" style="padding: 6px 12px; background: #ef4444; color: #fff; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">Reject</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>

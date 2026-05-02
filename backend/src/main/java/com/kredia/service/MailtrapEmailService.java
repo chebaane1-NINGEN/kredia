@@ -89,31 +89,31 @@ public class MailtrapEmailService implements IEmailService {
 
     @Override
     public void sendOrderExecutedEmail(User user, InvestmentOrder order, BigDecimal executedPrice) {
-        String subject = "✅ Votre ordre a été exécuté - " + order.getAssetSymbol();
+        String subject = "✅ Your order has been executed - " + order.getAssetSymbol();
         send(user.getEmail(), fullName(user), subject, buildOrderExecutedHtml(user, order, executedPrice));
     }
 
     @Override
     public void sendEcheancePaidEmail(User user, Echeance echeance) {
-        String subject = "✅ Quittance de paiement - Échéance #" + echeance.getEcheanceNumber();
+        String subject = "✅ Payment Receipt - Installment #" + echeance.getEcheanceNumber();
         send(user.getEmail(), fullName(user), subject, buildEcheancePaidHtml(user, echeance));
     }
 
     @Override
     public void sendEcheancePartiallyPaidEmail(User user, Echeance echeance) {
-        String subject = "⚠️ Quittance de paiement partiel - Échéance #" + echeance.getEcheanceNumber();
+        String subject = "⚠️ Partial Payment Receipt - Installment #" + echeance.getEcheanceNumber();
         send(user.getEmail(), fullName(user), subject, buildEcheancePartiallyPaidHtml(user, echeance));
     }
 
     @Override
     public void sendEcheanceOverdueEmail(User user, Echeance echeance) {
-        String subject = "🚨 Avis de retard de paiement - Échéance #" + echeance.getEcheanceNumber();
+        String subject = "🚨 Overdue Payment Notice - Installment #" + echeance.getEcheanceNumber();
         send(user.getEmail(), fullName(user), subject, buildEcheanceOverdueHtml(user, echeance));
     }
 
     @Override
     public void sendPaymentRejectedChronologicalEmail(User user, Echeance echeance) {
-        String subject = "❌ Paiement suspendu - Échéances précédentes impayées";
+        String subject = "❌ Payment Suspended - Previous Unpaid Installments";
         send(user.getEmail(), fullName(user), subject, buildPaymentRejectedHtml(user, echeance));
     }
 
@@ -123,7 +123,7 @@ public class MailtrapEmailService implements IEmailService {
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         String executedAt = order.getExecutedAt() != null ? order.getExecutedAt().format(fmt) : "N/A";
         String typeColor = "BUY".equals(order.getOrderType().name()) ? "#10B981" : "#EF4444";
-        String typeLabel = "BUY".equals(order.getOrderType().name()) ? "ACHAT" : "VENTE";
+        String typeLabel = "BUY".equals(order.getOrderType().name()) ? "BUY" : "SELL";
         BigDecimal total = executedPrice.multiply(order.getQuantity());
 
         return String.format("""
@@ -142,23 +142,23 @@ public class MailtrapEmailService implements IEmailService {
               .f{background:#f9fafb;padding:20px 30px;text-align:center;color:#6b7280;font-size:14px}
             </style></head><body>
             <div class="c">
-              <div class="h"><h1>🎉 Ordre Exécuté avec Succès</h1></div>
+              <div class="h"><h1>🎉 Order Executed Successfully</h1></div>
               <div class="b">
-                <p>Bonjour <strong>%s</strong>,</p>
-                <div class="badge">✅ EXÉCUTÉ</div>
-                <p>Votre ordre d'investissement a été exécuté avec succès.</p>
+                <p>Hello <strong>%s</strong>,</p>
+                <div class="badge">✅ EXECUTED</div>
+                <p>Your investment order has been executed successfully.</p>
                 <div class="box">
-                  <h3 style="margin-top:0;color:#1f2937">📊 Détails de l'Ordre</h3>
-                  <div class="row"><span class="lbl">Numéro d'ordre:</span><span class="val">#%s</span></div>
+                  <h3 style="margin-top:0;color:#1f2937">📊 Order Details</h3>
+                  <div class="row"><span class="lbl">Order Number:</span><span class="val">#%s</span></div>
                   <div class="row"><span class="lbl">Type:</span><span style="background:%s;color:#fff;padding:4px 10px;border-radius:6px;font-weight:700">%s</span></div>
-                  <div class="row"><span class="lbl">Actif:</span><span class="val">%s</span></div>
-                  <div class="row"><span class="lbl">Quantité:</span><span class="val">%s</span></div>
-                  <div class="row"><span class="lbl">Prix d'exécution:</span><span class="val">%s $</span></div>
+                  <div class="row"><span class="lbl">Asset:</span><span class="val">%s</span></div>
+                  <div class="row"><span class="lbl">Quantity:</span><span class="val">%s</span></div>
+                  <div class="row"><span class="lbl">Execution Price:</span><span class="val">%s $</span></div>
                   <div class="row" style="border-bottom:none"><span class="lbl">Date:</span><span class="val">%s</span></div>
                 </div>
-                <div class="total"><h3>💰 Montant Total</h3><p>%s $</p></div>
+                <div class="total"><h3>💰 Total Amount</h3><p>%s $</p></div>
               </div>
-              <div class="f"><p><strong>Kredia Investment Platform</strong></p><p>Email automatique — ne pas répondre.</p></div>
+              <div class="f"><p><strong>Kredia Investment Platform</strong></p><p>Automatic email — do not reply.</p></div>
             </div></body></html>
             """,
             fullName(user), order.getOrderId(), typeColor, typeLabel,
@@ -194,21 +194,21 @@ public class MailtrapEmailService implements IEmailService {
               .f{background:#f9fafb;padding:20px 30px;text-align:center;color:#6b7280;font-size:14px}
             </style></head><body>
             <div class="c">
-              <div class="h"><h1>✅ Quittance de Paiement</h1></div>
+              <div class="h"><h1>✅ Payment Receipt</h1></div>
               <div class="b">
-                <p>Bonjour <strong>%s</strong>,</p>
-                <div class="badge">PAYÉ</div>
-                <p>Nous confirmons la bonne réception de votre paiement.</p>
+                <p>Hello <strong>%s</strong>,</p>
+                <div class="badge">PAID</div>
+                <p>We confirm the receipt of your payment.</p>
                 <div class="box">
-                  <h3 style="margin-top:0;color:#1f2937">📊 Détails de l'Échéance</h3>
-                  <div class="row"><span class="lbl">Numéro:</span><span class="val">#%s</span></div>
-                  <div class="row"><span class="lbl">Date limite:</span><span class="val">%s</span></div>
-                  <div class="row"><span class="lbl">Montant initial:</span><span class="val">%s TND</span></div>
-                  <div class="row" style="border-bottom:none"><span class="lbl">Date de paiement:</span><span class="val">%s</span></div>
+                  <h3 style="margin-top:0;color:#1f2937">📊 Installment Details</h3>
+                  <div class="row"><span class="lbl">Number:</span><span class="val">#%s</span></div>
+                  <div class="row"><span class="lbl">Due Date:</span><span class="val">%s</span></div>
+                  <div class="row"><span class="lbl">Initial Amount:</span><span class="val">%s TND</span></div>
+                  <div class="row" style="border-bottom:none"><span class="lbl">Payment Date:</span><span class="val">%s</span></div>
                 </div>
-                <div class="total"><h3>💰 Montant Payé</h3><p>%s TND</p></div>
+                <div class="total"><h3>💰 Amount Paid</h3><p>%s TND</p></div>
               </div>
-              <div class="f"><p><strong>Kredia Platform</strong></p><p>Email automatique — ne pas répondre.</p></div>
+              <div class="f"><p><strong>Kredia Platform</strong></p><p>Automatic email — do not reply.</p></div>
             </div></body></html>
             """,
             fullName(user), echeance.getEcheanceNumber(), dueDate, due, paidAt, paid
@@ -241,24 +241,24 @@ public class MailtrapEmailService implements IEmailService {
               .f{background:#f9fafb;padding:20px 30px;text-align:center;color:#6b7280;font-size:14px}
             </style></head><body>
             <div class="c">
-              <div class="h"><h1>⚠️ Quittance de Paiement Partiel</h1></div>
+              <div class="h"><h1>⚠️ Partial Payment Receipt</h1></div>
               <div class="b">
-                <p>Bonjour <strong>%s</strong>,</p>
-                <div class="badge">PARTIELLEMENT PAYÉ</div>
-                <p>Nous confirmons la réception d'un paiement partiel pour votre échéance.</p>
+                <p>Hello <strong>%s</strong>,</p>
+                <div class="badge">PARTIALLY PAID</div>
+                <p>We confirm the receipt of a partial payment for your installment.</p>
                 <div class="box">
-                  <h3 style="margin-top:0;color:#1f2937">📊 Détails de l'Échéance</h3>
-                  <div class="row"><span class="lbl">Numéro:</span><span class="val">#%s</span></div>
-                  <div class="row"><span class="lbl">Date limite:</span><span class="val">%s</span></div>
-                  <div class="row"><span class="lbl">Montant initial:</span><span class="val">%s TND</span></div>
-                  <div class="row" style="border-bottom:none"><span class="lbl">Date du paiement:</span><span class="val">%s</span></div>
+                  <h3 style="margin-top:0;color:#1f2937">📊 Installment Details</h3>
+                  <div class="row"><span class="lbl">Number:</span><span class="val">#%s</span></div>
+                  <div class="row"><span class="lbl">Due Date:</span><span class="val">%s</span></div>
+                  <div class="row"><span class="lbl">Initial Amount:</span><span class="val">%s TND</span></div>
+                  <div class="row" style="border-bottom:none"><span class="lbl">Payment Date:</span><span class="val">%s</span></div>
                 </div>
                 <div class="total">
-                  <h3>💰 Montant Payé</h3><p>%s TND</p>
-                  <h3 style="margin-top:15px">⚠️ Reste à Payer</h3><p>%s TND</p>
+                  <h3>💰 Amount Paid</h3><p>%s TND</p>
+                  <h3 style="margin-top:15px">⚠️ Remaining Balance</h3><p>%s TND</p>
                 </div>
               </div>
-              <div class="f"><p><strong>Kredia Platform</strong></p><p>Email automatique — ne pas répondre.</p></div>
+              <div class="f"><p><strong>Kredia Platform</strong></p><p>Automatic email — do not reply.</p></div>
             </div></body></html>
             """,
             fullName(user), echeance.getEcheanceNumber(), dueDate, due, paidAt, paid, rem
@@ -286,19 +286,19 @@ public class MailtrapEmailService implements IEmailService {
               .f{background:#f9fafb;padding:20px 30px;text-align:center;color:#6b7280;font-size:14px}
             </style></head><body>
             <div class="c">
-              <div class="h"><h1>🚨 Avis de Retard de Paiement</h1></div>
+              <div class="h"><h1>🚨 Overdue Payment Notice</h1></div>
               <div class="b">
-                <p>Bonjour <strong>%s</strong>,</p>
-                <div class="badge">EN RETARD</div>
-                <p>Nous n'avons pas reçu le règlement intégral de votre échéance à sa date limite.</p>
+                <p>Hello <strong>%s</strong>,</p>
+                <div class="badge">OVERDUE</div>
+                <p>We have not received the full payment for your installment by its due date.</p>
                 <div class="box">
-                  <h3 style="margin-top:0;color:#1f2937">📊 Détails de l'Échéance</h3>
-                  <div class="row"><span class="lbl">Numéro:</span><span class="val">#%s</span></div>
-                  <div class="row" style="border-bottom:none"><span class="lbl">Date limite:</span><span class="val" style="color:#EF4444">%s (Dépassée)</span></div>
+                  <h3 style="margin-top:0;color:#1f2937">📊 Installment Details</h3>
+                  <div class="row"><span class="lbl">Number:</span><span class="val">#%s</span></div>
+                  <div class="row" style="border-bottom:none"><span class="lbl">Due Date:</span><span class="val" style="color:#EF4444">%s (Expired)</span></div>
                 </div>
-                <div class="total"><h3>⚠️ Montant Dû (avec pénalités)</h3><p>%s TND</p></div>
+                <div class="total"><h3>⚠️ Amount Due (including penalties)</h3><p>%s TND</p></div>
               </div>
-              <div class="f"><p><strong>Kredia Platform</strong></p><p>Email automatique — ne pas répondre.</p></div>
+              <div class="f"><p><strong>Kredia Platform</strong></p><p>Automatic email — do not reply.</p></div>
             </div></body></html>
             """,
             fullName(user), echeance.getEcheanceNumber(), dueDate, due
@@ -318,17 +318,17 @@ public class MailtrapEmailService implements IEmailService {
               .f{background:#f9fafb;padding:20px 30px;text-align:center;color:#6b7280;font-size:14px}
             </style></head><body>
             <div class="c">
-              <div class="h"><h1>❌ Opération Suspendue</h1></div>
+              <div class="h"><h1>❌ Operation Suspended</h1></div>
               <div class="b">
-                <p>Bonjour <strong>%s</strong>,</p>
-                <div class="badge">PAIEMENT BLOQUÉ</div>
-                <p>Impossible d'effectuer le paiement pour l'échéance <strong>#%s</strong>.</p>
+                <p>Hello <strong>%s</strong>,</p>
+                <div class="badge">PAYMENT BLOCKED</div>
+                <p>Payment failed for installment <strong>#%s</strong>.</p>
                 <div class="box">
-                  <h3 style="margin-top:0;color:#1f2937">⚠️ Motif du Refus</h3>
-                  <p style="color:#4b5563">Vous devez d'abord régler l'intégralité de vos échéances précédentes en retard.</p>
+                  <h3 style="margin-top:0;color:#1f2937">⚠️ Rejection Reason</h3>
+                  <p style="color:#4b5563">You must first settle all your previous overdue installments.</p>
                 </div>
               </div>
-              <div class="f"><p><strong>Kredia Platform</strong></p><p>Email automatique — ne pas répondre.</p></div>
+              <div class="f"><p><strong>Kredia Platform</strong></p><p>Automatic email — do not reply.</p></div>
             </div></body></html>
             """,
             fullName(user), echeance.getEcheanceNumber()

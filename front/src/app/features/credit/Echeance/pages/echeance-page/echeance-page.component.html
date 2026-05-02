@@ -1,198 +1,277 @@
-<section class="echeance-page">
+<div class="pub-sim">
 
-  <!-- ══════════════════════════════════════════════════════ -->
-  <!-- CASE 1: Client without filter → credit selection list  -->
-  <!-- ══════════════════════════════════════════════════════ -->
-  <ng-container *ngIf="auth.isClient() && !filterCreditId">
-    <header>
-      <h1>My Credits</h1>
-      <p>Select a credit to view and pay its installments.</p>
-    </header>
-
-    <div class="alert error" *ngIf="error">{{ error }}</div>
-    <div *ngIf="loading" class="loading-msg">Loading...</div>
-
-    <ng-container *ngIf="!loading">
-      <div *ngIf="clientCredits.length === 0" class="empty-state">
-        No active credits found.
+  <!-- ═══════════════════════════════════════════════════════════
+       HERO BAND
+  ══════════════════════════════════════════════════════════ -->
+  <header class="hero-band">
+    <div class="hero-band__inner">
+      <div class="hero-band__text">
+        <span class="hero-pill">
+          <span class="hero-pill__dot"></span>
+          {{ auth.isClient() ? 'Your Repayments' : 'Payment Oversight' }}
+        </span>
+        <h1>Installments — <br><span class="accent">{{ filterCreditId ? 'Credit #' + filterCreditId : 'Schedule' }}</span></h1>
+        <p>{{ auth.isClient() ? 'View and manage your upcoming credit payments.' : 'Monitor and audit payment schedules across all clients.' }}</p>
       </div>
 
-      <div class="credit-cards" *ngIf="clientCredits.length > 0">
-        <div class="credit-card" *ngFor="let c of clientCredits" (click)="selectCredit(c.creditId!)">
-          <div class="credit-card__id">Credit #{{ c.creditId }}</div>
-          <div class="credit-card__amount">{{ c.amount | number:'1.2-2' }}</div>
-          <div class="credit-card__info">
-            <span>{{ c.termMonths }} months</span>
-            <span>{{ getRepaymentLabel(c.repaymentType) }}</span>
-          </div>
-          <div class="credit-card__status">
-            <span [class]="'badge badge--' + (c.status ?? '').toLowerCase()">{{ c.status }}</span>
-          </div>
-          <button class="btn btn--primary">View Installments →</button>
+      <div class="hero-band__badge">
+        <div class="badge-ring">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div>
+          <span class="badge-value">{{ auth.isClient() ? 'Secure' : 'Audit' }}</span>
+          <span class="badge-label">{{ auth.isClient() ? 'Payments' : 'Compliance' }}</span>
         </div>
       </div>
-    </ng-container>
-  </ng-container>
+    </div>
+  </header>
 
-  <!-- ══════════════════════════════════════════════════════ -->
-  <!-- CASE 2: Credit selected → installments table          -->
-  <!-- ══════════════════════════════════════════════════════ -->
-  <ng-container *ngIf="filterCreditId">
-    <header>
-      <button *ngIf="auth.isClient()" class="btn btn--back" (click)="back()">← Back</button>
-      <a *ngIf="!auth.isClient()" routerLink="/credit/list" class="btn btn--back">← Back to Credits</a>
-      <div>
-        <h1>Installments — Credit #{{ filterCreditId }}</h1>
-        <p>Repayment schedule for this credit.</p>
-      </div>
-    </header>
+  <!-- ═══════════════════════════════════════════════════════════
+       CONTENT CARD
+  ══════════════════════════════════════════════════════════ -->
+  <div class="sim-card-wrapper">
 
-    <div class="filter-bar" *ngIf="!auth.isClient()">
-      <div class="filter-group">
-        <span class="filter-label">Due Date:</span>
-        <button class="sort-btn" [class.active]="dateSortOrder === 'asc'" (click)="setDateSort('asc')">↑ Ascending</button>
-        <button class="sort-btn" [class.active]="dateSortOrder === 'desc'" (click)="setDateSort('desc')">↓ Descending</button>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">Status:</span>
-        <button *ngFor="let s of statusOptions"
-          class="sort-btn status-btn"
-          [class.active]="statusFilter === s.value"
-          (click)="setStatusFilter(s.value)">
-          {{ s.label }}
-        </button>
+    <!-- ── CASE 1: Client selecting credit ────────────────── -->
+    <div *ngIf="auth.isClient() && !filterCreditId">
+      <div class="sim-card" style="padding: 40px;">
+        <div class="alert-premium error" *ngIf="error">
+          <span class="alert-icon">⚠️</span>
+          <div class="alert-content">
+            <strong>Payment Required</strong>
+            <p>{{ error }}</p>
+          </div>
+        </div>
+
+        <div class="panel-header">
+          <h2 class="panel-title">Select a Credit</h2>
+          <p class="panel-subtitle">Choose a credit to see its specific installment plan.</p>
+        </div>
+        <div *ngIf="loading" class="loading-msg">Fetching your active credits...</div>
+
+        <ng-container *ngIf="!loading">
+          <div *ngIf="clientCredits.length === 0" class="empty-state">
+            <div class="empty-state__icon">📄</div>
+            <h3>No active credits found</h3>
+            <p>You don't have any credits with active installments at the moment.</p>
+          </div>
+
+          <div class="credit-cards" *ngIf="clientCredits.length > 0">
+            <div class="credit-card" *ngFor="let c of clientCredits" (click)="selectCredit(c.creditId!)">
+              <div class="credit-card__header">
+                <span class="credit-card__id">CREDIT #{{ c.creditId }}</span>
+                <span class="status-badge" [class]="'status-badge--' + (c.status ?? '').toLowerCase()">{{ c.status }}</span>
+              </div>
+              <div class="credit-card__amount">{{ (c.amount || 0) | number:'1.2-2' }} <small>TND</small></div>
+              <div class="credit-card__meta">
+                <div class="meta-item">
+                  <span class="meta-label">Term</span>
+                  <span class="meta-value">{{ c.termMonths }} Mo.</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Type</span>
+                  <span class="meta-value">{{ getRepaymentLabel(c.repaymentType) }}</span>
+                </div>
+              </div>
+              <button class="btn-select">View Schedule →</button>
+            </div>
+          </div>
+        </ng-container>
       </div>
     </div>
 
-    <div class="alert error" *ngIf="error">{{ error }}</div>
-    <div *ngIf="loading" class="loading-msg">Loading installments...</div>
+    <!-- ── CASE 2: Credit Specific View (Client/Admin) ────── -->
+    <div *ngIf="filterCreditId">
+      <div class="sim-card" style="padding: 40px;">
+        <div class="alert-premium error" *ngIf="error">
+          <span class="alert-icon">⚠️</span>
+          <div class="alert-content">
+            <strong>Action Required</strong>
+            <p>{{ error }}</p>
+          </div>
+        </div>
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;">
+          <div>
+            <h2 class="panel-title">Payment Schedule</h2>
+            <p class="panel-subtitle">Detailed breakdown of installments for Credit #{{ filterCreditId }}</p>
+          </div>
+          <button (click)="back()" class="btn-back">
+            <span class="btn-back__icon">←</span> Back
+          </button>
+        </div>
 
-    <div class="table-wrapper" *ngIf="!loading">
-      <table *ngIf="items.length > 0">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th class="sortable-th" (click)="toggleDateSort()">
-              Due Date <span class="sort-icon">{{ dateSortOrder === 'asc' ? '↑' : '↓' }}</span>
-            </th>
-            <th>Amount Due</th>
-            <th>Amount Paid</th>
-            <th>Remaining</th>
-            <th>Status</th>
-            <th *ngIf="!auth.isClient()">ID</th>
-            <th *ngIf="auth.isClient()">Pay</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of sortedItems"
-              [class.row--paid]="item.echeance.status === 'PAID'"
-              [class.row--partial]="item.echeance.status === 'PARTIALLY_PAID'"
-              [class.row--overdue]="item.echeance.status === 'OVERDUE'">
-            <td>{{ item.echeance.echeanceNumber }}</td>
-            <td>{{ item.echeance.dueDate | date:'MM/dd/yyyy' }}</td>
-            <td><strong>{{ item.echeance.amountDue | number:'1.2-2' }}</strong></td>
-            <td>{{ item.amountPaid | number:'1.2-2' }}</td>
-            <td>{{ item.remainingAmount | number:'1.2-2' }}</td>
-            <td>
-              <span class="badge" [class]="'badge--' + item.echeance.status.toLowerCase()">
-                {{ getStatusLabel(item.echeance.status) }}
-              </span>
-            </td>
-            <td *ngIf="!auth.isClient()">#{{ item.echeance.echeanceId }}</td>
-            <td class="pay-cell" *ngIf="auth.isClient()">
-              <ng-container *ngIf="item.echeance.status !== 'PAID'; else paidTpl">
-                <input type="number" min="0.01" step="0.01"
-                  [value]="payAmounts[item.echeance.echeanceId] || ''"
-                  (input)="payAmounts[item.echeance.echeanceId] = $any($event.target).valueAsNumber"
-                  placeholder="Amount" />
-                <button class="btn primary"
-                  [disabled]="payingId === item.echeance.echeanceId"
-                  (click)="pay(item.echeance.echeanceId)">
-                  {{ payingId === item.echeance.echeanceId ? 'Sending...' : 'Pay' }}
+        <!-- Shared Filters (Client & Admin) -->
+        <div class="kyc-filter-bar" style="margin-bottom: 24px; display: flex; flex-direction: column; gap: 20px;">
+           <div class="kyc-filter-group">
+              <span class="kyc-filter-label">Sort Date:</span>
+              <div class="filter-btn-group">
+                <button class="kyc-filter-btn" [class.active]="dateSortOrder === 'asc'" (click)="setDateSort('asc')">↑ Oldest</button>
+                <button class="kyc-filter-btn" [class.active]="dateSortOrder === 'desc'" (click)="setDateSort('desc')">↓ Newest</button>
+              </div>
+           </div>
+           <div class="kyc-filter-group">
+              <span class="kyc-filter-label">Status:</span>
+              <div class="filter-btn-group">
+                <button *ngFor="let s of statusOptions" 
+                        class="kyc-filter-btn" 
+                        [class.active]="statusFilter === s.value" 
+                        [attr.data-status]="s.value"
+                        (click)="setStatusFilter(s.value)">
+                  {{ s.label }}
                 </button>
-              </ng-container>
-              <ng-template #paidTpl>
-                <span class="paid-label">✅ Settled</span>
-              </ng-template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div *ngIf="items.length === 0" class="empty-state">
-        No installments found for this credit.
+              </div>
+           </div>
+        </div>
+
+
+        <div *ngIf="loading" class="loading-msg">Loading installments...</div>
+
+        <div class="docs-table-wrap" *ngIf="!loading">
+          <table class="docs-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th class="sortable-th" (click)="toggleDateSort()">
+                  Due Date <span class="sort-icon">{{ dateSortOrder === 'asc' ? '↑' : '↓' }}</span>
+                </th>
+                <th>Amount Due</th>
+                <th>Remaining</th>
+                <th>Status</th>
+                <th *ngIf="auth.isClient()" style="text-align: right;">Pay</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of sortedItems" class="doc-row"
+                  [ngClass]="rowClass(item.echeance.status)">
+                <td><strong>{{ item.echeance.echeanceNumber }}</strong></td>
+                <td>{{ item.echeance.dueDate | date:'MM/dd/yyyy' }}</td>
+                <td><span class="amount-text">{{ item.echeance.amountDue | number:'1.2-2' }}</span></td>
+                <td>{{ item.remainingAmount | number:'1.2-2' }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="statusClass(item.echeance.status)">
+                    {{ getStatusLabel(item.echeance.status) }}
+                  </span>
+                </td>
+                <td *ngIf="auth.isClient()" style="text-align: right;" (click)="$event.stopPropagation()">
+                  <div class="pay-action" *ngIf="item.echeance.status !== 'PAID'; else paidTpl">
+                    <input type="number" class="pay-input" min="0.01" step="0.01"
+                      [value]="payAmounts[item.echeance.echeanceId] || ''"
+                      (input)="payAmounts[item.echeance.echeanceId] = $any($event.target).valueAsNumber"
+                      placeholder="Amount" />
+                    <button class="btn-pay" [disabled]="payingId === item.echeance.echeanceId" (click)="pay(item.echeance.echeanceId)">
+                      {{ payingId === item.echeance.echeanceId ? '...' : 'Pay' }}
+                    </button>
+                  </div>
+                  <ng-template #paidTpl>
+                    <span class="settled-tag">✅ Settled</span>
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div *ngIf="items.length === 0" class="empty-state">
+            <p>No installments found for this credit.</p>
+          </div>
+        </div>
       </div>
     </div>
-  </ng-container>
 
-  <!-- ══════════════════════════════════════════════════════ -->
-  <!-- CASE 3: Admin/Agent without filter → all installments  -->
-  <!-- ══════════════════════════════════════════════════════ -->
-  <ng-container *ngIf="!auth.isClient() && !filterCreditId">
-    <header>
-      <h1>All Installments</h1>
-      <p>Global view of all payment installments.</p>
-      <button
-        *ngIf="filterEcheanceId"
-        (click)="back()"
-        class="btn btn--filter-clear"
-        style="margin-top: 12px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid #3b82f6; padding: 6px 12px; border-radius: 6px; cursor: pointer;"
-      >
-        ✕ Show All Installments
-      </button>
-    </header>
+    <!-- ── CASE 3: Admin/Agent All Installments ──────────── -->
+    <div *ngIf="!auth.isClient() && !filterCreditId">
+      <div class="sim-card" style="padding: 40px;">
+        <div class="alert-premium error" *ngIf="error">
+          <span class="alert-icon">⚠️</span>
+          <div class="alert-content">
+            <strong>Payment Required</strong>
+            <p>{{ error }}</p>
+          </div>
+        </div>
 
-    <div class="filter-bar">
-      <div class="filter-group">
-        <span class="filter-label">Due Date:</span>
-        <button class="sort-btn" [class.active]="dateSortOrder === 'asc'" (click)="setDateSort('asc')">↑ Ascending</button>
-        <button class="sort-btn" [class.active]="dateSortOrder === 'desc'" (click)="setDateSort('desc')">↓ Descending</button>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">Status:</span>
-        <button *ngFor="let s of statusOptions"
-          class="sort-btn status-btn"
-          [class.active]="statusFilter === s.value"
-          (click)="setStatusFilter(s.value)">
-          {{ s.label }}
-        </button>
+        <div class="panel-header">
+          <h2 class="panel-title">Global Repayment Queue</h2>
+          <p class="panel-subtitle">Auditing all payment installments across the platform.</p>
+        </div>
+
+        <div class="kyc-filter-bar" style="margin-bottom: 24px; display: flex; flex-direction: column; gap: 16px;">
+          <!-- Row 1: Primary Controls -->
+          <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center;">
+            <div class="kyc-filter-group">
+              <span class="kyc-filter-label">Sort Date:</span>
+              <div class="filter-btn-group">
+                <button class="kyc-filter-btn" [class.active]="dateSortOrder === 'asc'" (click)="setDateSort('asc')">↑ Oldest</button>
+                <button class="kyc-filter-btn" [class.active]="dateSortOrder === 'desc'" (click)="setDateSort('desc')">↓ Newest</button>
+              </div>
+            </div>
+            <div class="kyc-filter-group">
+              <span class="kyc-filter-label">Status:</span>
+              <div class="filter-btn-group">
+                <button *ngFor="let s of statusOptions" 
+                        class="kyc-filter-btn" 
+                        [class.active]="statusFilter === s.value" 
+                        [attr.data-status]="s.value"
+                        (click)="setStatusFilter(s.value)">
+                  {{ s.label }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: ID Identifiers -->
+          <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center;" *ngIf="uniqueCreditIds.length > 0 || uniqueUserIds.length > 0">
+            <div class="kyc-filter-group" *ngIf="uniqueCreditIds.length > 0">
+              <span class="kyc-filter-label">Credit ID:</span>
+              <div class="filter-btn-group">
+                <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
+                <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn" [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+              </div>
+            </div>
+            <div class="kyc-filter-group" *ngIf="uniqueUserIds.length > 0">
+              <span class="kyc-filter-label">User ID:</span>
+              <div class="filter-btn-group">
+                <button class="kyc-filter-btn" [class.active]="userFilter === 'ALL'" (click)="setUserFilter('ALL')">All</button>
+                <button *ngFor="let id of uniqueUserIds" class="kyc-filter-btn" [class.active]="userFilter === id.toString()" (click)="setUserFilter(id.toString())">#{{ id }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="loading" class="loading-msg">Loading installment data...</div>
+
+        <div class="docs-table-wrap" *ngIf="!loading">
+          <table class="docs-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Ref</th>
+                <th>User</th>
+                <th>Due Date</th>
+                <th>Amount</th>
+                <th>Paid</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of sortedItems" class="doc-row"
+                  [ngClass]="rowClass(item.echeance.status)">
+                <td>#{{ item.echeance.echeanceId }}</td>
+                <td>Credit #{{ $any(item.echeance).creditId }} ({{ item.echeance.echeanceNumber }})</td>
+                <td><span class="user-tag">User #{{ $any(item.echeance).userId }}</span></td>
+                <td>{{ item.echeance.dueDate | date:'MM/dd/yyyy' }}</td>
+                <td><span class="amount-text">{{ item.echeance.amountDue | number:'1.2-2' }}</span></td>
+                <td>{{ item.amountPaid | number:'1.2-2' }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="statusClass(item.echeance.status)">
+                    {{ getStatusLabel(item.echeance.status) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div *ngIf="items.length === 0" class="empty-state">No installments found.</div>
+        </div>
       </div>
     </div>
 
-    <div class="alert error" *ngIf="error">{{ error }}</div>
-    <div *ngIf="loading" class="loading-msg">Loading...</div>
-
-    <div class="table-wrapper" *ngIf="!loading">
-      <table *ngIf="items.length > 0">
-        <thead>
-          <tr>
-            <th>ID</th><th>#</th>
-            <th class="sortable-th" (click)="toggleDateSort()">
-              Due Date <span class="sort-icon">{{ dateSortOrder === 'asc' ? '↑' : '↓' }}</span>
-            </th>
-            <th>Amount Due</th><th>Amount Paid</th><th>Remaining</th><th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of sortedItems"
-              [class.row--paid]="item.echeance.status === 'PAID'"
-              [class.row--partial]="item.echeance.status === 'PARTIALLY_PAID'"
-              [class.row--overdue]="item.echeance.status === 'OVERDUE'">
-            <td>#{{ item.echeance.echeanceId }}</td>
-            <td>{{ item.echeance.echeanceNumber }}</td>
-            <td>{{ item.echeance.dueDate | date:'MM/dd/yyyy' }}</td>
-            <td>{{ item.echeance.amountDue | number:'1.2-2' }}</td>
-            <td>{{ item.amountPaid | number:'1.2-2' }}</td>
-            <td>{{ item.remainingAmount | number:'1.2-2' }}</td>
-            <td>
-              <span class="badge" [class]="'badge--' + item.echeance.status.toLowerCase()">
-                {{ getStatusLabel(item.echeance.status) }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div *ngIf="items.length === 0" class="empty-state">No installments found.</div>
-    </div>
-  </ng-container>
-
-</section>
+  </div>
+</div>

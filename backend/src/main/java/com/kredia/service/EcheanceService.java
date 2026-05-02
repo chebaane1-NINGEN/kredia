@@ -349,7 +349,7 @@ public class EcheanceService {
         if (hasUnpaidPrevious) {
             dispatchRejectedChronologicalEmailSafe(echeance);
             throw new RuntimeException(
-                    "Impossible d'effectuer le paiement. Vous devez d'abord régler les échéances précédentes (en retard ou partiellement payées).");
+                    "Unable to process payment. You must first settle all previous installments that are overdue or partially paid.");
         }
 
         java.math.BigDecimal currentAmountPaid = echeance.getAmountPaid() != null ? echeance.getAmountPaid()
