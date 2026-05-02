@@ -11,7 +11,7 @@ export class WalletVm {
     return this.api.findAll();
   }
 
-  findByUser(userId: number): Observable<Wallet[]> {
+  findByUser(userId: number): Observable<Wallet | null> {
     return this.api.findByUser(userId);
   }
 

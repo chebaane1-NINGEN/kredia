@@ -210,7 +210,7 @@ export class AuthService {
   getDashboardRoute(): string {
     if (this.isAdmin()) return '/admin/analytics';
     if (this.isAgent()) return '/agent/dashboard';
-    if (this.isClient()) return '/user';
+    if (this.isClient()) return '/user/profile';
     return '/home';
   }
 }

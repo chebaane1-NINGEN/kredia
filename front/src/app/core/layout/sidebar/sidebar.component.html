@@ -26,7 +26,7 @@
           <span class="nav-icon">⊞</span>
           <span>Dashboard</span>
         </a>
-        <a routerLink="/wallet" *ngIf="authService.isClient()" routerLinkActive="active" class="nav-item">
+        <a routerLink="/user/profile" *ngIf="authService.isClient()" routerLinkActive="active" class="nav-item">
           <span class="nav-icon">⊞</span>
           <span>My Overview</span>
         </a>
@@ -78,7 +78,7 @@
       </li>
 
       <!-- WALLET -->
-      <li [class.active-parent]="expandedMenus['wallet']">
+      <li *ngIf="!authService.isClient()" [class.active-parent]="expandedMenus['wallet']">
         <a (click)="toggleMenu('wallet', $event)" class="nav-item parent-link">
           <span class="nav-icon">💳</span>
           <span>Wallet</span>

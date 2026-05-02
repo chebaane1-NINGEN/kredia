@@ -15,7 +15,7 @@
           <strong>{{ user.firstName }} {{ user.lastName }}</strong>
           <span>{{ user.role }}</span>
         </div>
-        <span *ngIf="unreadBySender.get(user.userId)" class="unread-badge">{{ unreadBySender.get(user.userId) }}</span>
+        <span *ngIf="getUnreadCountForUser(user.userId)" class="unread-badge">{{ getUnreadCountForUser(user.userId) }}</span>
       </div>
     </div>
   </div>

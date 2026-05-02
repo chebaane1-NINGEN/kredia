@@ -31,6 +31,12 @@ const checkAuth = (state?: RouterStateSnapshot): boolean => {
     return false;
   }
 
+  // Prevent registered clients from using the legacy wallet routes until the wallet module is stabilized
+  if (url.startsWith('/wallet') && auth.isClient()) {
+    router.navigate(['/user/profile']);
+    return false;
+  }
+
   return true;
 };
 

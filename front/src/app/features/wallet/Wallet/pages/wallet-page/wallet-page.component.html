@@ -90,14 +90,16 @@
     <div class="client-wallet">
       <div class="wallet-balance">
         <h3>Current Balance</h3>
-        <div class="balance-amount" *ngIf="userWallet">{{ userWallet.balance | currency:userWallet.currency:'symbol':'1.2-2' }}</div>
-        <div class="balance-amount" *ngIf="!userWallet">Loading...</div>
+        <div class="balance-amount" *ngIf="loading">Loading...</div>
+        <div class="balance-amount" *ngIf="!loading && userWallet">{{ userWallet.balance | currency:userWallet.currency:'symbol':'1.2-2' }}</div>
+        <div class="balance-amount" *ngIf="!loading && walletNotFound">No wallet has been created for your account yet.</div>
+        <div class="balance-amount" *ngIf="!loading && !userWallet && !walletNotFound">No wallet information available.</div>
       </div>
 
       <div class="wallet-actions">
-        <button class="btn primary">Add Funds</button>
-        <button class="btn secondary">Transfer</button>
-        <button class="btn secondary">View Transactions</button>
+        <button class="btn primary" [disabled]="!userWallet">Add Funds</button>
+        <button class="btn secondary" [disabled]="!userWallet">Transfer</button>
+        <button class="btn secondary" [disabled]="!userWallet">View Transactions</button>
       </div>
     </div>
   </ng-container>

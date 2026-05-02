@@ -1,24 +1,21 @@
 package com.kredia.dto.user;
 
-import java.util.HashMap;
-import java.util.Map;
+public class ScoreHistoryPointDTO {
 
-public class ClientRiskScoreDTO {
-
-    private int riskScore;
+    private String timestamp;
+    private int score;
     private int baseScore;
     private int statusBonus;
     private int suspensionPenalty;
     private int activityBonus;
     private int seniorityBonus;
-    private Map<String, Integer> breakdown;
+    private String reason;
 
-    public ClientRiskScoreDTO() {
-        this.breakdown = new HashMap<>();
-    }
+    public String getTimestamp() { return timestamp; }
+    public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
 
-    public int getRiskScore() { return riskScore; }
-    public void setRiskScore(int riskScore) { this.riskScore = riskScore; }
+    public int getScore() { return score; }
+    public void setScore(int score) { this.score = score; }
 
     public int getBaseScore() { return baseScore; }
     public void setBaseScore(int baseScore) { this.baseScore = baseScore; }
@@ -35,10 +32,6 @@ public class ClientRiskScoreDTO {
     public int getSeniorityBonus() { return seniorityBonus; }
     public void setSeniorityBonus(int seniorityBonus) { this.seniorityBonus = seniorityBonus; }
 
-    public Map<String, Integer> getBreakdown() { return breakdown; }
-    public void setBreakdown(Map<String, Integer> breakdown) { this.breakdown = breakdown; }
-    
-    public void addToBreakdown(String key, int value) {
-        this.breakdown.put(key, value);
-    }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
 }

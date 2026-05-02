@@ -7,6 +7,10 @@ import com.kredia.dto.user.AgentPerformanceDTO;
 import com.kredia.dto.user.ClientDetailsDTO;
 import com.kredia.dto.user.ClientEligibilityDTO;
 import com.kredia.dto.user.ClientRiskScoreDTO;
+import com.kredia.dto.user.FinancialMetricsDTO;
+import com.kredia.dto.user.ScoreHistoryPointDTO;
+import com.kredia.dto.user.SmartAlertDTO;
+import com.kredia.dto.user.AIInsightDTO;
 import com.kredia.dto.user.UserActivityResponseDTO;
 import com.kredia.dto.user.ClientProfileUpdateDTO;
 import com.kredia.dto.user.AdminUserUpdateDTO;
@@ -491,6 +495,15 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.clientProfile(actorId, clientId)));
     }
 
+    @PutMapping("/client/{clientId}/profile")
+    public ResponseEntity<ApiResponse<UserResponseDTO>> updateClientProfile(
+            @RequestHeader("X-Actor-Id") Long actorId,
+            @PathVariable("clientId") Long clientId,
+            @Valid @RequestBody ClientProfileUpdateDTO payload
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.updateProfile(actorId, clientId, payload)));
+    }
+
     @GetMapping("/agent/client/{clientId}")
     public ResponseEntity<ApiResponse<ClientDetailsDTO>> agentClientDetails(
             @RequestHeader("X-Actor-Id") Long actorId,
@@ -503,9 +516,39 @@ public class UserController {
     public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> clientActivity(
             @RequestHeader("X-Actor-Id") Long actorId,
             @PathVariable("clientId") Long clientId,
+            @RequestParam(name = "type", required = false) String actionType,
             @PageableDefault Pageable pageable
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.clientActivity(actorId, clientId, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(userService.clientActivity(actorId, clientId, actionType, pageable)));
+    }
+
+    @GetMapping("/client/{clientId}/score-history")
+    public ResponseEntity<ApiResponse<java.util.List<ScoreHistoryPointDTO>>> clientScoreHistory(
+            @PathVariable("clientId") Long clientId,
+            @RequestParam(name = "days", required = false, defaultValue = "90") int days
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.clientScoreHistory(clientId, days)));
+    }
+
+    @GetMapping("/client/{clientId}/financial-metrics")
+    public ResponseEntity<ApiResponse<FinancialMetricsDTO>> clientFinancialMetrics(
+            @PathVariable("clientId") Long clientId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.clientFinancialMetrics(clientId)));
+    }
+
+    @GetMapping("/client/{clientId}/alerts")
+    public ResponseEntity<ApiResponse<java.util.List<SmartAlertDTO>>> clientAlerts(
+            @PathVariable("clientId") Long clientId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.clientAlerts(clientId)));
+    }
+
+    @GetMapping("/client/{clientId}/insights")
+    public ResponseEntity<ApiResponse<java.util.List<AIInsightDTO>>> clientInsights(
+            @PathVariable("clientId") Long clientId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.clientInsights(clientId)));
     }
 
     @GetMapping("/client/{clientId}/risk-score")

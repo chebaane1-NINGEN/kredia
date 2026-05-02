@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, catchError, of } from 'rxjs';
 import { API_BASE_URL } from '../../../../core/http/api.config';
 import { Wallet } from '../models/wallet.model';
 
@@ -12,8 +12,10 @@ export class WalletApi {
     return this.http.get<Wallet[]>(`${API_BASE_URL}/api/wallets`);
   }
 
-  findByUser(userId: number): Observable<Wallet[]> {
-    return this.http.get<Wallet[]>(`${API_BASE_URL}/api/wallets/user/${userId}`);
+  findByUser(userId: number): Observable<Wallet | null> {
+    return this.http.get<Wallet>(`${API_BASE_URL}/api/wallets/user/${userId}`).pipe(
+      catchError(() => of(null))
+    );
   }
 
   freeze(id: number): Observable<Wallet> {

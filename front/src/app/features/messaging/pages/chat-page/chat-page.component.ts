@@ -117,6 +117,10 @@ export class ChatPageComponent implements OnInit, OnDestroy {
     return msg.senderId === this.auth.getCurrentUserId();
   }
 
+  getUnreadCountForUser(userId?: number): number {
+    return userId ? this.unreadBySender.get(userId) ?? 0 : 0;
+  }
+
   private pollUnread(showToast: boolean): void {
     const previousCount = this.unreadCount;
     this.messageApi.getUnreadMessages().subscribe({

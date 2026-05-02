@@ -21,6 +21,7 @@ export class WalletPageComponent implements OnInit {
   userWallet: Wallet | null = null;
   loading = false;
   error: string | null = null;
+  walletNotFound = false;
 
   ngOnInit(): void {
     if (this.authService.isAdmin()) {
@@ -49,14 +50,22 @@ export class WalletPageComponent implements OnInit {
     if (!userId) return;
 
     this.loading = true;
-    this.error   = null;
+    this.error = null;
+    this.walletNotFound = false;
     this.cdr.markForCheck();
 
     this.vm.findByUser(userId)
       .pipe(finalize(() => { this.loading = false; this.cdr.markForCheck(); }))
       .subscribe({
-        next:  (wallets) => { this.userWallet = wallets?.[0] || null; this.cdr.markForCheck(); },
-        error: ()     => { this.error = 'Unable to load wallet.'; this.cdr.markForCheck(); }
+        next: (wallet) => {
+          this.userWallet = wallet;
+          this.walletNotFound = !wallet;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.error = 'Unable to load wallet.';
+          this.cdr.markForCheck();
+        }
       });
   }
 

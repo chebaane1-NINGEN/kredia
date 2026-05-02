@@ -6,6 +6,10 @@ import com.kredia.dto.user.EnhancedAgentPerformanceDTO;
 import com.kredia.dto.user.ClientDetailsDTO;
 import com.kredia.dto.user.ClientEligibilityDTO;
 import com.kredia.dto.user.ClientRiskScoreDTO;
+import com.kredia.dto.user.FinancialMetricsDTO;
+import com.kredia.dto.user.ScoreHistoryPointDTO;
+import com.kredia.dto.user.SmartAlertDTO;
+import com.kredia.dto.user.AIInsightDTO;
 import com.kredia.dto.user.ClientProfileUpdateDTO;
 import com.kredia.dto.user.AdminUserUpdateDTO;
 import com.kredia.dto.user.EnhancedClientDTO;
@@ -89,9 +93,13 @@ public interface UserService {
     // --- Client Profile & Analytics ---
     UserResponseDTO clientProfile(Long actorId, Long clientId);
     ClientDetailsDTO agentClientDetails(Long agentId, Long clientId);
-    Page<UserActivityResponseDTO> clientActivity(Long actorId, Long clientId, Pageable pageable);
+    Page<UserActivityResponseDTO> clientActivity(Long actorId, Long clientId, String actionType, Pageable pageable);
     ClientRiskScoreDTO clientRiskScore(Long clientId);
     ClientEligibilityDTO clientEligibility(Long clientId);
+    List<ScoreHistoryPointDTO> clientScoreHistory(Long clientId, int days);
+    FinancialMetricsDTO clientFinancialMetrics(Long clientId);
+    List<SmartAlertDTO> clientAlerts(Long clientId);
+    List<AIInsightDTO> clientInsights(Long clientId);
 
     // --- Agent Client Workflow ---
     UserResponseDTO approveClient(Long agentId, Long clientId);

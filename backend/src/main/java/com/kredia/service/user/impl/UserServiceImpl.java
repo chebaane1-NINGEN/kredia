@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -1473,7 +1474,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Page<UserActivityResponseDTO> clientActivity(Long actorId, Long clientId, Pageable pageable) {
+    public Page<UserActivityResponseDTO> clientActivity(Long actorId, Long clientId, String actionType, Pageable pageable) {
         User actor = findUser(actorId);
         User client = findUser(clientId);
 
@@ -1482,7 +1483,19 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalArgumentException("Agent can only view activity for assigned clients");
             }
         }
-        return userActivityRepository.findByUserIdOrderByTimestampAsc(clientId, pageable).map(this::toActivityDto);
+
+        if (actionType == null || actionType.isBlank()) {
+            return userActivityRepository.findByUserIdOrderByTimestampAsc(clientId, pageable).map(this::toActivityDto);
+        }
+
+        UserActivityActionType filterType;
+        try {
+            filterType = UserActivityActionType.valueOf(actionType.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid activity type: " + actionType);
+        }
+
+        return userActivityRepository.findByFilters(null, filterType, clientId, null, null, pageable).map(this::toActivityDto);
     }
 
     @Override
@@ -1490,18 +1503,61 @@ public class UserServiceImpl implements UserService {
         User client = findUser(clientId);
         ClientRiskScoreDTO dto = new ClientRiskScoreDTO();
         
-        int baseScore = 30; // Starting with a "safe" score
+        // ==================== NEW FORMULA ====================
+        // Base score: 50 points
+        int baseScore = 50;
+        dto.setBaseScore(baseScore);
+        dto.addToBreakdown("BASE_SCORE", baseScore);
         
-        // Penalize for failed logins
-        long failedLogins = userActivityRepository.countByUserIdAndActionType(clientId, UserActivityActionType.FAILED_LOGIN);
-        baseScore += (int) (failedLogins * 5);
+        int totalScore = baseScore;
         
-        // Penalize for being blocked in the past
-        long blockedEvents = userActivityRepository.countByUserIdAndActionType(clientId, UserActivityActionType.ACCOUNT_BLOCKED);
-        baseScore += (int) (blockedEvents * 20);
+        // Bonus: +10 if status is ACTIVE
+        int statusBonus = 0;
+        if (client.getStatus() == UserStatus.ACTIVE) {
+            statusBonus = 10;
+            totalScore += statusBonus;
+        }
+        dto.setStatusBonus(statusBonus);
+        dto.addToBreakdown("STATUS_BONUS_ACTIVE", statusBonus);
         
-        // Cap the score
-        dto.setRiskScore(Math.min(100, baseScore));
+        // Penalty: -20 for past suspensions (count suspension events)
+        long suspensionCount = userActivityRepository.countByUserIdAndActionType(clientId, UserActivityActionType.CLIENT_SUSPENDED);
+        if (client.getStatus() == UserStatus.SUSPENDED) {
+            suspensionCount++; // Add current suspension if applicable
+        }
+        int suspensionPenalty = (int) (suspensionCount * -20);
+        totalScore += suspensionPenalty;
+        dto.setSuspensionPenalty(suspensionPenalty);
+        dto.addToBreakdown("SUSPENSION_PENALTY", suspensionPenalty);
+        dto.addToBreakdown("SUSPENSION_COUNT", (int) suspensionCount);
+        
+        // Activity bonus: +2 per recorded action (count total activities)
+        long totalActivityCount = userActivityRepository.countByUserId(clientId);
+        int activityBonus = (int) (totalActivityCount * 2);
+        totalScore += activityBonus;
+        dto.setActivityBonus(activityBonus);
+        dto.addToBreakdown("ACTIVITY_BONUS", activityBonus);
+        dto.addToBreakdown("ACTIVITY_COUNT", (int) totalActivityCount);
+        
+        // Seniority bonus: +1 per 30 days since account creation
+        java.time.Instant createdAt = client.getCreatedAt();
+        if (createdAt != null) {
+            long daysSinceCreation = java.time.temporal.ChronoUnit.DAYS.between(
+                createdAt.atZone(java.time.ZoneId.systemDefault()).toLocalDate(),
+                java.time.LocalDate.now()
+            );
+            int seniorityBonus = (int) (daysSinceCreation / 30); // 1 point per 30 days
+            totalScore += seniorityBonus;
+            dto.setSeniorityBonus(seniorityBonus);
+            dto.addToBreakdown("SENIORITY_BONUS", seniorityBonus);
+            dto.addToBreakdown("DAYS_SINCE_CREATION", (int) daysSinceCreation);
+        }
+        
+        // Cap the score between 0 and 100
+        int finalScore = Math.max(0, Math.min(100, totalScore));
+        dto.setRiskScore(finalScore);
+        dto.addToBreakdown("FINAL_SCORE", finalScore);
+        
         return dto;
     }
 
@@ -1511,11 +1567,207 @@ public class UserServiceImpl implements UserService {
         ClientEligibilityDTO dto = new ClientEligibilityDTO();
         
         ClientRiskScoreDTO risk = clientRiskScore(clientId);
-        boolean isEligible = client.getStatus() == UserStatus.ACTIVE && risk.getRiskScore() < 70;
+        
+        // Eligibility rule: score >= 60 AND status == ACTIVE
+        boolean isActive = client.getStatus() == UserStatus.ACTIVE;
+        boolean meetScore = risk.getRiskScore() >= 60;
+        boolean isEligible = meetScore && isActive;
         
         dto.setEligible(isEligible);
-        dto.setReason(isEligible ? "Client meets standard criteria." : "High risk score or inactive account.");
+        dto.setCurrentScore(risk.getRiskScore());
+        dto.setActive(isActive);
+        
+        // Build detailed reason
+        if (isEligible) {
+            dto.setReason("✓ Eligible: Account is ACTIVE and score is " + risk.getRiskScore() + "/100 (≥60)");
+            dto.setStatusReason("Status: " + client.getStatus());
+        } else {
+            StringBuilder reason = new StringBuilder("✗ Not eligible: ");
+            if (!isActive) {
+                reason.append("Account status is ").append(client.getStatus()).append(" (must be ACTIVE)");
+                dto.setStatusReason("Status: " + client.getStatus());
+                if (!meetScore) {
+                    reason.append(" AND ");
+                }
+            }
+            if (!meetScore) {
+                reason.append("Score is ").append(risk.getRiskScore()).append("/100 (below 60 threshold)");
+            }
+            dto.setReason(reason.toString());
+        }
+        
         return dto;
+    }
+
+    @Override
+    public List<ScoreHistoryPointDTO> clientScoreHistory(Long clientId, int days) {
+        User client = findUser(clientId);
+        if (days <= 0) {
+            days = 90;
+        }
+
+        Instant now = Instant.now();
+        Instant start = now.minus(days, ChronoUnit.DAYS);
+        ClientRiskScoreDTO currentRisk = clientRiskScore(clientId);
+        int points = Math.min(10, Math.max(4, days / 15));
+        long intervalSeconds = Math.max(1, Duration.between(start, now).getSeconds() / (points - 1));
+
+        List<ScoreHistoryPointDTO> history = new ArrayList<>();
+        for (int index = 0; index < points; index++) {
+            Instant windowStart = start.plusSeconds(intervalSeconds * index);
+            Instant windowEnd = index == points - 1 ? now : windowStart.plusSeconds(intervalSeconds);
+            long activityCount = userActivityRepository.countByUserIdAndTimestampBetween(clientId, windowStart, windowEnd);
+            int scoreOffset = (int) Math.max(0, activityCount * 2 - (points - 1 - index));
+            int score = Math.max(0, Math.min(100, currentRisk.getRiskScore() - ((points - 1 - index) * 2) + scoreOffset));
+
+            ScoreHistoryPointDTO point = new ScoreHistoryPointDTO();
+            point.setTimestamp(windowEnd.toString());
+            point.setScore(score);
+            point.setBaseScore(currentRisk.getBaseScore());
+            point.setStatusBonus(currentRisk.getStatusBonus());
+            point.setSuspensionPenalty(currentRisk.getSuspensionPenalty());
+            point.setActivityBonus(currentRisk.getActivityBonus());
+            point.setSeniorityBonus(currentRisk.getSeniorityBonus());
+            point.setReason("Trend estimate for the period ending " + windowEnd.toString());
+            history.add(point);
+        }
+
+        return history;
+    }
+
+    @Override
+    public FinancialMetricsDTO clientFinancialMetrics(Long clientId) {
+        User client = findUser(clientId);
+        ClientRiskScoreDTO risk = clientRiskScore(clientId);
+        List<UserActivity> activities = userActivityRepository.findByUserIdOrderByTimestampAsc(clientId);
+
+        Instant now = Instant.now();
+        int totalActivityCount = activities.size();
+        int accountAgeMonths = 0;
+        if (client.getCreatedAt() != null) {
+            accountAgeMonths = (int) ChronoUnit.MONTHS.between(
+                    client.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDate(),
+                    LocalDate.now()
+            );
+        }
+
+        int daysSinceLastActivity = 90;
+        if (!activities.isEmpty()) {
+            Instant lastActivity = activities.get(activities.size() - 1).getTimestamp();
+            daysSinceLastActivity = (int) Math.min(90, ChronoUnit.DAYS.between(lastActivity.atZone(java.time.ZoneId.systemDefault()).toLocalDate(), LocalDate.now()));
+        }
+
+        String riskLevel = risk.getRiskScore() >= 80 ? "LOW"
+                : risk.getRiskScore() >= 60 ? "MEDIUM"
+                : risk.getRiskScore() >= 40 ? "HIGH"
+                : "CRITICAL";
+
+        String activityLevel = totalActivityCount >= 20 ? "HIGH"
+                : totalActivityCount >= 5 ? "MODERATE"
+                : "LOW";
+
+        int accountHealth = Math.max(0, Math.min(100,
+                40 + (risk.getRiskScore() - 50) + Math.min(20, accountAgeMonths) + Math.min(20, totalActivityCount) - Math.min(25, daysSinceLastActivity / 2)
+        ));
+
+        FinancialMetricsDTO metrics = new FinancialMetricsDTO();
+        metrics.setAccountHealth(accountHealth);
+        metrics.setRiskLevel(riskLevel);
+        metrics.setActivityLevel(activityLevel);
+        metrics.setAccountAgeMonths(accountAgeMonths);
+        metrics.setDaysSinceLastActivity(daysSinceLastActivity);
+        metrics.setTotalActivityCount(totalActivityCount);
+        return metrics;
+    }
+
+    @Override
+    public List<SmartAlertDTO> clientAlerts(Long clientId) {
+        User client = findUser(clientId);
+        ClientRiskScoreDTO risk = clientRiskScore(clientId);
+        ClientEligibilityDTO eligibility = clientEligibility(clientId);
+
+        List<SmartAlertDTO> alerts = new ArrayList<>();
+
+        if (!eligibility.isEligible()) {
+            SmartAlertDTO alert = new SmartAlertDTO();
+            alert.setAlertId(UUID.randomUUID().toString());
+            alert.setTitle("Eligibility alert");
+            alert.setMessage(eligibility.getReason());
+            alert.setSeverity(risk.getRiskScore() >= 60 ? "WARNING" : "DANGER");
+            alert.setType("ELIGIBILITY_CHANGE");
+            alert.setTimestamp(Instant.now().toString());
+            alert.setActionUrl("/support/eligibility-help");
+            alert.setDismissed(false);
+            alerts.add(alert);
+        }
+
+        if (client.getStatus() != UserStatus.ACTIVE) {
+            SmartAlertDTO statusAlert = new SmartAlertDTO();
+            statusAlert.setAlertId(UUID.randomUUID().toString());
+            statusAlert.setTitle("Status update");
+            statusAlert.setMessage("Your account status is " + client.getStatus() + ". Review any required action.");
+            statusAlert.setSeverity("INFO");
+            statusAlert.setType("STATUS_CHANGE");
+            statusAlert.setTimestamp(Instant.now().toString());
+            statusAlert.setActionUrl("/profile/status");
+            statusAlert.setDismissed(false);
+            alerts.add(statusAlert);
+        }
+
+        if (alerts.isEmpty()) {
+            SmartAlertDTO defaultAlert = new SmartAlertDTO();
+            defaultAlert.setAlertId(UUID.randomUUID().toString());
+            defaultAlert.setTitle("No current alerts");
+            defaultAlert.setMessage("Your account is in good standing.");
+            defaultAlert.setSeverity("INFO");
+            defaultAlert.setType("SCORE_CHANGE");
+            defaultAlert.setTimestamp(Instant.now().toString());
+            defaultAlert.setDismissed(false);
+            alerts.add(defaultAlert);
+        }
+
+        return alerts;
+    }
+
+    @Override
+    public List<AIInsightDTO> clientInsights(Long clientId) {
+        User client = findUser(clientId);
+        ClientRiskScoreDTO risk = clientRiskScore(clientId);
+        FinancialMetricsDTO metrics = clientFinancialMetrics(clientId);
+
+        List<AIInsightDTO> insights = new ArrayList<>();
+
+        AIInsightDTO scoreInsight = new AIInsightDTO();
+        scoreInsight.setInsightId(UUID.randomUUID().toString());
+        scoreInsight.setCategory("SCORE_DRIVER");
+        scoreInsight.setTitle("Score performance summary");
+        scoreInsight.setMessage("Your financial score is " + risk.getRiskScore() + ". Continue maintaining good activity.");
+        scoreInsight.setConfidence(85);
+        scoreInsight.setActionable(true);
+        scoreInsight.setSuggestedAction(risk.getRiskScore() >= 60 ? "Keep your account activity steady." : "Increase activity and review your profile details.");
+        insights.add(scoreInsight);
+
+        AIInsightDTO activityInsight = new AIInsightDTO();
+        activityInsight.setInsightId(UUID.randomUUID().toString());
+        activityInsight.setCategory("BEHAVIOR");
+        activityInsight.setTitle("Activity insight");
+        activityInsight.setMessage(totalActivityCountDescription(metrics.getTotalActivityCount()));
+        activityInsight.setConfidence(75);
+        activityInsight.setActionable(true);
+        activityInsight.setSuggestedAction(metrics.getTotalActivityCount() < 5 ? "Perform more actions to build your history." : "Keep up your current activity level." );
+        insights.add(activityInsight);
+
+        return insights;
+    }
+
+    private String totalActivityCountDescription(int totalActivityCount) {
+        if (totalActivityCount >= 20) {
+            return "You have a strong activity history with " + totalActivityCount + " recorded actions.";
+        }
+        if (totalActivityCount >= 5) {
+            return "Your activity history is moderate with " + totalActivityCount + " recorded actions.";
+        }
+        return "Your activity history is limited with only " + totalActivityCount + " actions recorded.";
     }
 
     // --- Helpers ---

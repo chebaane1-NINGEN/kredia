@@ -122,7 +122,7 @@ export class RegisterComponent {
           return;
         }
 
-        this.router.navigateByUrl('/user');
+        this.router.navigateByUrl('/user/profile');
       },
       error: (err) => {
         this.loading = false;
