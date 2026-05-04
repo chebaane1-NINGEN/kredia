@@ -1,20 +1,24 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { AuditService, AuditLogDTO, AuditLogFilter, AuditLogSummary } from '../../../../core/services/audit.service';
 
 @Component({
   selector: 'app-admin-audit-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './admin-audit-page.component.html',
-  styleUrls: ['./admin-audit-page.component.scss']
+  styleUrls: ['./admin-audit-page.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminAuditPageComponent implements OnInit {
   auditLogs: AuditLogDTO[] = [];
   summary: AuditLogSummary | null = null;
   selectedLog: AuditLogDTO | null = null;
-  showModal = false;
+  showDetailsModal = false;
+  showFiltersModal = false;
+  loading = false;
+  error: string | null = null;
 
   currentPage = 0;
   totalPages = 0;
@@ -27,42 +31,110 @@ export class AdminAuditPageComponent implements OnInit {
     sortDirection: 'DESC'
   };
 
-  constructor(private auditService: AuditService) {}
+  // Modal filter form
+  filterForm!: FormGroup;
+
+  constructor(
+    private auditService: AuditService,
+    private fb: FormBuilder,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
-    this.loadSummary();
-    this.loadAuditLogs();
+    this.initializeFilterForm();
+    this.loadData();
   }
 
-  loadSummary(): void {
-    this.auditService.getAuditSummary().subscribe({
-      next: (summary) => {
-        this.summary = summary;
-      },
-      error: (error) => {
-        console.error('Failed to load audit summary:', error);
-      }
+  private initializeFilterForm(): void {
+    this.filterForm = this.fb.group({
+      actionType: [''],
+      severity: [''],
+      status: [''],
+      startDate: [''],
+      endDate: [''],
+      actorId: [''],
+      ipAddress: ['']
     });
   }
 
-  loadAuditLogs(): void {
-    this.auditService.getAuditLogs(this.filters).subscribe({
-      next: (response) => {
-        this.auditLogs = response.content;
-        this.currentPage = this.filters.page || 0;
-        this.totalPages = response.totalPages;
-        this.totalElements = response.totalElements;
-      },
-      error: (error) => {
-        console.error('Failed to load audit logs:', error);
-        this.auditLogs = [];
-      }
+  private loadData(): void {
+    this.loading = true;
+    this.error = null;
+
+    // Run both requests in parallel
+    Promise.all([
+      this.loadSummaryAsync(),
+      this.loadAuditLogsAsync()
+    ]).finally(() => {
+      this.loading = false;
+      this.cdr.markForCheck();
     });
+  }
+
+  private loadSummaryAsync(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      this.auditService.getAuditSummary().subscribe({
+        next: (summary) => {
+          this.summary = summary;
+          resolve();
+        },
+        error: (error) => {
+          console.error('Failed to load audit summary:', error);
+          this.error = 'Failed to load summary metrics';
+          resolve();
+        }
+      });
+    });
+  }
+
+  private loadAuditLogsAsync(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      this.auditService.getAuditLogs(this.filters).subscribe({
+        next: (response) => {
+          this.auditLogs = response.content || [];
+          this.currentPage = this.filters.page || 0;
+          this.totalPages = response.totalPages || 0;
+          this.totalElements = response.totalElements || 0;
+          this.error = null;
+          resolve();
+        },
+        error: (error) => {
+          console.error('Failed to load audit logs:', error);
+          this.auditLogs = [];
+          this.error = 'Failed to load audit logs';
+          resolve();
+        }
+      });
+    });
+  }
+
+  openFiltersModal(): void {
+    this.showFiltersModal = true;
+  }
+
+  closeFiltersModal(): void {
+    this.showFiltersModal = false;
   }
 
   applyFilters(): void {
-    this.filters.page = 0; // Reset to first page
-    this.loadAuditLogs();
+    const formValues = this.filterForm.value;
+    
+    // Update filters with form values
+    this.filters = {
+      ...this.filters,
+      page: 0,
+      actionType: formValues.actionType || undefined,
+      severity: formValues.severity || undefined,
+      status: formValues.status || undefined,
+      startDate: formValues.startDate || undefined,
+      endDate: formValues.endDate || undefined,
+      actorId: formValues.actorId ? parseInt(formValues.actorId, 10) : undefined,
+      ipAddress: formValues.ipAddress || undefined
+    };
+
+    this.closeFiltersModal();
+    this.loadData();
+    this.cdr.markForCheck();
   }
 
   resetFilters(): void {
@@ -72,7 +144,11 @@ export class AdminAuditPageComponent implements OnInit {
       sortBy: 'timestamp',
       sortDirection: 'DESC'
     };
-    this.loadAuditLogs();
+    
+    this.filterForm.reset();
+    this.closeFiltersModal();
+    this.loadData();
+    this.cdr.markForCheck();
   }
 
   sortBy(field: string): void {
@@ -87,7 +163,12 @@ export class AdminAuditPageComponent implements OnInit {
 
   goToPage(page: number): void {
     this.filters.page = page;
-    this.loadAuditLogs();
+    this.loadAuditLogsAsync().then(() => this.cdr.markForCheck());
+  }
+
+  changePageSize(): void {
+    this.filters.page = 0;
+    this.loadAuditLogsAsync().then(() => this.cdr.markForCheck());
   }
 
   selectLog(log: AuditLogDTO): void {
@@ -96,11 +177,11 @@ export class AdminAuditPageComponent implements OnInit {
 
   viewDetails(log: AuditLogDTO): void {
     this.selectedLog = log;
-    this.showModal = true;
+    this.showDetailsModal = true;
   }
 
-  closeModal(): void {
-    this.showModal = false;
+  closeDetailsModal(): void {
+    this.showDetailsModal = false;
     this.selectedLog = null;
   }
 
@@ -171,5 +252,24 @@ export class AdminAuditPageComponent implements OnInit {
       'CRITICAL': 'critical'
     };
     return severityClasses[severity] || 'default';
+  }
+
+  getFilterSummary(): string {
+    const activeFilters: string[] = [];
+    if (this.filters.actionType) activeFilters.push(`Action: ${this.filters.actionType}`);
+    if (this.filters.severity) activeFilters.push(`Severity: ${this.filters.severity}`);
+    if (this.filters.status) activeFilters.push(`Status: ${this.filters.status}`);
+    if (this.filters.startDate) activeFilters.push(`From: ${this.filters.startDate}`);
+    if (this.filters.endDate) activeFilters.push(`To: ${this.filters.endDate}`);
+    if (this.filters.actorId) activeFilters.push(`Actor: ${this.filters.actorId}`);
+    if (this.filters.ipAddress) activeFilters.push(`IP: ${this.filters.ipAddress}`);
+    
+    return activeFilters.length > 0 ? activeFilters.join(' | ') : 'No filters active';
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(this.filters.actionType || this.filters.severity || this.filters.status || 
+              this.filters.startDate || this.filters.endDate || this.filters.actorId || 
+              this.filters.ipAddress);
   }
 }

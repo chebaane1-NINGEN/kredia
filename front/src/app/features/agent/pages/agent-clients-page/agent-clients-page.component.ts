@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, HostListener, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,8 +11,9 @@ import { NotificationService } from '../../../../core/services/notification.serv
 @Component({
   standalone: true,
   imports: [CommonModule, FormsModule],
+  selector: 'app-agent-clients-page',
   templateUrl: './agent-clients-page.component.html',
-  styleUrl: './agent-clients-page.component.scss',
+  styleUrls: ['./agent-clients-page.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AgentClientsPageComponent implements OnInit {
@@ -22,43 +23,53 @@ export class AgentClientsPageComponent implements OnInit {
   private readonly notify = inject(NotificationService);
 
   clients: AgentClient[] = [];
-  loading = true;
+  loading = false;
   error: string | null = null;
   actionLoadingId: number | null = null;
 
-  // Filters
-  searchEmail = '';
-  selectedStatuses: string[] = [];
-  selectedPriorities: string[] = [];
-  availableStatuses = ['PENDING_VERIFICATION', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'BLOCKED'];
-  availablePriorities = ['HIGH', 'MEDIUM', 'LOW'];
-  startDate = '';
-  endDate = '';
+  filterSearch = '';
+  filterStatuses: string[] = [];
+  filterPriorities: string[] = [];
+  filterCreatedFrom = '';
+  filterCreatedTo = '';
+  filterRiskMin: number | null = null;
+  filterRiskMax: number | null = null;
   sortBy = 'priorityScore';
   sortDirection: 'asc' | 'desc' = 'desc';
 
-  // Dropdown states
-  statusDropdownOpen = false;
-  priorityDropdownOpen = false;
-
-  // Modal states
-  showAddClientModal = false;
-  showViewClientModal = false;
-  showEditClientModal = false;
-  addClientLoading = false;
-  addClientError: string | null = null;
-  viewClientLoading = false;
-  editClientLoading = false;
-
-  // Selected client for modals
-  selectedClient: AgentClient | null = null;
-  newClient: Partial<AgentClient> = {};
-
-  // Pagination
   currentPage = 0;
   pageSize = 50;
-  totalPages = 0;
+  pageSizeOptions = [25, 50, 100, 200];
   totalElements = 0;
+  totalPages = 1;
+
+  filterModalOpen = false;
+  confirmModalOpen = false;
+  confirmActionType: 'approve' | 'suspend' | 'reject' | null = null;
+  confirmReason = '';
+  selectedActionClient: AgentClient | null = null;
+  showViewClientModal = false;
+  selectedClient: AgentClient | null = null;
+
+  // Add Client modal state
+  showAddClientModal = false;
+  newClientForm = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    password: '',
+    status: 'ACTIVE',
+    dateOfBirth: '',
+    address: '',
+    gender: ''
+  };
+  addClientLoading = false;
+  addClientError: string | null = null;
+  addClientSuccess = false;
+
+  availableStatuses = ['PENDING_VERIFICATION', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'BLOCKED'];
+  availablePriorities = ['HIGH', 'MEDIUM', 'LOW'];
 
   ngOnInit(): void {
     this.loadClients();
@@ -69,164 +80,141 @@ export class AgentClientsPageComponent implements OnInit {
     this.error = null;
     this.cdr.markForCheck();
 
+    const searchParam = this.filterSearch.trim() || undefined;
+    const statusesParam = this.filterStatuses.length > 0 ? this.filterStatuses.join(',') : undefined;
+    const prioritiesParam = this.filterPriorities.length > 0 ? this.filterPriorities.join(',') : undefined;
+    const startDate = this.filterCreatedFrom || undefined;
+    const endDate = this.filterCreatedTo || undefined;
+
     this.api.getClients(
-      this.searchEmail || undefined,
-      this.selectedStatuses.length > 0 ? this.selectedStatuses.join(',') : undefined,
+      searchParam,
+      statusesParam,
       this.currentPage,
       this.pageSize,
       this.sortBy,
       this.sortDirection,
-      this.startDate || undefined,
-      this.endDate || undefined,
-      this.selectedPriorities.length > 0 ? this.selectedPriorities.join(',') : undefined
+      startDate,
+      endDate,
+      prioritiesParam
     )
-    .pipe(finalize(() => {
-      this.loading = false;
-      this.cdr.markForCheck();
-    }))
-    .subscribe({
-      next: (response: PageResponse<AgentClient>) => {
-        this.clients = response.content || [];
-        this.totalPages = response.totalPages || 0;
-        this.totalElements = response.totalElements || 0;
-      },
-      error: (err) => {
-        console.error('Load clients error:', err);
-        this.error = this.getErrorMessage(err);
-      }
-    });
-  }
-
-  private getErrorMessage(err: any): string {
-    if (err.error?.message) return err.error.message;
-    if (err.status === 403) return 'Access denied. You do not have permission to view clients.';
-    if (err.status === 404) return 'Clients endpoint not found.';
-    return 'Failed to load clients. Please try again later.';
-  }
-
-  // Modal operations
-  openAddClientModal(): void {
-    this.showAddClientModal = true;
-    this.newClient = { status: 'PENDING_VERIFICATION', role: 'CLIENT', priorityScore: 50 } as Partial<AgentClient>;
-    this.addClientError = null;
-    this.cdr.markForCheck();
-  }
-
-  closeAddClientModal(): void {
-    this.showAddClientModal = false;
-    this.addClientError = null;
-    this.cdr.markForCheck();
-  }
-
-  closeEditClientModal(): void {
-    this.showEditClientModal = false;
-    this.selectedClient = null;
-    this.cdr.markForCheck();
-  }
-
-  closeViewClientModal(): void {
-    this.showViewClientModal = false;
-    this.selectedClient = null;
-    this.cdr.markForCheck();
-  }
-
-  onAddClientSubmit(formData: any): void {
-    this.addClientLoading = true;
-    this.addClientError = null;
-    this.cdr.markForCheck();
-
-    this.api.createClient(formData)
       .pipe(finalize(() => {
-        this.addClientLoading = false;
+        this.loading = false;
         this.cdr.markForCheck();
       }))
       .subscribe({
-        next: () => {
-          this.notify.success('Success', 'Client added successfully');
-          this.closeAddClientModal();
-          this.currentPage = 0;
-          this.loadClients();
+        next: (response: PageResponse<AgentClient>) => {
+          this.clients = response.content || [];
+          this.totalElements = response.totalElements || 0;
+          this.totalPages = response.totalPages || 1;
+          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.addClientError = err.error?.message || 'Failed to add client';
-          console.error('Add client error:', err);
+          console.error('Agent clients load error', err);
+          this.error = this.getErrorMessage(err);
+          this.cdr.markForCheck();
         }
       });
   }
 
-  // Filter operations
+  private getErrorMessage(err: any): string {
+    if (err?.error?.message) {
+      return err.error.message;
+    }
+    if (err?.status === 403) {
+      return 'Access denied. You do not have permission to view these clients.';
+    }
+    if (err?.status === 404) {
+      return 'Agent clients endpoint was not found.';
+    }
+    return 'Unable to load clients right now. Try again in a moment.';
+  }
+
   refreshClients(): void {
     this.currentPage = 0;
     this.loadClients();
   }
 
+  onSearchInput(value: string): void {
+    this.filterSearch = value;
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
+  clearSearch(): void {
+    this.filterSearch = '';
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
+  openFilterModal(): void {
+    this.filterModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeFilterModal(): void {
+    this.filterModalOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  isFiltered(): boolean {
+    return !!(
+      this.filterSearch ||
+      this.filterStatuses.length > 0 ||
+      this.filterPriorities.length > 0 ||
+      this.filterCreatedFrom ||
+      this.filterCreatedTo ||
+      this.filterRiskMin !== null ||
+      this.filterRiskMax !== null
+    );
+  }
+
+  getFilterSummary(): string {
+    const parts: string[] = [];
+    if (this.filterSearch) {
+      parts.push(`Search: "${this.filterSearch}"`);
+    }
+    if (this.filterStatuses.length) {
+      parts.push(`Status: ${this.filterStatuses.join(', ')}`);
+    }
+    if (this.filterPriorities.length) {
+      parts.push(`Priority: ${this.filterPriorities.join(', ')}`);
+    }
+    if (this.filterCreatedFrom || this.filterCreatedTo) {
+      parts.push(`Created: ${this.filterCreatedFrom || 'Any'} → ${this.filterCreatedTo || 'Any'}`);
+    }
+    if (this.filterRiskMin !== null || this.filterRiskMax !== null) {
+      parts.push(`Risk: ${this.filterRiskMin ?? 0}% → ${this.filterRiskMax ?? 100}%`);
+    }
+    return parts.join(' • ');
+  }
+
+  applyFilters(): void {
+    this.currentPage = 0;
+    this.loadClients();
+    this.closeFilterModal();
+  }
+
   clearFilters(): void {
-    this.searchEmail = '';
-    this.selectedStatuses = [];
-    this.selectedPriorities = [];
-    this.startDate = '';
-    this.endDate = '';
+    this.filterSearch = '';
+    this.filterStatuses = [];
+    this.filterPriorities = [];
+    this.filterCreatedFrom = '';
+    this.filterCreatedTo = '';
+    this.filterRiskMin = null;
+    this.filterRiskMax = null;
     this.currentPage = 0;
     this.loadClients();
+    this.closeFilterModal();
   }
 
-  onSearch(): void {
-    this.currentPage = 0;
-    this.loadClients();
-  }
-
-  onStatusFilter(): void {
-    this.currentPage = 0;
-    this.loadClients();
-  }
-
-  onPriorityFilter(): void {
-    this.currentPage = 0;
-    this.loadClients();
-  }
-
-  onDateFilter(): void {
-    this.currentPage = 0;
-    this.loadClients();
-  }
-
-  toggleStatusDropdown(): void {
-    this.statusDropdownOpen = !this.statusDropdownOpen;
-    this.priorityDropdownOpen = false;
-  }
-
-  togglePriorityDropdown(): void {
-    this.priorityDropdownOpen = !this.priorityDropdownOpen;
-    this.statusDropdownOpen = false;
-  }
-
-  onStatusChange(status: string, event: Event): void {
-    const target = event.target as HTMLInputElement;
-    if (target.checked) {
-      this.selectedStatuses.push(status);
+  toggleFilterValue(list: string[], value: string): void {
+    const index = list.indexOf(value);
+    if (index === -1) {
+      list.push(value);
     } else {
-      this.selectedStatuses = this.selectedStatuses.filter(s => s !== status);
+      list.splice(index, 1);
     }
-    this.onStatusFilter();
-  }
-
-  onPriorityChange(priority: string, event: Event): void {
-    const target = event.target as HTMLInputElement;
-    if (target.checked) {
-      this.selectedPriorities.push(priority);
-    } else {
-      this.selectedPriorities = this.selectedPriorities.filter(p => p !== priority);
-    }
-    this.onPriorityFilter();
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.multi-select')) {
-      this.statusDropdownOpen = false;
-      this.priorityDropdownOpen = false;
-    }
+    this.cdr.markForCheck();
   }
 
   onSortChange(sortBy: string): void {
@@ -241,209 +229,208 @@ export class AgentClientsPageComponent implements OnInit {
   }
 
   onPageChange(page: number): void {
-    if (page >= 0 && page < this.totalPages) {
-      this.currentPage = page;
-      this.loadClients();
+    if (page < 0 || page >= this.totalPages) {
+      return;
     }
+    this.currentPage = page;
+    this.loadClients();
   }
 
-  // Client actions
+  onPageSizeChange(): void {
+    this.currentPage = 0;
+    this.loadClients();
+  }
+
   viewClientDetails(client: AgentClient): void {
-    this.selectedClient = client;
     this.showViewClientModal = true;
-    this.viewClientLoading = true;
+    this.selectedClient = client;
     this.cdr.markForCheck();
 
     this.api.getClientDetails(client.userId)
-      .pipe(finalize(() => {
-        this.viewClientLoading = false;
-        this.cdr.markForCheck();
-      }))
+      .pipe(finalize(() => this.cdr.markForCheck()))
       .subscribe({
         next: (details) => {
           this.selectedClient = { ...client, ...details };
         },
         error: (err) => {
-          this.notify.error('Error', 'Failed to load client details');
+          this.notify.error('Error', 'Failed to load client details.');
           this.closeViewClientModal();
         }
       });
   }
 
-  approveClient(client: AgentClient, event: Event): void {
-    event.stopPropagation();
-    this.actionLoadingId = client.userId;
+  closeViewClientModal(): void {
+    this.showViewClientModal = false;
+    this.selectedClient = null;
+    this.cdr.markForCheck();
+  }
+
+  openConfirm(actionType: 'approve' | 'suspend' | 'reject', client: AgentClient): void {
+    this.confirmActionType = actionType;
+    this.selectedActionClient = client;
+    this.confirmReason = '';
+    this.confirmModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeConfirm(): void {
+    this.confirmModalOpen = false;
+    this.selectedActionClient = null;
+    this.confirmReason = '';
+    this.cdr.markForCheck();
+  }
+
+  confirmAction(): void {
+    if (!this.selectedActionClient || !this.confirmActionType) {
+      return;
+    }
+
+    this.actionLoadingId = this.selectedActionClient.userId;
     this.cdr.markForCheck();
 
-    this.api.approveClient(client.userId)
-      .pipe(finalize(() => {
-        this.actionLoadingId = null;
-        this.cdr.markForCheck();
-      }))
-      .subscribe({
-        next: () => {
-          this.notify.success('Success', `${client.firstName} approved successfully`);
-          this.loadClients();
-        },
-        error: (err) => {
-          this.notify.error('Error', 'Failed to approve client: ' + (err.error?.message || 'Unknown error'));
-        }
-      });
-  }
+    let actionCall = this.api.approveClient(this.selectedActionClient.userId);
+    let successMessage = 'Client updated successfully.';
 
-  rejectClient(client: AgentClient, event: Event): void {
-    event.stopPropagation();
-    const reason = prompt('Please provide a reason for rejection:');
-    if (!reason) return;
+    if (this.confirmActionType === 'suspend') {
+      actionCall = this.api.suspendClient(this.selectedActionClient.userId, this.confirmReason || undefined);
+      successMessage = 'Client suspended successfully.';
+    } else if (this.confirmActionType === 'reject') {
+      actionCall = this.api.rejectClient(this.selectedActionClient.userId, this.confirmReason || undefined);
+      successMessage = 'Client rejected successfully.';
+    }
 
-    this.actionLoadingId = client.userId;
-    this.cdr.markForCheck();
-
-    this.api.rejectClient(client.userId, reason)
-      .pipe(finalize(() => {
-        this.actionLoadingId = null;
-        this.cdr.markForCheck();
-      }))
-      .subscribe({
-        next: () => {
-          this.notify.success('Success', `${client.firstName} rejected`);
-          this.loadClients();
-        },
-        error: (err) => {
-          this.notify.error('Error', 'Failed to reject client: ' + (err.error?.message || 'Unknown error'));
-        }
-      });
-  }
-
-  getPriorityBadgeClass(score?: number): string {
-    if (!score) return 'priority-unknown';
-    if (score >= 80) return 'priority-high';
-    if (score >= 50) return 'priority-medium';
-    return 'priority-low';
-  }
-
-  getPriorityCategory(score?: number): string {
-    if (!score) return 'LOW';
-    if (score >= 80) return 'HIGH';
-    if (score >= 50) return 'MEDIUM';
-    return 'LOW';
-  }
-
-  getStatusBadgeClass(status: string): string {
-    return `status-${status.toLowerCase().replace('_', '-')}`;
-  }
-
-  // Missing methods called from template
-  createClient(): void {
-    this.openAddClientModal();
-  }
-
-  getVisibleClients(): AgentClient[] {
-    return this.clients.filter(client => {
-      if (this.selectedPriorities.length === 0) {
-        return true;
+    actionCall.pipe(finalize(() => {
+      this.actionLoadingId = null;
+      this.closeConfirm();
+      this.cdr.markForCheck();
+    }))
+    .subscribe({
+      next: () => {
+        this.notify.success('Success', successMessage);
+        this.loadClients();
+      },
+      error: (err) => {
+        this.notify.error('Error', err?.error?.message || 'Unable to perform this action.');
       }
-      return this.selectedPriorities.includes(this.getPriorityCategory(client.priorityScore));
     });
   }
 
-  getPriorityClass(score?: number): string {
-    if (!score) return 'priority-low';
-    if (score >= 80) return 'priority-high';
-    if (score >= 50) return 'priority-medium';
-    return 'priority-low';
-  }
-
-  editClient(client: AgentClient): void {
-    this.selectedClient = { ...client };
-    this.showEditClientModal = true;
+  createClient(): void {
+    this.showAddClientModal = true;
+    this.addClientError = null;
+    this.addClientSuccess = false;
+    this.newClientForm = {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phoneNumber: '',
+      password: '',
+      status: 'ACTIVE',
+      dateOfBirth: '',
+      address: '',
+      gender: ''
+    };
     this.cdr.markForCheck();
   }
 
-  suspendClient(client: AgentClient): void {
-    if (!client.userId) return;
-    const reason = prompt('Reason for suspension (optional):');
-    this.actionLoadingId = client.userId;
-    this.api.suspendClient(client.userId, reason || undefined)
-      .pipe(finalize(() => {
-        this.actionLoadingId = null;
-        this.cdr.markForCheck();
-      }))
-      .subscribe({
-        next: () => this.loadClients(),
-        error: (err) => {
-          this.error = 'Failed to suspend client';
-          console.error('Suspend client error:', err);
-        }
-      });
+  closeAddClientModal(): void {
+    this.showAddClientModal = false;
+    this.addClientError = null;
+    this.addClientSuccess = false;
+    this.cdr.markForCheck();
+  }
+
+  validateAddClientForm(): string | null {
+    if (!this.newClientForm.firstName?.trim()) {
+      return 'First name is required.';
+    }
+    if (!this.newClientForm.lastName?.trim()) {
+      return 'Last name is required.';
+    }
+    if (!this.newClientForm.email?.trim()) {
+      return 'Email is required.';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(this.newClientForm.email)) {
+      return 'Please enter a valid email address.';
+    }
+    if (!this.newClientForm.phoneNumber?.trim()) {
+      return 'Phone number is required.';
+    }
+    if (!this.newClientForm.password) {
+      return 'Password is required.';
+    }
+    if (this.newClientForm.password.length < 8) {
+      return 'Password must be at least 8 characters long.';
+    }
+    return null;
   }
 
   submitAddClient(): void {
-    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.newClient.email || '');
-    const passwordValid = !!this.newClient.password && this.newClient.password.length >= 8;
-    if (!this.newClient.firstName || !this.newClient.lastName || !this.newClient.email || !this.newClient.phoneNumber || !emailValid || !passwordValid) {
-      this.addClientError = 'First name, last name, valid email, phone number, and an 8+ character password are required.';
+    const validationError = this.validateAddClientForm();
+    if (validationError) {
+      this.addClientError = validationError;
+      this.cdr.markForCheck();
       return;
     }
 
     this.addClientLoading = true;
     this.addClientError = null;
+    this.cdr.markForCheck();
 
-    this.api.createClient(this.newClient)
+    this.api.createClient(this.newClientForm as Partial<AgentClient>)
       .pipe(finalize(() => {
         this.addClientLoading = false;
         this.cdr.markForCheck();
       }))
       .subscribe({
         next: () => {
-          this.notify.success('Success', 'Client created and assigned to you');
+          this.notify.success('Success', 'Client created successfully!');
           this.closeAddClientModal();
-          this.newClient = {};
           this.currentPage = 0;
           this.loadClients();
         },
         error: (err) => {
-          console.error('Create client error:', err);
-          if (err.error && err.error.message) {
-            this.addClientError = err.error.message;
-          } else if (err.status === 400) {
-            this.addClientError = 'Invalid client data. Please check the form and try again.';
-          } else if (err.status === 409) {
-            this.addClientError = 'A client with this email or phone number already exists.';
-          } else if (err.status === 403) {
-            this.addClientError = 'You do not have permission to create clients.';
-          } else {
-            this.addClientError = 'Failed to create client. Please try again later.';
-          }
+          const errMessage = err?.error?.message || 'Failed to create client.';
+          this.addClientError = errMessage;
         }
       });
   }
 
-  saveEditedClient(): void {
-    if (!this.selectedClient || !this.selectedClient.userId) return;
-    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.selectedClient.email || '');
-    if (!this.selectedClient.firstName || !this.selectedClient.lastName || !this.selectedClient.email || !emailValid) {
-      this.notify.error('Validation', 'First name, last name, and a valid email are required');
-      return;
+  editClient(client: AgentClient): void {
+    this.notify.info('Info', 'Edit client flow is not available in this view yet.');
+  }
+
+  getStatusBadgeClass(status: string): string {
+    if (!status) {
+      return 'status-unknown';
     }
+    return `status-${status.toLowerCase().replace(/_/g, '-')}`;
+  }
 
-    this.editClientLoading = true;
-    this.cdr.markForCheck();
+  getPriorityClass(score?: number): string {
+    if (score === undefined || score === null) {
+      return 'priority-low';
+    }
+    if (score >= 80) {
+      return 'priority-high';
+    }
+    if (score >= 50) {
+      return 'priority-medium';
+    }
+    return 'priority-low';
+  }
 
-    this.api.updateClient(this.selectedClient.userId, this.selectedClient)
-      .pipe(finalize(() => {
-        this.editClientLoading = false;
-        this.cdr.markForCheck();
-      }))
-      .subscribe({
-        next: () => {
-          this.notify.success('Success', 'Client profile updated');
-          this.closeEditClientModal();
-          this.loadClients();
-        },
-        error: (err) => {
-          this.notify.error('Error', 'Failed to update client: ' + (err.error?.message || 'Unknown error'));
-        }
-      });
+  getPriorityLabel(score?: number): string {
+    if (score === undefined || score === null) {
+      return 'LOW';
+    }
+    if (score >= 80) {
+      return 'HIGH';
+    }
+    if (score >= 50) {
+      return 'MEDIUM';
+    }
+    return 'LOW';
   }
 }

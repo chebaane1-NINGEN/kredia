@@ -1,497 +1,383 @@
-<section class="agent-clients-page">
-  <div class="topbar">
-    <div class="topbar__title">
+<div class="agent-clients-page">
+  <div class="page-header">
+    <div>
       <p class="eyebrow">Agent Dashboard</p>
       <h1>My Clients</h1>
-      <p class="description">Review client status, performance, and history with the same clarity as the Admin console.</p>
+      <p class="description">Enterprise-ready client management for your assigned portfolio and company-wide client base.</p>
     </div>
-    <div class="topbar__actions">
-      <button type="button" class="btn ghost" (click)="refreshClients()">Refresh</button>
-      <button type="button" class="btn primary" (click)="createClient()">+ New Client</button>
+
+    <div class="header-actions">
+      <button type="button" class="btn ghost" (click)="refreshClients()">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
+      <button type="button" class="btn secondary" (click)="openFilterModal()">
+        <i class="fas fa-filter"></i> Advanced Filters
+      </button>
+      <button type="button" class="btn primary" (click)="createClient()">
+        <i class="fas fa-user-plus"></i> New Client
+      </button>
     </div>
   </div>
 
-  <div class="filters-panel">
-    <div class="filter-group">
-      <label class="filter-label">Search</label>
-      <div class="search-field">
-        <input
-          type="text"
-          [(ngModel)]="searchEmail"
-          (keyup.enter)="onSearch()"
-          placeholder="Search by email, name, or phone"
-          class="search-input"
-        />
-        <button type="button" class="icon-btn search" (click)="onSearch()" aria-label="Search clients">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="7"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-        </button>
-      </div>
+  <div class="search-toolbar">
+    <div class="search-input-group">
+      <i class="fas fa-search"></i>
+      <input
+        type="text"
+        placeholder="Search by name, email or phone"
+        [(ngModel)]="filterSearch"
+        (ngModelChange)="onSearchInput($event)"
+      />
+      <button
+        type="button"
+        class="clear-search"
+        *ngIf="filterSearch"
+        (click)="clearSearch()"
+        aria-label="Clear search"
+      >
+        <i class="fas fa-times"></i>
+      </button>
     </div>
-
-    <div class="filter-group">
-      <label class="filter-label">Status</label>
-      <div class="multi-select">
-        <div class="multi-select__selected" (click)="toggleStatusDropdown()">
-          <span *ngIf="selectedStatuses.length === 0">All Status</span>
-          <span *ngIf="selectedStatuses.length === 1">{{ selectedStatuses[0] }}</span>
-          <span *ngIf="selectedStatuses.length > 1">{{ selectedStatuses.length }} selected</span>
-          <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6,9 12,15 18,9"></polyline>
-          </svg>
-        </div>
-        <div class="multi-select__dropdown" [class.open]="statusDropdownOpen">
-          <label *ngFor="let status of availableStatuses" class="multi-select__option">
-            <input type="checkbox" [checked]="selectedStatuses.includes(status)" (change)="onStatusChange(status, $event)" />
-            {{ status }}
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <div class="filter-group">
-      <label class="filter-label">Priority</label>
-      <div class="multi-select">
-        <div class="multi-select__selected" (click)="togglePriorityDropdown()">
-          <span *ngIf="selectedPriorities.length === 0">All Priorities</span>
-          <span *ngIf="selectedPriorities.length === 1">{{ selectedPriorities[0] }}</span>
-          <span *ngIf="selectedPriorities.length > 1">{{ selectedPriorities.length }} selected</span>
-          <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6,9 12,15 18,9"></polyline>
-          </svg>
-        </div>
-        <div class="multi-select__dropdown" [class.open]="priorityDropdownOpen">
-          <label *ngFor="let priority of availablePriorities" class="multi-select__option">
-            <input type="checkbox" [checked]="selectedPriorities.includes(priority)" (change)="onPriorityChange(priority, $event)" />
-            {{ priority }}
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <div class="filter-group">
-      <label class="filter-label">Date Range</label>
-      <div class="date-range">
-        <input type="date" [(ngModel)]="startDate" (change)="onDateFilter()" placeholder="Start date" class="date-input" />
-        <span class="date-separator">to</span>
-        <input type="date" [(ngModel)]="endDate" (change)="onDateFilter()" placeholder="End date" class="date-input" />
-      </div>
-    </div>
-
-    <div class="filter-actions">
-      <button type="button" class="btn outline" (click)="clearFilters()">Clear Filters</button>
+    <div class="status-summary">
+      <span class="summary-pill">{{ totalElements }} clients</span>
+      <span class="summary-pill">Page {{ currentPage + 1 }} of {{ totalPages || 1 }}</span>
+      <span class="summary-pill" *ngIf="isFiltered()">Filters active</span>
     </div>
   </div>
 
-  <div *ngIf="loading" class="status-panel status-panel--loading">
-    <div class="spinner"></div>
-    <p>Loading clients...</p>
+  <div *ngIf="isFiltered()" class="active-filters-bar">
+    <span>{{ getFilterSummary() }}</span>
+    <button type="button" class="link-button" (click)="clearFilters()">Clear filters</button>
+  </div>
+
+  <div *ngIf="loading" class="loading-skeleton">
+    <div class="skeleton-row" *ngFor="let row of [1,2,3,4,5]"></div>
   </div>
 
   <div *ngIf="error && !loading" class="status-panel status-panel--error">
-    <div class="status-icon">⚠️</div>
+    <div class="status-icon">!</div>
     <div>
       <h3>{{ error }}</h3>
-      <button type="button" class="btn primary" (click)="loadClients()">Retry</button>
+      <p>Please try refreshing the page or contact support if the issue persists.</p>
     </div>
   </div>
 
-  <div *ngIf="!loading && !error && getVisibleClients().length === 0" class="status-panel status-panel--empty">
-    <div class="empty-icon">👥</div>
+  <div *ngIf="!loading && !error && clients.length === 0" class="status-panel status-panel--empty">
+    <div class="status-icon">👤</div>
     <div>
       <h3>No clients found</h3>
-      <p>{{ searchEmail || selectedStatuses.length > 0 || selectedPriorities.length > 0 || startDate || endDate ? 'Try adjusting your filters or refreshing the list.' : 'No clients are currently available.' }}</p>
+      <p>{{ isFiltered() ? 'Adjust your filters or reset to see all clients.' : 'There are no clients available in the system yet.' }}</p>
     </div>
   </div>
 
-  <!-- Clients Table -->
-  <div *ngIf="!loading && !error && getVisibleClients().length > 0" class="clients-content">
-    <!-- Desktop Table View -->
-    <div class="table-view">
-      <div class="table-overflow">
-        <table>
-          <thead>
-            <tr>
-              <th>
-                <button type="button" class="column-sort" (click)="onSortChange('firstName')">
-                  CLIENT
-                  <span>{{ sortBy === 'firstName' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
-                </button>
-              </th>
-              <th>
-                <button type="button" class="column-sort" (click)="onSortChange('email')">
-                  EMAIL
-                  <span>{{ sortBy === 'email' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
-                </button>
-              </th>
-              <th>PHONE</th>
-              <th>
-                <button type="button" class="column-sort" (click)="onSortChange('status')">
-                  STATUS
-                  <span>{{ sortBy === 'status' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
-                </button>
-              </th>
-              <th>
-                <button type="button" class="column-sort" (click)="onSortChange('createdAt')">
-                  CREATED
-                  <span>{{ sortBy === 'createdAt' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
-                </button>
-              </th>
-              <th>
-                <button type="button" class="column-sort" (click)="onSortChange('updatedAt')">
-                  LAST INTERACTION
-                  <span>{{ sortBy === 'updatedAt' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
-                </button>
-              </th>
-              <th>
-                <button type="button" class="column-sort" (click)="onSortChange('priorityScore')">
-                  PRIORITY
-                  <span>{{ sortBy === 'priorityScore' ? (sortDirection === 'asc' ? '▲' : '▼') : '↕' }}</span>
-                </button>
-              </th>
-              <th>ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let client of getVisibleClients()" class="client-row">
-              <td>
-                <div class="client-meta">
-                  <span class="client-avatar">{{ client.firstName?.charAt(0) }}{{ client.lastName?.charAt(0) }}</span>
-                  <div>
-                    <div class="client-name">{{ client.firstName }} {{ client.lastName }}</div>
-                    <div class="client-email">{{ client.email }}</div>
-                  </div>
-                </div>
-              </td>
-              <td>{{ client.email }}</td>
-              <td>{{ client.phoneNumber || '—' }}</td>
-              <td>
-                <span class="pill status-pill" [ngClass]="getStatusBadgeClass(client.status)">{{ client.status }}</span>
-              </td>
-              <td>{{ client.createdAt ? (client.createdAt | date:'shortDate') : '—' }}</td>
-              <td>{{ client.updatedAt ? (client.updatedAt | date:'short') : '—' }}</td>
-              <td>
-                <span class="pill priority-pill" [ngClass]="getPriorityClass(client.priorityScore)">{{ client.priorityScore || 'N/A' }}</span>
-              </td>
-              <td class="actions-cell">
-                <button type="button" class="icon-btn view" (click)="viewClientDetails(client)" title="View client">👁</button>
-                <button type="button" class="icon-btn edit" (click)="editClient(client)" title="Edit client">✎</button>
-                <button type="button" class="icon-btn approve" [disabled]="actionLoadingId === client.userId" (click)="approveClient(client, $event)" title="Approve client">✓</button>
-                <button type="button" class="icon-btn suspend" [disabled]="actionLoadingId === client.userId" (click)="rejectClient(client, $event)" title="Reject client">⛔</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+  <div *ngIf="!loading && !error && clients.length > 0" class="clients-table-wrapper">
+    <div class="table-toolbar">
+      <div class="table-legend">Showing {{ clients.length }} of {{ totalElements }} clients</div>
+      <div class="table-settings">
+        <label>
+          Rows per page
+          <select [(ngModel)]="pageSize" (change)="onPageSizeChange()">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+          </select>
+        </label>
       </div>
     </div>
 
-    <!-- Mobile Card View -->
-    <div class="card-view">
-      <div class="client-card" *ngFor="let client of getVisibleClients()">
-        <div class="card-header">
-          <div class="client-meta">
-            <span class="client-avatar">{{ client.firstName?.charAt(0) }}{{ client.lastName?.charAt(0) }}</span>
-            <div>
-              <div class="client-name">{{ client.firstName }} {{ client.lastName }}</div>
-              <div class="client-email">{{ client.email }}</div>
+    <div class="table-inner">
+      <table class="clients-table">
+        <thead>
+          <tr>
+            <th class="sticky-header">
+              <button type="button" class="sort-button" (click)="onSortChange('firstName')">
+                Client <i class="fas" [ngClass]="sortBy === 'firstName' ? (sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort'"></i>
+              </button>
+            </th>
+            <th class="sticky-header">Contact</th>
+            <th class="sticky-header">Assigned Agent</th>
+            <th class="sticky-header">
+              <button type="button" class="sort-button" (click)="onSortChange('status')">
+                Status <i class="fas" [ngClass]="sortBy === 'status' ? (sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort'"></i>
+              </button>
+            </th>
+            <th class="sticky-header">Segment</th>
+            <th class="sticky-header">
+              <button type="button" class="sort-button" (click)="onSortChange('priorityScore')">
+                Risk Score <i class="fas" [ngClass]="sortBy === 'priorityScore' ? (sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort'"></i>
+              </button>
+            </th>
+            <th class="sticky-header">
+              <button type="button" class="sort-button" (click)="onSortChange('updatedAt')">
+                Last Activity <i class="fas" [ngClass]="sortBy === 'updatedAt' ? (sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort'"></i>
+              </button>
+            </th>
+            <th class="sticky-header">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let client of clients" class="client-row">
+            <td>
+              <div class="client-body">
+                <span class="client-avatar">{{ client.firstName?.charAt(0) || 'C' }}{{ client.lastName?.charAt(0) || '' }}</span>
+                <div>
+                  <div class="client-name">{{ client.firstName }} {{ client.lastName }}</div>
+                  <div class="client-email">{{ client.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="client-contact">
+                <div>{{ client.phoneNumber || '—' }}</div>
+                <div class="client-meta-text">Created {{ client.createdAt | date:'mediumDate' }}</div>
+              </div>
+            </td>
+            <td>{{ client.assignedAgentName || 'Unassigned' }}</td>
+            <td>
+              <span class="pill" [ngClass]="getStatusBadgeClass(client.status)">{{ client.status }}</span>
+            </td>
+            <td>
+              <span class="segment-pill" [ngClass]="getPriorityClass(client.priorityScore)">{{ getPriorityLabel(client.priorityScore) }}</span>
+            </td>
+            <td>
+              <div class="risk-meter">
+                <div class="risk-score">{{ client.priorityScore ?? 0 }}%</div>
+                <div class="risk-track">
+                  <div class="risk-fill" [ngClass]="getPriorityClass(client.priorityScore)" [style.width.%]="client.priorityScore ?? 0"></div>
+                </div>
+              </div>
+            </td>
+            <td>{{ client.lastInteraction ? (client.lastInteraction | date:'short') : (client.updatedAt ? (client.updatedAt | date:'short') : '—') }}</td>
+            <td class="table-actions">
+              <button type="button" class="icon-btn" title="View client details" (click)="viewClientDetails(client)">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button type="button" class="icon-btn" title="Edit client" (click)="editClient(client)">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button type="button" class="icon-btn approve" [disabled]="actionLoadingId === client.userId" title="Approve client" (click)="openConfirm('approve', client)">
+                <i class="fas fa-check"></i>
+              </button>
+              <button type="button" class="icon-btn suspend" [disabled]="actionLoadingId === client.userId" title="Suspend client" (click)="openConfirm('suspend', client)">
+                <i class="fas fa-ban"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-row">
+      <button type="button" class="btn ghost" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 0">
+        <i class="fas fa-chevron-left"></i> Previous
+      </button>
+      <span>Page {{ currentPage + 1 }} of {{ totalPages || 1 }}</span>
+      <button type="button" class="btn ghost" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage + 1 >= totalPages">
+        Next <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="filterModalOpen" class="modal-overlay" (click)="closeFilterModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h2>Advanced Filters</h2>
+          <p>Apply server-side filtering for accurate client results.</p>
+        </div>
+        <button type="button" class="close-icon" (click)="closeFilterModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="filter-grid">
+          <div class="filter-block">
+            <label>Search</label>
+            <input type="text" [(ngModel)]="filterSearch" placeholder="Search by name, email or phone" />
+          </div>
+          <div class="filter-block">
+            <label>Status</label>
+            <div class="multi-check">
+              <label *ngFor="let status of availableStatuses">
+                <input type="checkbox" [checked]="filterStatuses.includes(status)" (change)="toggleFilterValue(filterStatuses, status)" />
+                {{ status }}
+              </label>
             </div>
           </div>
-          <div class="card-badges">
-            <span class="pill status-pill" [ngClass]="getStatusBadgeClass(client.status)">{{ client.status }}</span>
-            <span class="pill priority-pill" [ngClass]="getPriorityClass(client.priorityScore)">{{ client.priorityScore || 'N/A' }}</span>
+          <div class="filter-block">
+            <label>Priority</label>
+            <div class="multi-check">
+              <label *ngFor="let priority of availablePriorities">
+                <input type="checkbox" [checked]="filterPriorities.includes(priority)" (change)="toggleFilterValue(filterPriorities, priority)" />
+                {{ priority }}
+              </label>
+            </div>
           </div>
-        </div>
-
-        <div class="card-details">
-          <div class="detail-row">
-            <span class="detail-label">Phone:</span>
-            <span class="detail-value">{{ client.phoneNumber || '—' }}</span>
+          <div class="filter-block">
+            <label>Created From</label>
+            <input type="date" [(ngModel)]="filterCreatedFrom" />
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Created:</span>
-            <span class="detail-value">{{ client.createdAt ? (client.createdAt | date:'shortDate') : '—' }}</span>
+          <div class="filter-block">
+            <label>Created To</label>
+            <input type="date" [(ngModel)]="filterCreatedTo" />
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Last Interaction:</span>
-            <span class="detail-value">{{ client.updatedAt ? (client.updatedAt | date:'short') : '—' }}</span>
+          <div class="filter-block full-width">
+            <label>Risk Score Range</label>
+            <div class="range-group">
+              <input type="number" min="0" max="100" [(ngModel)]="filterRiskMin" />
+              <span>to</span>
+              <input type="number" min="0" max="100" [(ngModel)]="filterRiskMax" />
+            </div>
           </div>
-        </div>
-
-        <div class="card-actions">
-          <button type="button" class="btn outline" (click)="viewClientDetails(client)">View Details</button>
-          <button type="button" class="btn outline" (click)="editClient(client)">Edit</button>
-          <button type="button" class="btn primary" [disabled]="actionLoadingId === client.userId" (click)="approveClient(client, $event)">Approve</button>
-          <button type="button" class="btn outline" [disabled]="actionLoadingId === client.userId" (click)="rejectClient(client, $event)">Reject</button>
         </div>
       </div>
+      <div class="modal-footer">
+        <button type="button" class="btn outline" (click)="clearFilters()">Reset</button>
+        <button type="button" class="btn primary" (click)="applyFilters()">Apply Filters</button>
+      </div>
     </div>
+  </div>
 
-        <div class="table-footer">
-      <span class="table-note">Showing {{ getVisibleClients().length }} of {{ totalElements }} clients</span>
-      <div class="pagination">
-        <button class="btn ghost" type="button" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 0">Previous</button>
-        <span>Page {{ currentPage + 1 }} / {{ totalPages }}</span>
-        <button class="btn ghost" type="button" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage + 1 >= totalPages">Next</button>
+  <div *ngIf="confirmModalOpen" class="modal-overlay" (click)="closeConfirm()">
+    <div class="modal-card modal-card--small" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ confirmActionType === 'approve' ? 'Approve Client' : 'Suspend Client' }}</h2>
+        <button type="button" class="close-icon" (click)="closeConfirm()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p>
+          {{ confirmActionType === 'approve'
+             ? 'Are you sure you want to approve this client? This action will mark them as active in the system.'
+             : 'Suspending this client will block access and flag them for review. Provide a reason below.'
+          }}
+        </p>
+        <div *ngIf="confirmActionType === 'suspend'" class="field-group">
+          <label>Reason</label>
+          <textarea [(ngModel)]="confirmReason" placeholder="Optional reason for suspension"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn outline" (click)="closeConfirm()">Cancel</button>
+        <button type="button" class="btn primary" (click)="confirmAction()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="showViewClientModal && selectedClient" class="modal-overlay" (click)="closeViewClientModal()">
+    <div class="modal-card modal-card--wide" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h2>{{ selectedClient.firstName }} {{ selectedClient.lastName }}</h2>
+          <p>{{ selectedClient.email }}</p>
+        </div>
+        <button type="button" class="close-icon" (click)="closeViewClientModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body details-grid">
+        <div class="detail-item">
+          <label>Status</label>
+          <span class="pill" [ngClass]="getStatusBadgeClass(selectedClient.status)">{{ selectedClient.status }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Assigned Agent</label>
+          <span>{{ selectedClient.assignedAgentName || 'Unassigned' }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Priority Score</label>
+          <span>{{ selectedClient.priorityScore ?? 'N/A' }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Risk Segment</label>
+          <span class="segment-pill" [ngClass]="getPriorityClass(selectedClient.priorityScore)">{{ getPriorityLabel(selectedClient.priorityScore) }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Created</label>
+          <span>{{ selectedClient.createdAt | date:'medium' }}</span>
+        </div>
+        <div class="detail-item">
+          <label>Last Activity</label>
+          <span>{{ selectedClient.lastInteraction ? (selectedClient.lastInteraction | date:'medium') : (selectedClient.updatedAt | date:'medium') }}</span>
+        </div>
+        <div class="detail-item full-width">
+          <label>Address</label>
+          <span>{{ selectedClient.address || 'N/A' }}</span>
+        </div>
+        <div class="detail-item full-width">
+          <label>Additional Info</label>
+          <span>{{ selectedClient.gender || 'No additional information available.' }}</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn outline" (click)="closeViewClientModal()">Close</button>
       </div>
     </div>
   </div>
 
   <!-- Add Client Modal -->
   <div *ngIf="showAddClientModal" class="modal-overlay" (click)="closeAddClientModal()">
-    <div class="modal add-user-modal" (click)="$event.stopPropagation()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Add New Client</h3>
-        <button type="button" class="modal-close" (click)="closeAddClientModal()" aria-label="Close modal">×</button>
+        <div>
+          <h2>Create New Client</h2>
+          <p>Add a new client to the system with required details and credentials.</p>
+        </div>
+        <button type="button" class="close-icon" (click)="closeAddClientModal()"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
-        <div *ngIf="addClientError" class="status-panel status-panel--error compact">
-          <div>{{ addClientError }}</div>
+        <div *ngIf="addClientError" class="status-panel status-panel--error compact" style="margin-bottom: 16px;">
+          <p style="margin: 0; color: #e63946;">{{ addClientError }}</p>
         </div>
-        <form class="form-grid">
-          <div class="form-group">
-            <label for="firstName" class="form-label">First Name *</label>
-            <input
-              id="firstName"
-              type="text"
-              [(ngModel)]="newClient.firstName"
-              name="firstName"
-              class="form-input"
-              placeholder="Enter first name"
-              required
-            />
+
+        <div class="form-grid">
+          <div class="form-field">
+            <label>First Name *</label>
+            <input type="text" [(ngModel)]="newClientForm.firstName" placeholder="John" (keyup.enter)="submitAddClient()" />
           </div>
-          <div class="form-group">
-            <label for="lastName" class="form-label">Last Name *</label>
-            <input
-              id="lastName"
-              type="text"
-              [(ngModel)]="newClient.lastName"
-              name="lastName"
-              class="form-input"
-              placeholder="Enter last name"
-              required
-            />
+          <div class="form-field">
+            <label>Last Name *</label>
+            <input type="text" [(ngModel)]="newClientForm.lastName" placeholder="Doe" (keyup.enter)="submitAddClient()" />
           </div>
-          <div class="form-group">
-            <label for="email" class="form-label">Email *</label>
-            <input
-              id="email"
-              type="email"
-              [(ngModel)]="newClient.email"
-              name="email"
-              class="form-input"
-              placeholder="Enter email address"
-              required
-            />
+          <div class="form-field full-width">
+            <label>Email Address *</label>
+            <input type="email" [(ngModel)]="newClientForm.email" placeholder="john.doe@example.com" (keyup.enter)="submitAddClient()" />
           </div>
-          <div class="form-group">
-            <label for="phoneNumber" class="form-label">Phone Number *</label>
-            <input
-              id="phoneNumber"
-              type="tel"
-              [(ngModel)]="newClient.phoneNumber"
-              name="phoneNumber"
-              class="form-input"
-              placeholder="Enter phone number"
-              required
-            />
+          <div class="form-field full-width">
+            <label>Phone Number *</label>
+            <input type="tel" [(ngModel)]="newClientForm.phoneNumber" placeholder="+1 (555) 123-4567" (keyup.enter)="submitAddClient()" />
           </div>
-          <div class="form-group">
-            <label for="password" class="form-label">Password *</label>
-            <input
-              id="password"
-              type="password"
-              [(ngModel)]="newClient.password"
-              name="password"
-              class="form-input"
-              placeholder="Minimum 8 characters"
-              minlength="8"
-              required
-            />
+          <div class="form-field full-width">
+            <label>Password * (minimum 8 characters)</label>
+            <input type="password" [(ngModel)]="newClientForm.password" placeholder="••••••••" (keyup.enter)="submitAddClient()" />
           </div>
-          <div class="form-group">
-            <label for="status" class="form-label">Initial Status</label>
-            <select id="status" [(ngModel)]="newClient.status" name="status" class="form-input">
-              <option value="PENDING_VERIFICATION">Pending Verification</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
+          <div class="form-field">
+            <label>Status</label>
+            <select [(ngModel)]="newClientForm.status">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="PENDING_VERIFICATION">PENDING_VERIFICATION</option>
+              <option value="INACTIVE">INACTIVE</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="priorityScore" class="form-label">Priority</label>
-            <select id="priorityScore" [(ngModel)]="newClient.priorityScore" name="priorityScore" class="form-input">
-              <option [ngValue]="90">High priority</option>
-              <option [ngValue]="60">Medium priority</option>
-              <option [ngValue]="30">Low priority</option>
+          <div class="form-field">
+            <label>Date of Birth</label>
+            <input type="date" [(ngModel)]="newClientForm.dateOfBirth" />
+          </div>
+          <div class="form-field">
+            <label>Gender</label>
+            <select [(ngModel)]="newClientForm.gender">
+              <option value="">Not specified</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+              <option value="OTHER">Other</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="address" class="form-label">Address</label>
-            <input
-              id="address"
-              type="text"
-              [(ngModel)]="newClient.address"
-              name="address"
-              class="form-input"
-              placeholder="Client address"
-            />
+          <div class="form-field full-width">
+            <label>Address</label>
+            <input type="text" [(ngModel)]="newClientForm.address" placeholder="123 Main St, City, State" (keyup.enter)="submitAddClient()" />
           </div>
-        </form>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn outline" (click)="closeAddClientModal()">Cancel</button>
         <button type="button" class="btn primary" (click)="submitAddClient()" [disabled]="addClientLoading">
-          <span *ngIf="addClientLoading" class="spinner small"></span>
-          {{ addClientLoading ? 'Creating...' : 'Create Client' }}
+          <span *ngIf="!addClientLoading">Create Client</span>
+          <span *ngIf="addClientLoading"><i class="fas fa-spinner fa-spin"></i> Creating...</span>
         </button>
       </div>
     </div>
   </div>
-</section>
-
-<!-- View Client Modal -->
-<section *ngIf="showViewClientModal" class="modal-overlay" (click)="closeViewClientModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>Client Details</h3>
-      <button type="button" class="modal-close" (click)="closeViewClientModal()">×</button>
-    </div>
-
-    <div class="modal-body" *ngIf="selectedClient">
-      <div class="client-detail-header">
-        <div class="client-avatar-large">
-          {{ selectedClient.firstName?.charAt(0) }}{{ selectedClient.lastName?.charAt(0) }}
-        </div>
-        <div>
-          <h4>{{ selectedClient.firstName }} {{ selectedClient.lastName }}</h4>
-          <p>{{ selectedClient.email }}</p>
-        </div>
-        <div class="status-badges">
-          <span class="pill status-pill" [ngClass]="getStatusBadgeClass(selectedClient.status)">{{ selectedClient.status }}</span>
-          <span class="pill priority-pill" [ngClass]="getPriorityClass(selectedClient.priorityScore)">{{ selectedClient.priorityScore || 'N/A' }}</span>
-        </div>
-      </div>
-
-      <div class="client-details-grid">
-        <div class="detail-item">
-          <label>Email</label>
-          <span>{{ selectedClient.email }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Phone</label>
-          <span>{{ selectedClient.phoneNumber || '—' }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Status</label>
-          <span class="pill status-pill" [ngClass]="getStatusBadgeClass(selectedClient.status)">{{ selectedClient.status }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Priority Score</label>
-          <span>{{ selectedClient.priorityScore || 'N/A' }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Created</label>
-          <span>{{ selectedClient.createdAt ? (selectedClient.createdAt | date:'medium') : '—' }}</span>
-        </div>
-        <div class="detail-item">
-          <label>Last Updated</label>
-          <span>{{ selectedClient.updatedAt ? (selectedClient.updatedAt | date:'medium') : '—' }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-footer">
-      <button type="button" class="btn outline" (click)="closeViewClientModal()">Close</button>
-      <button type="button" class="btn primary" (click)="editClient(selectedClient!); closeViewClientModal()">Edit Client</button>
-    </div>
-  </div>
-</section>
-
-<!-- Edit Client Modal -->
-<section *ngIf="showEditClientModal" class="modal-overlay" (click)="closeEditClientModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>Edit Client</h3>
-      <button type="button" class="modal-close" (click)="closeEditClientModal()">×</button>
-    </div>
-
-    <form class="modal-body" *ngIf="selectedClient">
-      <div class="form-group">
-        <label for="editFirstName" class="form-label">First Name *</label>
-        <input
-          id="editFirstName"
-          type="text"
-          [(ngModel)]="selectedClient.firstName"
-          name="firstName"
-          class="form-input"
-          placeholder="Enter first name"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="editLastName" class="form-label">Last Name *</label>
-        <input
-          id="editLastName"
-          type="text"
-          [(ngModel)]="selectedClient.lastName"
-          name="lastName"
-          class="form-input"
-          placeholder="Enter last name"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="editEmail" class="form-label">Email *</label>
-        <input
-          id="editEmail"
-          type="email"
-          [(ngModel)]="selectedClient.email"
-          name="email"
-          class="form-input"
-          placeholder="Enter email address"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="editPhone" class="form-label">Phone Number *</label>
-        <input
-          id="editPhone"
-          type="tel"
-          [(ngModel)]="selectedClient.phoneNumber"
-          name="phoneNumber"
-          class="form-input"
-          placeholder="Enter phone number"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="editStatus" class="form-label">Status</label>
-        <select id="editStatus" [(ngModel)]="selectedClient.status" name="status" class="form-input">
-          <option value="PENDING_VERIFICATION">Pending Verification</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-          <option value="SUSPENDED">Suspended</option>
-          <option value="BLOCKED">Blocked</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="editPriorityScore" class="form-label">Priority</label>
-        <select id="editPriorityScore" [(ngModel)]="selectedClient.priorityScore" name="priorityScore" class="form-input">
-          <option [ngValue]="90">High priority</option>
-          <option [ngValue]="60">Medium priority</option>
-          <option [ngValue]="30">Low priority</option>
-        </select>
-      </div>
-    </form>
-
-    <div class="modal-footer">
-      <button type="button" class="btn outline" (click)="closeEditClientModal()">Cancel</button>
-      <button type="button" class="btn primary" (click)="saveEditedClient()" [disabled]="editClientLoading">
-        <span *ngIf="editClientLoading" class="spinner small"></span>
-        {{ editClientLoading ? 'Saving...' : 'Save Changes' }}
-      </button>
-    </div>
-  </div>
-</section>
+</div>

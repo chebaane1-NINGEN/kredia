@@ -1,208 +1,186 @@
 <div class="audit-admin-page">
+  <!-- Header -->
   <div class="header">
-    <h1 class="page-title">Audit Trail Administration</h1>
-    <p class="page-subtitle">Monitor and investigate all system activities</p>
+    <div class="header-content">
+      <h1 class="page-title">Audit Trail Administration</h1>
+      <p class="page-subtitle">Monitor and investigate all system activities</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="openFiltersModal()">
+        <i class="fas fa-filter"></i> Advanced Filters
+        <span class="filter-badge" *ngIf="hasActiveFilters()">●</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading audit logs...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="error-state alert alert-danger" *ngIf="error && !loading">
+    <i class="fas fa-exclamation-circle"></i>
+    <p>{{ error }}</p>
   </div>
 
   <!-- Summary Cards -->
-  <div class="summary-cards" *ngIf="summary">
-    <div class="card">
-      <div class="card-icon">
+  <div class="summary-cards" *ngIf="summary && !loading">
+    <div class="card metric-card">
+      <div class="card-icon primary">
         <i class="fas fa-chart-line"></i>
       </div>
       <div class="card-content">
-        <h3>{{ summary.totalActionsToday }}</h3>
-        <p>Actions Today</p>
+        <p class="label">Actions Today</p>
+        <h3 class="value">{{ summary.totalActionsToday }}</h3>
       </div>
     </div>
 
-    <div class="card warning">
-      <div class="card-icon">
+    <div class="card metric-card warning">
+      <div class="card-icon warning">
         <i class="fas fa-exclamation-triangle"></i>
       </div>
       <div class="card-content">
-        <h3>{{ summary.failedActionsToday }}</h3>
-        <p>Failed Actions</p>
+        <p class="label">Failed Actions</p>
+        <h3 class="value">{{ summary.failedActionsToday }}</h3>
       </div>
     </div>
 
-    <div class="card critical">
-      <div class="card-icon">
+    <div class="card metric-card critical">
+      <div class="card-icon critical">
         <i class="fas fa-shield-alt"></i>
       </div>
       <div class="card-content">
-        <h3>{{ summary.highSeverityActionsToday }}</h3>
-        <p>High Severity</p>
+        <p class="label">High Severity</p>
+        <h3 class="value">{{ summary.highSeverityActionsToday }}</h3>
       </div>
     </div>
   </div>
 
+  <!-- Recent Activity Summary -->
   <div class="recent-summary" *ngIf="summary?.mostRecentAction || summary?.mostRecentFailure">
     <div class="summary-detail-card">
-      <h3>Most Recent Action</h3>
-      <p *ngIf="summary?.mostRecentAction; else noRecentAction">
-        <strong>{{ summary?.mostRecentAction?.actionType }}</strong> by {{ summary?.mostRecentAction?.actorName || 'Unknown' }}
-        on {{ summary?.mostRecentAction?.timestamp | date:'short' }}
-      </p>
-      <ng-template #noRecentAction>
-        <p>No recent actions recorded.</p>
-      </ng-template>
+      <div class="summary-icon">
+        <i class="fas fa-history"></i>
+      </div>
+      <div class="summary-content">
+        <h3>Most Recent Action</h3>
+        <p *ngIf="summary?.mostRecentAction; else noRecentAction">
+          <strong>{{ summary?.mostRecentAction?.actionType | titlecase }}</strong> 
+          by <em>{{ summary?.mostRecentAction?.actorName || 'System' }}</em>
+          <br>
+          <small>{{ summary?.mostRecentAction?.timestamp | date:'short' }}</small>
+        </p>
+        <ng-template #noRecentAction>
+          <p class="text-muted">No recent actions recorded.</p>
+        </ng-template>
+      </div>
     </div>
+
     <div class="summary-detail-card">
-      <h3>Most Recent Failure</h3>
-      <p *ngIf="summary?.mostRecentFailure; else noRecentFailure">
-        <strong>{{ summary?.mostRecentFailure?.actionType }}</strong> failed on {{ summary?.mostRecentFailure?.timestamp | date:'short' }}
-      </p>
-      <ng-template #noRecentFailure>
-        <p>No failed actions recorded today.</p>
-      </ng-template>
+      <div class="summary-icon alert">
+        <i class="fas fa-times-circle"></i>
+      </div>
+      <div class="summary-content">
+        <h3>Most Recent Failure</h3>
+        <p *ngIf="summary?.mostRecentFailure; else noRecentFailure">
+          <strong>{{ summary?.mostRecentFailure?.actionType | titlecase }}</strong> 
+          <br>
+          <small>{{ summary?.mostRecentFailure?.timestamp | date:'short' }}</small>
+        </p>
+        <ng-template #noRecentFailure>
+          <p class="text-muted">No failed actions recorded today.</p>
+        </ng-template>
+      </div>
     </div>
   </div>
 
-  <!-- Filters -->
-  <div class="filters-section">
-    <div class="filters-header">
-      <h2>Advanced Filters</h2>
-      <button class="btn btn-secondary" (click)="resetFilters()">
-        <i class="fas fa-undo"></i> Reset
-      </button>
-    </div>
-
-    <div class="filters-grid">
-      <div class="filter-group">
-        <label>Date Range</label>
-        <div class="date-range">
-          <input type="date" [(ngModel)]="filters.startDate" class="form-control">
-          <span>to</span>
-          <input type="date" [(ngModel)]="filters.endDate" class="form-control">
-        </div>
-      </div>
-
-      <div class="filter-group">
-        <label>Action Type</label>
-        <select [(ngModel)]="filters.actionType" class="form-control">
-          <option value="">All Actions</option>
-          <option value="LOGIN">Login</option>
-          <option value="LOGOUT">Logout</option>
-          <option value="CREATE_USER">Create User</option>
-          <option value="UPDATE_USER">Update User</option>
-          <option value="DELETE_USER">Delete User</option>
-          <option value="CREATE_CREDIT">Create Credit</option>
-          <option value="UPDATE_CREDIT">Update Credit</option>
-          <option value="DELETE_CREDIT">Delete Credit</option>
-          <option value="CREATE_TRANSACTION">Create Transaction</option>
-          <option value="UPDATE_TRANSACTION">Update Transaction</option>
-          <option value="DELETE_TRANSACTION">Delete Transaction</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label>Severity</label>
-        <select [(ngModel)]="filters.severity" class="form-control">
-          <option value="">All Severities</option>
-          <option value="LOW">Low</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HIGH">High</option>
-          <option value="CRITICAL">Critical</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label>Status</label>
-        <select [(ngModel)]="filters.status" class="form-control">
-          <option value="">All Statuses</option>
-          <option value="SUCCESS">Success</option>
-          <option value="FAILED">Failed</option>
-          <option value="PARTIAL">Partial</option>
-          <option value="PENDING">Pending</option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label>Actor ID</label>
-        <input type="number" [(ngModel)]="filters.actorId" class="form-control" placeholder="Enter actor ID">
-      </div>
-
-      <div class="filter-group">
-        <label>IP Address</label>
-        <input type="text" [(ngModel)]="filters.ipAddress" class="form-control" placeholder="192.168.1.1">
-      </div>
-    </div>
-
-    <div class="filters-actions">
-      <button class="btn btn-primary" (click)="applyFilters()">
-        <i class="fas fa-search"></i> Apply Filters
-      </button>
-    </div>
+  <!-- Filter Summary -->
+  <div class="filter-summary" *ngIf="hasActiveFilters()">
+    <i class="fas fa-info-circle"></i>
+    <span>{{ getFilterSummary() }}</span>
   </div>
 
-  <!-- Audit Logs Table -->
+  <!-- Audit Logs Table Section -->
   <div class="table-section">
     <div class="table-header">
       <h2>Audit Logs</h2>
       <div class="table-controls">
-        <select [(ngModel)]="filters.pageSize" (change)="applyFilters()" class="form-control">
+        <select [(ngModel)]="filters.pageSize" (change)="changePageSize()" class="form-control page-size-select">
           <option [value]="10">10 per page</option>
           <option [value]="20">20 per page</option>
           <option [value]="50">50 per page</option>
+          <option [value]="100">100 per page</option>
         </select>
       </div>
     </div>
 
-    <div class="table-container" *ngIf="auditLogs.length > 0; else noData">
+    <!-- Audit Logs Table -->
+    <div class="table-container" *ngIf="auditLogs.length > 0 && !loading; else noData">
       <table class="audit-table">
         <thead>
           <tr>
-            <th (click)="sortBy('timestamp')" [class.sorted]="filters.sortBy === 'timestamp'">
-              Timestamp <i class="fas" [class.fa-sort-up]="filters.sortDirection === 'ASC'" [class.fa-sort-down]="filters.sortDirection === 'DESC'"></i>
+            <th (click)="sortBy('timestamp')" [class.sorted]="filters.sortBy === 'timestamp'" class="clickable">
+              <i class="fas fa-calendar"></i> Timestamp 
+              <i class="fas sort-icon" [class.fa-sort-up]="filters.sortDirection === 'ASC'" [class.fa-sort-down]="filters.sortDirection === 'DESC'"></i>
             </th>
-            <th (click)="sortBy('actionType')" [class.sorted]="filters.sortBy === 'actionType'">
-              Action <i class="fas" [class.fa-sort-up]="filters.sortDirection === 'ASC'" [class.fa-sort-down]="filters.sortDirection === 'DESC'"></i>
+            <th (click)="sortBy('actionType')" [class.sorted]="filters.sortBy === 'actionType'" class="clickable">
+              <i class="fas fa-tasks"></i> Action
+              <i class="fas sort-icon" [class.fa-sort-up]="filters.sortDirection === 'ASC'" [class.fa-sort-down]="filters.sortDirection === 'DESC'"></i>
             </th>
-            <th>Module</th>
-            <th>Actor</th>
-            <th>Target</th>
-            <th>Status</th>
-            <th>Severity</th>
-            <th>Duration</th>
-            <th>Actions</th>
+            <th><i class="fas fa-cube"></i> Module</th>
+            <th><i class="fas fa-user"></i> Actor</th>
+            <th><i class="fas fa-crosshairs"></i> Target</th>
+            <th><i class="fas fa-check-circle"></i> Status</th>
+            <th><i class="fas fa-exclamation"></i> Severity</th>
+            <th><i class="fas fa-clock"></i> Duration</th>
+            <th class="actions-col">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let log of auditLogs" (click)="selectLog(log)" [class.selected]="selectedLog?.id === log.id">
-            <td>{{ log.timestamp | date:'short' }}</td>
+            <td class="timestamp-cell">
+              {{ log.timestamp | date:'short' }}
+            </td>
             <td>
-              <span class="action-badge" [ngClass]="getActionClass(log.actionType)">
-                {{ log.actionType | titlecase }}
+              <span class="action-badge" [ngClass]="'action-' + getActionClass(log.actionType)">
+                <i class="fas fa-circle-small"></i> {{ log.actionType | titlecase }}
               </span>
             </td>
-            <td>{{ getModuleFromLog(log) }}</td>
             <td>
-              <div class="actor-info">
+              <span class="module-badge">{{ getModuleFromLog(log) }}</span>
+            </td>
+            <td>
+              <div class="actor-cell">
                 <div class="actor-name">{{ log.actorName || 'System' }}</div>
-                <div class="actor-email">{{ log.actorEmail }}</div>
+                <div class="actor-email" *ngIf="log.actorEmail">{{ log.actorEmail }}</div>
               </div>
             </td>
             <td>
-              <div class="target-info">
+              <div class="target-cell" *ngIf="log.targetType">
                 <div class="target-type">{{ log.targetType }}</div>
-                <div class="target-id">#{{ log.targetId }}</div>
+                <div class="target-id" *ngIf="log.targetId">#{{ log.targetId }}</div>
               </div>
+              <span class="text-muted" *ngIf="!log.targetType">-</span>
             </td>
             <td>
-              <span class="status-badge" [ngClass]="getStatusClass(log.status)">
+              <span class="status-badge" [ngClass]="'status-' + getStatusClass(log.status)">
+                <i class="fas" [class.fa-check]="log.status === 'SUCCESS'" [class.fa-times]="log.status === 'FAILED'"></i>
                 {{ log.status }}
               </span>
             </td>
             <td>
-              <span class="severity-badge" [ngClass]="getSeverityClass(log.severity)">
+              <span class="severity-badge" [ngClass]="'severity-' + getSeverityClass(log.severity)">
                 {{ log.severity }}
               </span>
             </td>
-            <td>{{ log.durationMs ? log.durationMs + 'ms' : '-' }}</td>
-            <td>
-              <button class="btn btn-sm btn-outline" (click)="viewDetails(log); $event.stopPropagation()">
-                <i class="fas fa-eye"></i> Details
+            <td class="duration-cell">
+              {{ log.durationMs ? log.durationMs + 'ms' : '-' }}
+            </td>
+            <td class="actions-cell">
+              <button class="btn btn-sm btn-icon" (click)="viewDetails(log); $event.stopPropagation()" title="View details">
+                <i class="fas fa-eye"></i>
               </button>
             </td>
           </tr>
@@ -210,145 +188,256 @@
       </table>
     </div>
 
+    <!-- No Data State -->
     <ng-template #noData>
       <div class="no-data">
-        <i class="fas fa-search"></i>
+        <i class="fas fa-inbox"></i>
         <h3>No audit logs found</h3>
-        <p>Try adjusting your filters or check back later.</p>
+        <p *ngIf="hasActiveFilters()">Try adjusting your filter criteria or reset filters.</p>
+        <p *ngIf="!hasActiveFilters()">No audit logs have been recorded yet.</p>
       </div>
     </ng-template>
 
     <!-- Pagination -->
-    <div class="pagination" *ngIf="totalPages > 1">
-      <button class="btn btn-outline" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">
+    <div class="pagination" *ngIf="totalPages > 1 && !loading">
+      <button class="btn btn-outline btn-sm" [disabled]="currentPage === 0" (click)="goToPage(currentPage - 1)">
         <i class="fas fa-chevron-left"></i> Previous
       </button>
 
       <span class="page-info">
-        Page {{ currentPage + 1 }} of {{ totalPages }}
+        Page {{ currentPage + 1 }} of {{ totalPages }} ({{ totalElements }} total)
       </span>
 
-      <button class="btn btn-outline" [disabled]="currentPage >= totalPages - 1" (click)="goToPage(currentPage + 1)">
+      <button class="btn btn-outline btn-sm" [disabled]="currentPage >= totalPages - 1" (click)="goToPage(currentPage + 1)">
         Next <i class="fas fa-chevron-right"></i>
       </button>
     </div>
   </div>
 
-  <!-- Detail Modal -->
-  <div class="modal" *ngIf="selectedLog && showModal" (click)="closeModal()">
+  <!-- Advanced Filters Modal -->
+  <div class="modal" [class.show]="showFiltersModal" *ngIf="showFiltersModal" (click)="closeFiltersModal()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Audit Log Details</h3>
-        <button class="close-btn" (click)="closeModal()">
+        <h3>
+          <i class="fas fa-filter"></i> Advanced Filters
+        </h3>
+        <button class="close-btn" (click)="closeFiltersModal()" title="Close filters">
           <i class="fas fa-times"></i>
         </button>
       </div>
 
-      <div class="modal-body">
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>ID</label>
-            <span>{{ selectedLog.id }}</span>
-          </div>
-
-          <div class="detail-item">
-            <label>Timestamp</label>
-            <span>{{ selectedLog.timestamp | date:'medium' }}</span>
-          </div>
-
-          <div class="detail-item">
-            <label>Action Type</label>
-            <span class="action-badge" [ngClass]="getActionClass(selectedLog.actionType)">
-              {{ selectedLog.actionType | titlecase }}
-            </span>
-          </div>
-
-          <div class="detail-item">
-            <label>Status</label>
-            <span class="status-badge" [ngClass]="getStatusClass(selectedLog.status)">
-              {{ selectedLog.status }}
-            </span>
-          </div>
-
-          <div class="detail-item">
-            <label>Severity</label>
-            <span class="severity-badge" [ngClass]="getSeverityClass(selectedLog.severity)">
-              {{ selectedLog.severity }}
-            </span>
-          </div>
-
-          <div class="detail-item">
-            <label>Duration</label>
-            <span>{{ selectedLog.durationMs ? selectedLog.durationMs + 'ms' : 'N/A' }}</span>
-          </div>
-
-          <div class="detail-item full-width">
-            <label>Actor</label>
-            <div class="actor-details">
-              <p><strong>Name:</strong> {{ selectedLog.actorName || 'System' }}</p>
-              <p><strong>Email:</strong> {{ selectedLog.actorEmail || 'N/A' }}</p>
-              <p><strong>Role:</strong> {{ selectedLog.actorRole || 'N/A' }}</p>
-              <p><strong>ID:</strong> {{ selectedLog.actorId || 'N/A' }}</p>
+      <form [formGroup]="filterForm" class="modal-body">
+        <!-- Section 1: Date Range -->
+        <div class="filter-section">
+          <h4>Date Range</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="startDate">From</label>
+              <input type="date" id="startDate" formControlName="startDate" class="form-control">
             </div>
-          </div>
-
-          <div class="detail-item full-width">
-            <label>Target</label>
-            <div class="target-details">
-              <p><strong>Type:</strong> {{ selectedLog.targetType || 'N/A' }}</p>
-              <p><strong>ID:</strong> {{ selectedLog.targetId || 'N/A' }}</p>
-              <p><strong>Email:</strong> {{ selectedLog.targetEmail || 'N/A' }}</p>
+            <div class="form-group">
+              <label for="endDate">To</label>
+              <input type="date" id="endDate" formControlName="endDate" class="form-control">
             </div>
-          </div>
-
-          <div class="detail-item full-width">
-            <label>Module</label>
-            <span>{{ getModuleFromLog(selectedLog) }}</span>
-          </div>
-          <div class="detail-item full-width">
-            <label>Network</label>
-            <div class="network-details">
-              <p><strong>IP Address:</strong> {{ selectedLog.ipAddress || 'N/A' }}</p>
-              <p><strong>Endpoint:</strong> {{ selectedLog.endpoint || 'N/A' }}</p>
-              <p><strong>HTTP Method:</strong> {{ selectedLog.httpMethod || 'N/A' }}</p>
-              <p><strong>User Agent:</strong> {{ selectedLog.userAgent || 'N/A' }}</p>
-            </div>
-          </div>
-
-          <div class="detail-item full-width" *ngIf="selectedLog.errorMessage">
-            <label>Error Message</label>
-            <div class="error-message">
-              {{ selectedLog.errorMessage }}
-            </div>
-          </div>
-
-          <div class="detail-item full-width" *ngIf="selectedLog.changesDescription">
-            <label>Changes Description</label>
-            <div class="changes-description">
-              {{ selectedLog.changesDescription }}
-            </div>
-          </div>
-
-          <div class="detail-item full-width" *ngIf="selectedLog.requestData">
-            <label>Request Data</label>
-            <pre class="json-data">{{ selectedLog.requestData | json }}</pre>
-          </div>
-
-          <div class="detail-item full-width" *ngIf="selectedLog.responseData">
-            <label>Response Data</label>
-            <pre class="json-data">{{ selectedLog.responseData | json }}</pre>
-          </div>
-
-          <div class="detail-item full-width" *ngIf="selectedLog.previousState">
-            <label>Previous State</label>
-            <pre class="json-data">{{ selectedLog.previousState | json }}</pre>
-          </div>
-
-          <div class="detail-item full-width" *ngIf="selectedLog.newState">
-            <label>New State</label>
-            <pre class="json-data">{{ selectedLog.newState | json }}</pre>
           </div>
         </div>
+
+        <!-- Section 2: Action Filters -->
+        <div class="filter-section">
+          <h4>Action Filters</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="actionType">Action Type</label>
+              <select id="actionType" formControlName="actionType" class="form-control">
+                <option value="">All Actions</option>
+                <option value="LOGIN">Login</option>
+                <option value="LOGOUT">Logout</option>
+                <option value="CREATE_USER">Create User</option>
+                <option value="UPDATE_USER">Update User</option>
+                <option value="DELETE_USER">Delete User</option>
+                <option value="CREATE_CREDIT">Create Credit</option>
+                <option value="UPDATE_CREDIT">Update Credit</option>
+                <option value="DELETE_CREDIT">Delete Credit</option>
+                <option value="CREATE_TRANSACTION">Create Transaction</option>
+                <option value="UPDATE_TRANSACTION">Update Transaction</option>
+                <option value="DELETE_TRANSACTION">Delete Transaction</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="severity">Severity</label>
+              <select id="severity" formControlName="severity" class="form-control">
+                <option value="">All Severities</option>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select id="status" formControlName="status" class="form-control">
+                <option value="">All Statuses</option>
+                <option value="SUCCESS">Success</option>
+                <option value="FAILED">Failed</option>
+                <option value="PARTIAL">Partial</option>
+                <option value="PENDING">Pending</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Actor & Network Filters -->
+        <div class="filter-section">
+          <h4>Actor & Network</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="actorId">Actor ID</label>
+              <input type="number" id="actorId" formControlName="actorId" class="form-control" placeholder="Enter actor ID">
+            </div>
+
+            <div class="form-group">
+              <label for="ipAddress">IP Address</label>
+              <input type="text" id="ipAddress" formControlName="ipAddress" class="form-control" placeholder="192.168.1.1">
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="resetFilters()">
+          <i class="fas fa-undo"></i> Reset All
+        </button>
+        <button class="btn btn-primary" (click)="applyFilters()">
+          <i class="fas fa-check"></i> Apply Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Details Modal -->
+  <div class="modal" [class.show]="showDetailsModal" *ngIf="showDetailsModal" (click)="closeDetailsModal()">
+    <div class="modal-content modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Audit Log Details</h3>
+        <button class="close-btn" (click)="closeDetailsModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body details-grid" *ngIf="selectedLog">
+        <!-- Core Information -->
+        <div class="detail-section">
+          <h4>Core Information</h4>
+          <div class="detail-row">
+            <div class="detail-item">
+              <label>ID</label>
+              <span class="mono">{{ selectedLog.id }}</span>
+            </div>
+
+            <div class="detail-item">
+              <label>Timestamp</label>
+              <span>{{ selectedLog.timestamp | date:'medium' }}</span>
+            </div>
+
+            <div class="detail-item">
+              <label>Duration</label>
+              <span>{{ selectedLog.durationMs ? selectedLog.durationMs + 'ms' : 'N/A' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Information -->
+        <div class="detail-section">
+          <h4>Action Information</h4>
+          <div class="detail-row">
+            <div class="detail-item">
+              <label>Action Type</label>
+              <span class="action-badge" [ngClass]="'action-' + getActionClass(selectedLog.actionType)">
+                {{ selectedLog.actionType | titlecase }}
+              </span>
+            </div>
+
+            <div class="detail-item">
+              <label>Status</label>
+              <span class="status-badge" [ngClass]="'status-' + getStatusClass(selectedLog.status)">
+                {{ selectedLog.status }}
+              </span>
+            </div>
+
+            <div class="detail-item">
+              <label>Severity</label>
+              <span class="severity-badge" [ngClass]="'severity-' + getSeverityClass(selectedLog.severity)">
+                {{ selectedLog.severity }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actor Information -->
+        <div class="detail-section">
+          <h4>Actor Information</h4>
+          <div class="actor-details">
+            <p><strong>Name:</strong> {{ selectedLog.actorName || 'System' }}</p>
+            <p><strong>Email:</strong> {{ selectedLog.actorEmail || 'N/A' }}</p>
+            <p><strong>Role:</strong> {{ selectedLog.actorRole || 'N/A' }}</p>
+            <p><strong>ID:</strong> {{ selectedLog.actorId || 'N/A' }}</p>
+          </div>
+        </div>
+
+        <!-- Target Information -->
+        <div class="detail-section" *ngIf="selectedLog.targetType">
+          <h4>Target Information</h4>
+          <div class="target-details">
+            <p><strong>Type:</strong> {{ selectedLog.targetType }}</p>
+            <p><strong>ID:</strong> {{ selectedLog.targetId || 'N/A' }}</p>
+            <p><strong>Email:</strong> {{ selectedLog.targetEmail || 'N/A' }}</p>
+          </div>
+        </div>
+
+        <!-- Network Information -->
+        <div class="detail-section">
+          <h4>Network Information</h4>
+          <div class="network-details">
+            <p><strong>IP Address:</strong> {{ selectedLog.ipAddress || 'N/A' }}</p>
+            <p><strong>Endpoint:</strong> {{ selectedLog.endpoint || 'N/A' }}</p>
+            <p><strong>HTTP Method:</strong> {{ selectedLog.httpMethod || 'N/A' }}</p>
+            <p><strong>User Agent:</strong> {{ selectedLog.userAgent || 'N/A' }}</p>
+          </div>
+        </div>
+
+        <!-- Error Information -->
+        <div class="detail-section error-section" *ngIf="selectedLog.errorMessage">
+          <h4>Error Information</h4>
+          <div class="error-message">
+            {{ selectedLog.errorMessage }}
+          </div>
+        </div>
+
+        <!-- Changes Description -->
+        <div class="detail-section" *ngIf="selectedLog.changesDescription">
+          <h4>Changes</h4>
+          <div class="changes-description">
+            {{ selectedLog.changesDescription }}
+          </div>
+        </div>
+
+        <!-- Request Data -->
+        <div class="detail-section" *ngIf="selectedLog.requestData">
+          <h4>Request Data</h4>
+          <pre class="json-data">{{ selectedLog.requestData | json }}</pre>
+        </div>
+
+        <!-- Response Data -->
+        <div class="detail-section" *ngIf="selectedLog.responseData">
+          <h4>Response Data</h4>
+          <pre class="json-data">{{ selectedLog.responseData | json }}</pre>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" (click)="closeDetailsModal()">Close</button>
       </div>
     </div>
   </div>

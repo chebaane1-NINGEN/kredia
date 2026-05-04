@@ -534,12 +534,12 @@ public class UserServiceImpl implements UserService {
         User agent = findUser(actorId);
         
         // Build dynamic query based on filters
+        // NOTE: Agents can see ALL clients in the system for portfolio management
         var queryBuilder = new StringBuilder();
         var params = new HashMap<String, Object>();
         
-        queryBuilder.append("SELECT u FROM User u WHERE u.role = :role AND u.deleted = false AND u.assignedAgent = :agent");
+        queryBuilder.append("SELECT u FROM User u WHERE u.role = :role AND u.deleted = false");
         params.put("role", UserRole.CLIENT);
-        params.put("agent", agent);
         
         // Email filter
         if (email.isPresent() && !email.get().trim().isEmpty()) {
@@ -600,8 +600,8 @@ public class UserServiceImpl implements UserService {
         
         var clients = query.getResultList();
         
-        // Count query for total elements
-        var countQueryBuilder = new StringBuilder("SELECT COUNT(u) FROM User u WHERE u.role = :role AND u.deleted = false AND u.assignedAgent = :agent");
+        // Count query for total elements (matching the main query without pagination)
+        var countQueryBuilder = new StringBuilder("SELECT COUNT(u) FROM User u WHERE u.role = :role AND u.deleted = false");
         if (email.isPresent() && !email.get().trim().isEmpty()) {
             countQueryBuilder.append(" AND (LOWER(u.email) LIKE LOWER(:email) OR LOWER(u.firstName) LIKE LOWER(:email) OR LOWER(u.lastName) LIKE LOWER(:email) OR LOWER(u.phoneNumber) LIKE LOWER(:email))");
         }

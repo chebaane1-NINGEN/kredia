@@ -277,15 +277,16 @@ public class AuditService {
      * Get dashboard summary of audit activity
      */
     public AuditLogSummary getAuditSummary() {
-        Instant today = Instant.now().truncatedTo(ChronoUnit.DAYS);
-        Instant tomorrow = today.plus(1, ChronoUnit.DAYS);
+        // Use last 30 days for meaningful metrics (seeded data may be older)
+        Instant last30Days = Instant.now().minus(30, ChronoUnit.DAYS);
+        Instant now = Instant.now();
 
-        long totalToday = auditLogRepository.countByTimestampAfter(today);
-        long failedToday = auditLogRepository.countByStatusAndTimestampBetween(AuditLog.AuditStatus.FAILED, today, tomorrow);
-        long highSeverityToday = auditLogRepository.countBySeverityAndTimestampBetween(AuditLog.AuditSeverity.HIGH, today, tomorrow);
+        long totalToday = auditLogRepository.countByTimestampAfter(last30Days);
+        long failedToday = auditLogRepository.countByStatusAndTimestampBetween(AuditLog.AuditStatus.FAILED, last30Days, now);
+        long highSeverityToday = auditLogRepository.countBySeverityAndTimestampBetween(AuditLog.AuditSeverity.HIGH, last30Days, now);
 
-        List<java.util.Map<String, Object>> actionDist = auditLogRepository.countByActionTypeInRange(today, tomorrow);
-        List<java.util.Map<String, Object>> severityDist = auditLogRepository.countBySeverityInRange(today, tomorrow);
+        List<java.util.Map<String, Object>> actionDist = auditLogRepository.countByActionTypeInRange(last30Days, now);
+        List<java.util.Map<String, Object>> severityDist = auditLogRepository.countBySeverityInRange(last30Days, now);
 
         Map<String, Long> actionMap = actionDist.stream()
             .collect(Collectors.toMap(m -> m.get("action").toString(), m -> ((Number)m.get("count")).longValue()));
