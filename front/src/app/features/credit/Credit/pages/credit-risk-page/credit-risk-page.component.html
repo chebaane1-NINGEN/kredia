@@ -1,0 +1,30 @@
+<div class="page-container">
+  <h1>Analyse du risque de défaut</h1>
+  <p>Entrez l'ID du crédit pour prédire la probabilité de défaut de paiement.</p>
+
+  <div class="form-group">
+    <label for="creditId">ID du crédit</label>
+    <input type="number" id="creditId" [(ngModel)]="creditId" placeholder="Ex: 123" class="input">
+    <div class="actions">
+      <button (click)="predict()" [disabled]="loading" class="btn btn--primary">
+        {{ loading ? 'Analyse...' : 'Prédire' }}
+      </button>
+      <button (click)="reset()" class="btn btn--ghost">Reset</button>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="alert alert--error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="result" class="result-card">
+    <h3>Résultat de la prédiction</h3>
+    <div class="prob-gauge" [style.background]="getProbabilityColor()">
+      {{ (result.default_probability * 100).toFixed(1) }}%
+    </div>
+    <div class="risk-level">
+      Niveau de risque : <span [class]="getRiskLabelClass()">{{ result.risk_level }}</span>
+    </div>
+    <p class="description">{{ result.recommendation }}</p>
+  </div>
+</div>

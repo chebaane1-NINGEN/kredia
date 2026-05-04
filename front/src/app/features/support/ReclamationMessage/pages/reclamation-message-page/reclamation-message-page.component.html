@@ -1,0 +1,105 @@
+<div class="support-simple-page">
+  <header class="page-header">
+    <div>
+      <span>Console support</span>
+      <h1>Conversation dossier</h1>
+      <p>Consultez les echanges client/support et ajoutez une reponse depuis un espace centralise.</p>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="loadMessages()" [disabled]="loading">Recharger</button>
+  </header>
+
+  <div *ngIf="error" class="alert alert--error">{{ error }}</div>
+  <div *ngIf="success" class="alert alert--success">{{ success }}</div>
+
+  <section class="conversation-stats">
+    <article>
+      <span>Dossier actif</span>
+      <strong>{{ reclamationId || '-' }}</strong>
+    </article>
+    <article>
+      <span>Messages visibles</span>
+      <strong>{{ messages.length }}</strong>
+    </article>
+    <article>
+      <span>Dernier message</span>
+      <strong>{{ messages.length ? formatDate(messages[0].createdAt) : '-' }}</strong>
+    </article>
+  </section>
+
+  <div class="conversation-workspace">
+    <section class="panel command-panel">
+      <div class="panel-title">
+        <div>
+          <h2>Selection du dossier</h2>
+          <p>Chargez les echanges lies a un ticket support.</p>
+        </div>
+      </div>
+
+      <div class="lookup-card">
+        <label>
+          Numero du dossier
+          <input type="number" name="reclamationId" [(ngModel)]="reclamationId" placeholder="Ex: 1024">
+        </label>
+        <label class="toggle" *ngIf="!auth.isClient()">
+          <input type="checkbox" name="includeInternal" [(ngModel)]="includeInternal" (change)="loadMessages()">
+          Inclure les notes internes
+        </label>
+        <button type="button" class="btn btn--primary" (click)="loadMessages()" [disabled]="loading">Charger la conversation</button>
+      </div>
+    </section>
+
+    <section class="panel conversation-panel">
+      <div class="panel-title">
+        <div>
+          <h2>Fil de conversation</h2>
+          <p>{{ messages.length }} message(s) visible(s)</p>
+        </div>
+      </div>
+      <div *ngIf="loading" class="muted">Chargement...</div>
+
+      <div class="message-list" *ngIf="!loading && messages.length > 0; else noMessages">
+        <article
+          class="message"
+          *ngFor="let message of messages; trackBy: trackMessage"
+          [class.message--support]="message.authorUserId === draft.authorUserId"
+          [class.message--internal]="message.visibility === 'INTERNAL'">
+          <div class="message-head">
+            <strong>{{ authorLabel(message) }}</strong>
+            <span class="chip">{{ visibilityLabel(message.visibility) }}</span>
+          </div>
+          <p>{{ message.message }}</p>
+          <small>{{ formatDate(message.createdAt) }}</small>
+        </article>
+      </div>
+
+      <ng-template #noMessages>
+        <div *ngIf="!loading" class="empty-state">
+          <strong>Aucune conversation</strong>
+          <p>Chargez un dossier ou envoyez le premier message.</p>
+        </div>
+      </ng-template>
+    </section>
+
+    <section class="panel reply-panel">
+      <div class="panel-title">
+        <div>
+          <h2>Repondre au dossier</h2>
+          <p>L'auteur est defini automatiquement avec votre session.</p>
+        </div>
+      </div>
+      <form class="reply-form" (ngSubmit)="sendMessage()">
+        <label>
+          Visibilite
+          <select name="visibility" [(ngModel)]="draft.visibility">
+            <option *ngFor="let visibility of visibilities" [ngValue]="visibility" [disabled]="visibility === 'INTERNAL' && auth.isClient()">{{ visibilityLabel(visibility) }}</option>
+          </select>
+        </label>
+        <label>
+          Message
+          <textarea name="message" rows="5" [(ngModel)]="draft.message" placeholder="Ecrivez une reponse claire et actionnable..." required></textarea>
+        </label>
+        <button type="submit" class="btn btn--primary" [disabled]="actionLoading">Envoyer la reponse</button>
+      </form>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,754 @@
+<div class="support-page" [class.support-page--client]="auth.isClient()">
+  <header class="page-hero" [class.page-hero--client]="auth.isClient()">
+    <ng-container *ngIf="auth.isClient(); else supportHero">
+      <div class="client-hero-copy">
+        <span class="eyebrow">Espace client</span>
+        <h1>Mes reclamations</h1>
+        <p class="client-hero-note">
+          Suivez vos demandes, vos reponses et vos documents dans un espace clair.
+        </p>
+      </div>
+
+      <div class="hero-actions">
+        <span class="auto-refresh-pill">Mise a jour automatique</span>
+      </div>
+    </ng-container>
+
+    <ng-template #supportHero>
+      <div>
+        <span class="eyebrow">Console support</span>
+        <h1>Centre de traitement</h1>
+        <p class="admin-hero-note">Pilotez les dossiers, les priorites, les assignations et les echanges clients depuis une vue operationnelle.</p>
+      </div>
+
+      <div class="hero-actions">
+        <button *ngIf="canViewDashboard()" type="button" class="btn btn--ghost" (click)="loadDashboard()" [disabled]="loadingDashboard">Stats</button>
+        <button type="button" class="btn btn--primary" (click)="loadReclamations()" [disabled]="loadingList">Actualiser</button>
+      </div>
+    </ng-template>
+  </header>
+
+  <div *ngIf="error" class="alert alert--error">{{ error }}</div>
+  <div *ngIf="success" class="alert alert--success">{{ success }}</div>
+
+  <ng-container *ngIf="auth.isClient(); else supportConsole">
+    <section class="client-welcome-grid">
+      <article class="client-welcome-card">
+        <span class="client-welcome-card__label">Total</span>
+        <strong>{{ totalElements }}</strong>
+        <p>Demandes ouvertes et archivees</p>
+      </article>
+
+      <article class="client-welcome-card">
+        <span class="client-welcome-card__label">Suivi</span>
+        <strong>{{ selected ? statusLabel(selected.status) : '-' }}</strong>
+        <p>Dernier statut du dossier</p>
+      </article>
+
+      <article class="client-welcome-card">
+        <span class="client-welcome-card__label">Dossier</span>
+        <strong>{{ messages.length + attachments.length }}</strong>
+        <p>Messages et documents</p>
+      </article>
+    </section>
+
+    <section class="client-shell">
+      <article class="support-panel client-compose">
+        <div class="section-title">
+          <h2>Nouvelle demande</h2>
+          <span>2 champs</span>
+        </div>
+
+        <form class="stack-form client-form" (ngSubmit)="createReclamation()">
+          <label>
+            Sujet
+            <span class="field-help">Resumez le probleme en une phrase.</span>
+            <input type="text" name="createSubject" maxlength="150" [(ngModel)]="createDraft.subject" required>
+          </label>
+
+          <label>
+            Description detaillee
+            <span class="field-help">Ajoutez les informations utiles pour accelerer le traitement.</span>
+            <textarea
+              name="createDescription"
+              rows="6"
+              maxlength="5000"
+              [(ngModel)]="createDraft.description"
+              placeholder="Expliquez votre probleme..."
+              required></textarea>
+          </label>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn--primary" [disabled]="actionLoading">Envoyer ma demande</button>
+          </div>
+        </form>
+      </article>
+
+      <article class="support-panel client-list-panel">
+        <div class="section-title">
+          <h2>Mes demandes</h2>
+          <span>{{ totalElements }} au total</span>
+        </div>
+
+        <div *ngIf="loadingList" class="loading-line">Chargement de vos reclamations...</div>
+
+        <div class="client-ticket-list" *ngIf="!loadingList && reclamations.length > 0; else emptyClientTickets">
+          <button
+            type="button"
+            class="client-ticket-card"
+            *ngFor="let rec of reclamations; trackBy: trackReclamation"
+            [class.client-ticket-card--active]="selected?.reclamationId === rec.reclamationId"
+            (click)="selectReclamation(rec)">
+            <div class="client-ticket-card__header">
+              <div>
+                <strong>{{ rec.subject }}</strong>
+                <small>{{ formatDate(rec.createdAt) }}</small>
+              </div>
+              <span [class]="statusClass(rec.status)">{{ statusLabel(rec.status) }}</span>
+            </div>
+
+            <div class="client-ticket-card__meta">
+              <span class="badge-soft">{{ categoryLabel(rec.category) }}</span>
+              <span class="badge-soft">{{ priorityLabel(rec.priority) }}</span>
+              <span class="badge-soft badge-soft--danger" *ngIf="rec.slaBreached">Suivi prioritaire</span>
+            </div>
+          </button>
+        </div>
+
+        <ng-template #emptyClientTickets>
+          <div *ngIf="!loadingList" class="empty-state">Vous n'avez pas encore de reclamation.</div>
+        </ng-template>
+
+        <div class="pagination client-pagination" *ngIf="totalPages > 1">
+          <button type="button" class="btn btn--ghost" (click)="changePage(-1)" [disabled]="page === 0">Precedent</button>
+          <span>Page {{ page + 1 }} / {{ totalPages || 1 }}</span>
+          <button type="button" class="btn btn--ghost" (click)="changePage(1)" [disabled]="totalPages === 0 || page + 1 >= totalPages">Suivant</button>
+        </div>
+      </article>
+    </section>
+
+    <ng-container *ngIf="selected as ticket; else noClientSelection">
+      <section class="client-detail-grid">
+        <article class="support-panel client-detail-card">
+          <div class="client-detail-card__header">
+            <div>
+              <span class="eyebrow">Demande selectionnee</span>
+              <h2>{{ ticket.subject }}</h2>
+            </div>
+
+            <button type="button" class="btn btn--ghost" (click)="downloadSelectedPdf()" [disabled]="exportingPdf">
+              {{ exportingPdf ? 'Generation PDF...' : 'Exporter PDF' }}
+            </button>
+          </div>
+
+          <div class="client-detail-overview">
+            <div class="client-status-mark">
+              <span [class]="statusClass(ticket.status)">{{ statusLabel(ticket.status) }}</span>
+              <strong>{{ clientStatusHeadline(ticket) }}</strong>
+            </div>
+
+            <div class="client-detail-badges">
+              <span class="badge-soft">{{ categoryLabel(ticket.category) }}</span>
+              <span class="badge-soft">{{ priorityLabel(ticket.priority) }}</span>
+              <span class="chip chip--danger" *ngIf="ticket.slaBreached">Prioritaire</span>
+            </div>
+          </div>
+
+          <div class="client-description-box">
+            <span>Message initial</span>
+            <p class="description">{{ ticket.description }}</p>
+          </div>
+
+          <div class="client-info-grid">
+            <div>
+              <span>Envoyee le</span>
+              <strong>{{ formatDate(ticket.createdAt) }}</strong>
+            </div>
+            <div>
+              <span>Derniere activite</span>
+              <strong>{{ formatDate(ticket.lastActivityAt) }}</strong>
+            </div>
+          </div>
+        </article>
+
+        <article class="support-panel client-workspace">
+          <div class="client-workspace__top">
+            <div class="section-title">
+              <h2>Dossier de suivi</h2>
+              <span>{{ loadingDetails ? 'Chargement...' : 'A jour' }}</span>
+            </div>
+
+            <div class="client-tabs" role="tablist" aria-label="Dossier reclamation">
+              <button type="button" [class.active]="clientWorkspaceTab === 'conversation'" (click)="setClientWorkspaceTab('conversation')">
+                Conversation <span>{{ messages.length }}</span>
+              </button>
+              <button type="button" [class.active]="clientWorkspaceTab === 'documents'" (click)="setClientWorkspaceTab('documents')">
+                Documents <span>{{ attachments.length }}</span>
+              </button>
+              <button type="button" *ngIf="!isClosed(ticket.status)" [class.active]="clientWorkspaceTab === 'edit'" (click)="setClientWorkspaceTab('edit')">
+                Modifier
+              </button>
+              <button type="button" *ngIf="isClosed(ticket.status)" [class.active]="clientWorkspaceTab === 'feedback'" (click)="setClientWorkspaceTab('feedback')">
+                Avis
+              </button>
+              <button type="button" [class.active]="clientWorkspaceTab === 'history'" (click)="setClientWorkspaceTab('history')">
+                Historique <span>{{ history.length }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="loadingDetails" class="loading-line">Chargement du dossier...</div>
+
+          <section class="client-tab-panel" *ngIf="clientWorkspaceTab === 'conversation'">
+            <div class="message-list client-conversation" *ngIf="messages.length > 0; else emptyClientMessages">
+              <article class="message" *ngFor="let message of messages; trackBy: trackMessage">
+                <div>
+                  <strong>{{ messageAuthorLabel(message, ticket) }}</strong>
+                  <span class="chip">{{ formatDate(message.createdAt) }}</span>
+                </div>
+                <p>{{ message.message }}</p>
+              </article>
+            </div>
+
+            <ng-template #emptyClientMessages>
+              <div class="empty-state">Aucun message pour le moment.</div>
+            </ng-template>
+
+            <form class="stack-form client-message-form" *ngIf="!isClosed(ticket.status)" (ngSubmit)="sendMessage()">
+              <label>
+                Nouveau message
+                <textarea
+                  name="messageText"
+                  rows="4"
+                  [(ngModel)]="messageDraft.message"
+                  placeholder="Ecrivez votre message au support..."
+                  required></textarea>
+              </label>
+              <button type="submit" class="btn btn--primary" [disabled]="actionLoading">Envoyer</button>
+            </form>
+          </section>
+
+          <section class="client-tab-panel" *ngIf="clientWorkspaceTab === 'documents'">
+            <div class="attachment-list" *ngIf="attachments.length > 0; else emptyClientAttachments">
+              <a class="attachment" *ngFor="let attachment of attachments; trackBy: trackAttachment" [href]="attachment.fileUrl" target="_blank" rel="noreferrer">
+                <strong>{{ attachment.fileName }}</strong>
+                <span>{{ attachment.contentType || 'fichier' }} - {{ formatBytes(attachment.sizeBytes) }}</span>
+                <small>{{ attachmentAuthorLabel(attachment, ticket) }} - {{ formatDate(attachment.uploadedAt) }}</small>
+              </a>
+            </div>
+
+            <ng-template #emptyClientAttachments>
+              <div class="empty-state">Aucun document ajoute.</div>
+            </ng-template>
+
+            <form class="stack-form client-upload-form" *ngIf="!isClosed(ticket.status)" (ngSubmit)="uploadAttachment()">
+              <label>
+                Ajouter un document
+                <input type="file" name="attachmentFile" (change)="onFileSelected($event)" [disabled]="isClosed(ticket.status)">
+              </label>
+              <button type="submit" class="btn btn--primary" [disabled]="actionLoading || !selectedFile || isClosed(ticket.status)">Uploader</button>
+            </form>
+          </section>
+
+          <section class="client-tab-panel" *ngIf="clientWorkspaceTab === 'edit' && !isClosed(ticket.status)">
+            <form class="stack-form client-edit-form client-edit-card" (ngSubmit)="updateSelectedContent()">
+              <label>
+                Sujet
+                <input type="text" name="editSubject" [(ngModel)]="editDraft.subject" [disabled]="isClosed(ticket.status)">
+              </label>
+
+              <label>
+                Description
+                <textarea name="editDescription" rows="6" [(ngModel)]="editDraft.description" [disabled]="isClosed(ticket.status)"></textarea>
+              </label>
+
+              <button type="submit" class="btn btn--primary" [disabled]="actionLoading || isClosed(ticket.status)">Enregistrer</button>
+            </form>
+          </section>
+
+          <section class="client-tab-panel" *ngIf="clientWorkspaceTab === 'feedback' && isClosed(ticket.status)">
+            <form class="stack-form client-feedback-form" *ngIf="canSubmitFeedback(ticket)" (ngSubmit)="submitFeedback()">
+              <label>
+                Note /5
+                <input type="number" name="feedbackScore" min="1" max="5" [(ngModel)]="feedbackDraft.customerSatisfactionScore" required>
+              </label>
+
+              <label>
+                Commentaire
+                <textarea name="feedbackText" rows="4" maxlength="500" [(ngModel)]="feedbackDraft.customerFeedback"></textarea>
+              </label>
+
+              <button type="submit" class="btn btn--primary" [disabled]="actionLoading">Envoyer mon avis</button>
+            </form>
+
+            <div class="client-reopen-box" *ngIf="canClientReopen(ticket)">
+              <strong>Besoin d'une nouvelle intervention ?</strong>
+              <p>Vous pouvez rouvrir cette demande.</p>
+              <button type="button" class="btn btn--ghost" (click)="reopenSelected()" [disabled]="actionLoading">Rouvrir</button>
+            </div>
+          </section>
+
+          <section class="client-tab-panel" *ngIf="clientWorkspaceTab === 'history'">
+            <div class="timeline" *ngIf="history.length > 0; else emptyClientHistory">
+              <article class="timeline-item" *ngFor="let row of history; trackBy: trackHistory">
+                <span class="timeline-dot"></span>
+                <div>
+                  <strong>{{ statusLabel(row.oldStatus) }} -> {{ statusLabel(row.newStatus) }}</strong>
+                  <p>{{ row.note || 'Mise a jour enregistree.' }}</p>
+                  <small>{{ historyActorLabel(row, ticket) }} - {{ formatDate(row.changedAt) }}</small>
+                </div>
+              </article>
+            </div>
+
+            <ng-template #emptyClientHistory>
+              <div class="empty-state">Aucun historique disponible.</div>
+            </ng-template>
+          </section>
+        </article>
+      </section>
+    </ng-container>
+
+    <ng-template #noClientSelection>
+      <section class="support-panel empty-wide client-empty-wide">
+        <h2>Selectionnez une demande pour voir le suivi detaille</h2>
+        <p>Votre conversation, vos documents et les mises a jour du support apparaitront ici.</p>
+      </section>
+    </ng-template>
+  </ng-container>
+
+  <ng-template #supportConsole>
+    <section class="stats-grid" *ngIf="dashboard as stats">
+      <article class="stat-tile">
+        <span>Total</span>
+        <strong>{{ stats.totalReclamations }}</strong>
+      </article>
+      <article class="stat-tile stat-tile--open">
+        <span>Ouvertes</span>
+        <strong>{{ stats.openReclamations }}</strong>
+      </article>
+      <article class="stat-tile stat-tile--work">
+        <span>En traitement</span>
+        <strong>{{ stats.inProgressReclamations }}</strong>
+      </article>
+      <article class="stat-tile stat-tile--wait">
+        <span>Attente client</span>
+        <strong>{{ stats.waitingCustomerReclamations }}</strong>
+      </article>
+      <article class="stat-tile stat-tile--risk">
+        <span>Escaladees</span>
+        <strong>{{ stats.escalatedReclamations }}</strong>
+      </article>
+      <article class="stat-tile stat-tile--done">
+        <span>Resolues</span>
+        <strong>{{ stats.resolvedReclamations }}</strong>
+      </article>
+      <article class="stat-tile stat-tile--late">
+        <span>SLA reponse</span>
+        <strong>{{ stats.overdueFirstResponses }}</strong>
+      </article>
+      <article class="stat-tile stat-tile--late">
+        <span>SLA resolution</span>
+        <strong>{{ stats.overdueResolutions }}</strong>
+      </article>
+    </section>
+
+    <section class="insights-grid" *ngIf="dashboard as stats">
+      <div class="insight-panel">
+        <div class="section-title">
+          <h2>Performance</h2>
+          <span>{{ stats.resolutionRate }}%</span>
+        </div>
+        <div class="progress">
+          <span [style.width.%]="stats.resolutionRate"></span>
+        </div>
+        <div class="metric-line">
+          <span>Temps moyen</span>
+          <strong>{{ stats.averageResolutionHours }} h</strong>
+        </div>
+        <div class="metric-line">
+          <span>Satisfaction</span>
+          <strong>{{ stats.averageCustomerSatisfaction }}/5</strong>
+        </div>
+      </div>
+
+      <div class="insight-panel">
+        <div class="section-title">
+          <h2>Categories</h2>
+          <span>{{ stats.categoryBreakdown.length }}</span>
+        </div>
+        <div class="category-bars" *ngIf="stats.categoryBreakdown.length > 0; else noCategories">
+          <div class="category-row" *ngFor="let category of stats.categoryBreakdown">
+            <span>{{ category.category }}</span>
+            <strong>{{ category.count }}</strong>
+          </div>
+        </div>
+        <ng-template #noCategories>
+          <p class="muted">Aucune categorie.</p>
+        </ng-template>
+      </div>
+    </section>
+
+    <div class="workspace-grid">
+      <section class="support-panel create-panel">
+        <div class="section-title">
+          <h2>Nouveau dossier</h2>
+          <span>Creation manuelle</span>
+        </div>
+
+        <form class="form-grid" (ngSubmit)="createReclamation()">
+          <label>
+            Client concerne
+            <span class="field-help">Reference client interne</span>
+            <input type="number" name="createUserId" [(ngModel)]="createDraft.userId" [readonly]="auth.isClient()" placeholder="Ex: 42" required>
+          </label>
+
+          <label>
+            Priorite
+            <select name="createPriority" [(ngModel)]="createDraft.priority">
+              <option *ngFor="let priority of priorities" [ngValue]="priority">{{ priority }}</option>
+            </select>
+          </label>
+
+          <label>
+            Categorie
+            <select name="createCategory" [(ngModel)]="createDraft.category">
+              <option *ngFor="let category of categories" [ngValue]="category">{{ category }}</option>
+            </select>
+          </label>
+
+          <label class="span-2">
+            Sujet
+            <input type="text" name="createSubject" maxlength="150" [(ngModel)]="createDraft.subject" required>
+          </label>
+
+          <label class="span-2">
+            Description
+            <textarea name="createDescription" rows="5" [(ngModel)]="createDraft.description" required></textarea>
+          </label>
+
+          <div class="form-actions span-2">
+            <button type="submit" class="btn btn--primary" [disabled]="actionLoading">Creer</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="support-panel list-panel">
+        <div class="section-title">
+          <h2>Tickets</h2>
+          <span>{{ totalElements }} dossiers</span>
+        </div>
+
+        <div class="filters">
+          <label>
+            Vue
+            <select name="filterMode" [(ngModel)]="filterMode" (ngModelChange)="loadReclamations(true)">
+              <option [ngValue]="'ALL'" *ngIf="!auth.isClient()">Toutes</option>
+              <option [ngValue]="'MINE'">Mes reclamations</option>
+              <option [ngValue]="'USER'" *ngIf="!auth.isClient()">Par utilisateur</option>
+              <option [ngValue]="'STATUS'">Par statut</option>
+            </select>
+          </label>
+
+          <label *ngIf="filterMode === 'USER'">
+            Client
+            <input type="number" name="filterUserId" [(ngModel)]="userFilterId" (change)="loadReclamations(true)" placeholder="Reference client">
+          </label>
+
+          <label *ngIf="filterMode === 'STATUS'">
+            Statut
+            <select name="statusFilter" [(ngModel)]="statusFilter" (ngModelChange)="loadReclamations(true)">
+              <option *ngFor="let status of statuses" [ngValue]="status">{{ status }}</option>
+            </select>
+          </label>
+
+          <label>
+            Taille
+            <select name="pageSize" [(ngModel)]="size" (ngModelChange)="loadReclamations(true)">
+              <option [ngValue]="5">5</option>
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="20">20</option>
+            </select>
+          </label>
+
+          <button type="button" class="btn btn--ghost" (click)="resetFilters()">Reset</button>
+        </div>
+
+        <div *ngIf="loadingList" class="loading-line">Chargement...</div>
+
+        <div class="ticket-list" *ngIf="!loadingList && reclamations.length > 0; else emptyTickets">
+          <button
+            type="button"
+            class="ticket-row"
+            *ngFor="let rec of reclamations; trackBy: trackReclamation"
+            [class.ticket-row--active]="selected?.reclamationId === rec.reclamationId"
+            (click)="selectReclamation(rec)">
+            <span class="ticket-main">
+              <strong>{{ rec.subject }}</strong>
+              <small>Dossier {{ rec.reclamationId }} - Client {{ rec.userId }} - {{ formatDate(rec.createdAt) }}</small>
+            </span>
+            <span class="ticket-meta">
+              <span [class]="statusClass(rec.status)">{{ statusLabel(rec.status) }}</span>
+              <span [class]="priorityClass(rec.priority)">{{ priorityLabel(rec.priority) }}</span>
+              <span *ngIf="canViewRiskInsights()" [class]="riskClass(rec.riskLevel)">{{ rec.riskLevel }}</span>
+              <span class="chip chip--danger" *ngIf="rec.slaBreached">SLA</span>
+            </span>
+          </button>
+        </div>
+
+        <ng-template #emptyTickets>
+          <div *ngIf="!loadingList" class="empty-state">Aucune reclamation.</div>
+        </ng-template>
+
+        <div class="pagination">
+          <button type="button" class="btn btn--ghost" (click)="changePage(-1)" [disabled]="page === 0">Precedent</button>
+          <span>Page {{ page + 1 }} / {{ totalPages || 1 }}</span>
+          <button type="button" class="btn btn--ghost" (click)="changePage(1)" [disabled]="totalPages === 0 || page + 1 >= totalPages">Suivant</button>
+        </div>
+      </section>
+    </div>
+
+    <ng-container *ngIf="selected as ticket; else noSelection">
+      <section class="detail-layout">
+        <div class="support-panel detail-panel">
+          <div class="section-title">
+            <div>
+              <h2>{{ ticket.subject }}</h2>
+              <span [class]="statusClass(ticket.status)">{{ statusLabel(ticket.status) }}</span>
+            </div>
+            <button type="button" class="btn btn--ghost" (click)="downloadSelectedPdf()" [disabled]="exportingPdf">
+              {{ exportingPdf ? 'Generation PDF...' : 'Exporter PDF' }}
+            </button>
+          </div>
+
+          <div class="detail-summary">
+            <span class="chip">Dossier {{ ticket.reclamationId }}</span>
+            <span [class]="priorityClass(ticket.priority)">{{ priorityLabel(ticket.priority) }}</span>
+            <span *ngIf="canViewRiskInsights()" [class]="riskClass(ticket.riskLevel)">{{ ticket.riskLevel }}</span>
+            <span *ngIf="canViewRiskInsights()" class="chip">Score {{ formatScore(ticket.riskScore ?? risk?.riskScore) }}</span>
+            <span class="chip chip--danger" *ngIf="ticket.slaBreached">SLA depasse</span>
+            <span class="chip" *ngIf="canViewRiskInsights() && ticket.duplicateCount > 0">{{ ticket.duplicateCount }} doublon(s)</span>
+          </div>
+
+          <p class="description">{{ ticket.description }}</p>
+
+          <div class="info-grid">
+            <div><span>Client</span><strong>{{ ticket.userId }}</strong></div>
+            <div><span>Conseiller assigne</span><strong>{{ ticket.assignedTo || 'Non assigne' }}</strong></div>
+            <div><span>Categorie</span><strong>{{ categoryLabel(ticket.category) }}</strong></div>
+            <div><span>Creee</span><strong>{{ formatDate(ticket.createdAt) }}</strong></div>
+            <div><span>Derniere activite</span><strong>{{ formatDate(ticket.lastActivityAt) }}</strong></div>
+            <div><span>Premiere reponse</span><strong>{{ formatDate(ticket.firstResponseAt) }}</strong></div>
+            <div><span>SLA reponse</span><strong>{{ formatDate(ticket.firstResponseDueAt) }}</strong></div>
+            <div><span>SLA resolution</span><strong>{{ formatDate(ticket.resolutionDueAt) }}</strong></div>
+          </div>
+
+          <div class="model-box" *ngIf="canViewRiskInsights() && ticket.modelInput as model">
+            <div class="metric-line"><span>Reclamations 90j</span><strong>{{ model.complaints_last_90d }}</strong></div>
+            <div class="metric-line"><span>Longueur message</span><strong>{{ model.message_len }}</strong></div>
+            <div class="metric-line"><span>Solde wallet</span><strong>{{ model.wallet_balance }}</strong></div>
+            <div class="metric-line"><span>Retards credit</span><strong>{{ model.credit_days_late }} j</strong></div>
+          </div>
+        </div>
+
+        <div class="support-panel actions-panel">
+          <div class="section-title">
+            <h2>Centre d'actions</h2>
+            <span>Dossier actif</span>
+          </div>
+
+          <form class="stack-form" (ngSubmit)="updateSelectedContent()">
+            <h3>Modifier</h3>
+            <label>
+              Sujet
+              <input type="text" name="editSubject" [(ngModel)]="editDraft.subject" [disabled]="isClosed(ticket.status)">
+            </label>
+            <label>
+              Description
+              <textarea name="editDescription" rows="4" [(ngModel)]="editDraft.description" [disabled]="isClosed(ticket.status)"></textarea>
+            </label>
+            <div class="inline-fields">
+              <label>
+                Priorite
+                <select name="editPriority" [(ngModel)]="editDraft.priority" [disabled]="isClosed(ticket.status)">
+                  <option *ngFor="let priority of priorities" [ngValue]="priority">{{ priority }}</option>
+                </select>
+              </label>
+              <label>
+                Categorie
+                <select name="editCategory" [(ngModel)]="editDraft.category" [disabled]="isClosed(ticket.status)">
+                  <option *ngFor="let category of categories" [ngValue]="category">{{ category }}</option>
+                </select>
+              </label>
+            </div>
+            <button type="submit" class="btn btn--primary" [disabled]="actionLoading || isClosed(ticket.status)">Enregistrer</button>
+          </form>
+
+          <form class="stack-form" *ngIf="canUpdateStatus(ticket)" (ngSubmit)="updateSelectedStatus()">
+            <h3>Changer le statut</h3>
+            <label>
+              Nouveau statut
+              <select name="newStatus" [(ngModel)]="statusDraft.newStatus">
+                <option *ngFor="let status of getAllowedStatuses(ticket.status)" [ngValue]="status">{{ statusLabel(status) }}</option>
+              </select>
+            </label>
+            <label>
+              Note interne
+              <input type="text" name="statusNote" [(ngModel)]="statusDraft.note">
+            </label>
+            <button type="submit" class="btn btn--primary" [disabled]="actionLoading">Changer statut</button>
+          </form>
+
+          <form class="stack-form" (ngSubmit)="assignSelected()" *ngIf="canAssignSelected()">
+            <h3>Assigner a un conseiller</h3>
+            <label>
+              Conseiller
+              <span class="field-help">Reference interne du conseiller</span>
+              <input type="number" name="assignAgent" [(ngModel)]="assignDraft.agentUserId" placeholder="Ex: 12" required>
+            </label>
+            <label>
+              Note
+              <input type="text" name="assignNote" [(ngModel)]="assignDraft.note">
+            </label>
+            <button type="submit" class="btn btn--primary" [disabled]="actionLoading || isClosed(ticket.status)">Assigner</button>
+          </form>
+
+          <form class="stack-form" (ngSubmit)="submitFeedback()" *ngIf="canSubmitFeedback(ticket)">
+            <h3>Feedback client</h3>
+            <div class="inline-fields">
+              <label>
+                Note /5
+                <input type="number" name="feedbackScore" min="1" max="5" [(ngModel)]="feedbackDraft.customerSatisfactionScore" required>
+              </label>
+            </div>
+            <label>
+              Commentaire
+              <textarea name="feedbackText" rows="3" maxlength="500" [(ngModel)]="feedbackDraft.customerFeedback"></textarea>
+            </label>
+            <button type="submit" class="btn btn--primary" [disabled]="actionLoading">Envoyer feedback</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="support-panel admin-workspace">
+        <div class="admin-workspace__header">
+          <div>
+            <span class="eyebrow">Espace dossier</span>
+            <h2>Suivi operationnel</h2>
+            <p>Centralisez les echanges, documents, historique et alertes de similarite du dossier actif.</p>
+          </div>
+
+          <label class="toggle" *ngIf="canUseInternalMessages()">
+            <input type="checkbox" name="includeInternal" [(ngModel)]="includeInternal" (change)="toggleInternalMessages()">
+            Inclure les notes internes
+          </label>
+        </div>
+
+        <div class="admin-tabs" role="tablist" aria-label="Suivi dossier support">
+          <button type="button" [class.active]="adminWorkspaceTab === 'conversation'" (click)="setAdminWorkspaceTab('conversation')">
+            Conversation <span>{{ messages.length }}</span>
+          </button>
+          <button type="button" [class.active]="adminWorkspaceTab === 'documents'" (click)="setAdminWorkspaceTab('documents')">
+            Documents <span>{{ attachments.length }}</span>
+          </button>
+          <button type="button" [class.active]="adminWorkspaceTab === 'history'" (click)="setAdminWorkspaceTab('history')">
+            Historique <span>{{ history.length }}</span>
+          </button>
+          <button type="button" *ngIf="canViewRiskInsights()" [class.active]="adminWorkspaceTab === 'duplicates'" (click)="setAdminWorkspaceTab('duplicates')">
+            Doublons <span>{{ duplicates.length }}</span>
+          </button>
+        </div>
+
+        <div *ngIf="loadingDetails" class="loading-line">Chargement du dossier...</div>
+
+        <section class="admin-tab-panel" *ngIf="adminWorkspaceTab === 'conversation'">
+          <div class="message-list admin-conversation" *ngIf="messages.length > 0; else emptyMessages">
+            <article class="message" *ngFor="let message of messages; trackBy: trackMessage" [class.message--internal]="message.visibility === 'INTERNAL'">
+              <div>
+                <strong>{{ messageAuthorLabel(message, ticket) }}</strong>
+                <span [class]="message.visibility === 'INTERNAL' ? 'chip chip--internal' : 'chip'">{{ message.visibility }}</span>
+              </div>
+              <p>{{ message.message }}</p>
+              <small>{{ formatDate(message.createdAt) }}</small>
+            </article>
+          </div>
+
+          <ng-template #emptyMessages>
+            <div class="empty-state">Aucun message.</div>
+          </ng-template>
+
+          <form class="stack-form message-form admin-reply" (ngSubmit)="sendMessage()">
+            <label>
+              Visibilite
+              <select name="messageVisibility" [(ngModel)]="messageDraft.visibility">
+                <option *ngFor="let visibility of visibilities" [ngValue]="visibility" [disabled]="visibility === 'INTERNAL' && auth.isClient()">{{ visibility }}</option>
+              </select>
+            </label>
+            <label>
+              Reponse
+              <textarea name="messageText" rows="3" [(ngModel)]="messageDraft.message" placeholder="Ecrire une reponse claire pour le client ou une note interne..." required></textarea>
+            </label>
+            <button type="submit" class="btn btn--primary" [disabled]="actionLoading">Envoyer</button>
+          </form>
+        </section>
+
+        <section class="admin-tab-panel" *ngIf="adminWorkspaceTab === 'documents'">
+          <div class="attachment-list" *ngIf="attachments.length > 0; else emptyAttachments">
+            <a class="attachment" *ngFor="let attachment of attachments; trackBy: trackAttachment" [href]="attachment.fileUrl" target="_blank" rel="noreferrer">
+              <strong>{{ attachment.fileName }}</strong>
+              <span>{{ attachment.contentType || 'fichier' }} - {{ formatBytes(attachment.sizeBytes) }}</span>
+              <small>{{ attachmentAuthorLabel(attachment, ticket) }} - {{ formatDate(attachment.uploadedAt) }}</small>
+            </a>
+          </div>
+
+          <ng-template #emptyAttachments>
+            <div class="empty-state">Aucune piece jointe.</div>
+          </ng-template>
+
+          <form class="stack-form upload-form admin-upload" (ngSubmit)="uploadAttachment()">
+            <label>
+              Ajouter un fichier
+              <input type="file" name="attachmentFile" (change)="onFileSelected($event)" [disabled]="isClosed(ticket.status)">
+            </label>
+            <button type="submit" class="btn btn--primary" [disabled]="actionLoading || !selectedFile || isClosed(ticket.status)">Uploader</button>
+          </form>
+        </section>
+
+        <section class="admin-tab-panel" *ngIf="adminWorkspaceTab === 'history'">
+          <div class="timeline" *ngIf="history.length > 0; else emptyHistory">
+            <article class="timeline-item" *ngFor="let row of history; trackBy: trackHistory">
+              <span class="timeline-dot"></span>
+              <div>
+                <strong>{{ statusLabel(row.oldStatus) }} -> {{ statusLabel(row.newStatus) }}</strong>
+                <p>{{ row.note || '-' }}</p>
+                <small>{{ historyActorLabel(row, ticket) }} - {{ formatDate(row.changedAt) }}</small>
+              </div>
+            </article>
+          </div>
+
+          <ng-template #emptyHistory>
+            <div class="empty-state">Aucun historique.</div>
+          </ng-template>
+        </section>
+
+        <section class="admin-tab-panel" *ngIf="adminWorkspaceTab === 'duplicates' && canViewRiskInsights()">
+          <div class="duplicate-list" *ngIf="duplicates.length > 0; else emptyDuplicates">
+            <button type="button" class="duplicate" *ngFor="let duplicate of duplicates; trackBy: trackReclamation" (click)="selectReclamation(duplicate)">
+              <strong>{{ duplicate.subject }}</strong>
+              <span>Dossier {{ duplicate.reclamationId }} - {{ statusLabel(duplicate.status) }} - {{ formatDate(duplicate.createdAt) }}</span>
+            </button>
+          </div>
+
+          <ng-template #emptyDuplicates>
+            <div class="empty-state">Aucun doublon detecte.</div>
+          </ng-template>
+        </section>
+      </section>
+    </ng-container>
+
+    <ng-template #noSelection>
+      <section class="support-panel empty-wide">
+        <h2>Aucune reclamation selectionnee</h2>
+      </section>
+    </ng-template>
+  </ng-template>
+</div>

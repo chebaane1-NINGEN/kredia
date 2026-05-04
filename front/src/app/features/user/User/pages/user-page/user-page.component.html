@@ -1,0 +1,36 @@
+<section class="user-page">
+  <header>
+    <h1>Users</h1>
+    <p>Manage all registered users and their statuses.</p>
+  </header>
+
+  <div class="alert error" *ngIf="error">{{ error }}</div>
+
+  <div class="table-responsive" *ngIf="!loading || users.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of users">
+          <td>{{ u.userId }}</td>
+          <td>{{ u.firstName }} {{ u.lastName }}</td>
+          <td>{{ u.email }}</td>
+          <td><span [class]="getRoleClass(u.role)">{{ u.role }}</span></td>
+          <td><span [class]="getStatusClass(u.status)">{{ u.status }}</span></td>
+          <td>{{ u.createdAt | date:'short' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="users.length === 0 && !loading">No users found.</p>
+  </div>
+
+  <p *ngIf="loading && users.length === 0">Loading...</p>
+</section>

@@ -1,0 +1,96 @@
+<div class="support-simple-page">
+  <header class="page-header">
+    <div>
+      <span>Console support</span>
+      <h1>Documents du dossier</h1>
+      <p>Retrouvez et ajoutez les pieces justificatives liees a une reclamation.</p>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="loadAttachments()" [disabled]="loading">Recharger</button>
+  </header>
+
+  <div *ngIf="error" class="alert alert--error">{{ error }}</div>
+  <div *ngIf="success" class="alert alert--success">{{ success }}</div>
+
+  <section class="document-stats">
+    <article>
+      <span>Dossier actif</span>
+      <strong>{{ reclamationId || '-' }}</strong>
+    </article>
+    <article>
+      <span>Documents</span>
+      <strong>{{ attachments.length }}</strong>
+    </article>
+    <article>
+      <span>Fichier selectionne</span>
+      <strong>{{ selectedFile ? selectedFile.name : '-' }}</strong>
+    </article>
+  </section>
+
+  <div class="documents-workspace">
+    <section class="panel command-panel">
+      <div class="panel-title">
+        <div>
+          <h2>Selection du dossier</h2>
+          <p>Chargez la bibliotheque documentaire d'un ticket support.</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          Numero du dossier
+          <input type="number" name="reclamationId" [(ngModel)]="reclamationId" placeholder="Ex: 1024">
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn btn--primary" (click)="loadAttachments()" [disabled]="loading">Charger les documents</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel upload-panel">
+      <div class="panel-title">
+        <div>
+          <h2>Ajouter un document</h2>
+          <p>L'ajout sera signe automatiquement avec votre session support.</p>
+        </div>
+      </div>
+
+      <form class="upload-dropzone" (ngSubmit)="upload()">
+        <label>
+          <span class="upload-icon">DOC</span>
+          <strong>{{ selectedFile ? selectedFile.name : 'Choisir un fichier' }}</strong>
+          <small>{{ selectedFile ? 'Pret a etre ajoute au dossier' : 'PDF, image ou document justificatif' }}</small>
+          <input type="file" name="file" (change)="onFileSelected($event)">
+        </label>
+        <button type="submit" class="btn btn--primary" [disabled]="actionLoading || !selectedFile">Ajouter au dossier</button>
+      </form>
+    </section>
+
+    <section class="panel document-library">
+      <div class="panel-title">
+        <div>
+          <h2>Bibliotheque documentaire</h2>
+          <p>{{ attachments.length }} fichier(s) rattache(s)</p>
+        </div>
+      </div>
+      <div *ngIf="loading" class="muted">Chargement...</div>
+
+      <div class="attachment-list" *ngIf="!loading && attachments.length > 0; else noAttachments">
+        <a class="attachment" *ngFor="let attachment of attachments; trackBy: trackAttachment" [href]="attachment.fileUrl" target="_blank" rel="noreferrer">
+          <span class="file-icon">{{ fileBadge(attachment.contentType) }}</span>
+          <span class="file-content">
+            <strong>{{ attachment.fileName }}</strong>
+            <small>{{ attachment.uploadedByUserId === uploadedByUserId ? 'Ajoute par le support' : 'Ajoute par le client' }} - {{ formatDate(attachment.uploadedAt) }}</small>
+          </span>
+          <span class="file-meta">{{ attachment.contentType || 'fichier' }}<br>{{ formatBytes(attachment.sizeBytes) }}</span>
+        </a>
+      </div>
+
+      <ng-template #noAttachments>
+        <div *ngIf="!loading" class="empty-state">
+          <strong>Aucun document pour ce dossier</strong>
+          <p>Chargez un dossier ou ajoutez une premiere piece jointe.</p>
+        </div>
+      </ng-template>
+    </section>
+  </div>
+</div>

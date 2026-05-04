@@ -1,0 +1,41 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+/* Root layout: sidebar | main */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-secondary);
+}
+
+/* Main area takes remaining width */
+.main-area {
+  flex: 1;
+  margin-left: 220px; /* matches sidebar width */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-secondary);
+  transition: margin-left 0.3s ease, background-color 0.3s ease;
+}
+
+/* When no sidebar (home page) */
+.main-area.no-sidebar {
+  margin-left: 0;
+}
+
+/* Scrollable content area */
+.page-content {
+  flex: 1;
+  padding: 28px clamp(16px, 2.5vw, 36px);
+  overflow-y: auto;
+}
+
+/* Responsive */
+@media (max-width: 920px) {
+  .main-area {
+    margin-left: 0;
+  }
+}

@@ -1,0 +1,21 @@
+<ng-container *ngIf="!isLoginPage; else loginOutlet">
+  <div class="app-layout">
+
+    <!-- Sidebar visible sauf home et login -->
+    <app-sidebar *ngIf="!isHomePage"></app-sidebar>
+
+    <!-- Main area -->
+    <div class="main-area" [class.no-sidebar]="isHomePage">
+      <app-navbar></app-navbar>
+      <main class="page-content">
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+
+  </div>
+</ng-container>
+
+<!-- Page login : rendu sans shell (pas de sidebar, pas de navbar) -->
+<ng-template #loginOutlet>
+  <router-outlet></router-outlet>
+</ng-template>

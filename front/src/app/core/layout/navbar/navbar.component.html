@@ -1,0 +1,106 @@
+<header class="topbar">
+  <div class="search-bar">
+    <span class="search-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M10.5 4a6.5 6.5 0 1 0 4.06 11.58l4.43 4.43 1.41-1.41-4.43-4.43A6.5 6.5 0 0 0 10.5 4Zm0 2a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z"></path>
+      </svg>
+    </span>
+    <input type="text" placeholder="Global search (Users, Transactions, Logs...)" />
+  </div>
+
+  <div class="topbar-actions">
+    <span class="status-badge">
+      <span class="status-dot"></span>
+      System Live
+    </span>
+
+    <button class="icon-btn" type="button" (click)="toggleDarkMode()" title="Changer le theme">
+      <span *ngIf="!darkModeService.isDarkMode()" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M21 12.79A9 9 0 0 1 11.21 3a1 1 0 0 0-1.17 1.29A7 7 0 1 0 19.71 13a1 1 0 0 0 1.29-1.17Z"></path>
+        </svg>
+      </span>
+      <span *ngIf="darkModeService.isDarkMode()" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M12 4a1 1 0 0 1 1 1v1.2a1 1 0 1 1-2 0V5a1 1 0 0 1 1-1Zm0 12.8a1 1 0 0 1 1 1V19a1 1 0 1 1-2 0v-1.2a1 1 0 0 1 1-1Zm8-5.8a1 1 0 0 1-1 1h-1.2a1 1 0 1 1 0-2H19a1 1 0 0 1 1 1Zm-12.8 0a1 1 0 0 1-1 1H5a1 1 0 1 1 0-2h1.2a1 1 0 0 1 1 1Zm10.11-4.91a1 1 0 0 1 0 1.41l-.85.85a1 1 0 0 1-1.41-1.41l.85-.85a1 1 0 0 1 1.41 0ZM9.1 14.9a1 1 0 0 1 0 1.41l-.85.85a1 1 0 0 1-1.41-1.41l.85-.85a1 1 0 0 1 1.41 0Zm7.36 2.26a1 1 0 0 1-1.41 0l-.85-.85a1 1 0 0 1 1.41-1.41l.85.85a1 1 0 0 1 0 1.41ZM9.1 7.69a1 1 0 0 1-1.41 0l-.85-.85a1 1 0 0 1 1.41-1.41l.85.85a1 1 0 0 1 0 1.41ZM12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"></path>
+        </svg>
+      </span>
+    </button>
+
+    <div class="notification-shell" *ngIf="isLoggedIn">
+      <button
+        class="icon-btn icon-btn--notification"
+        type="button"
+        title="Notifications"
+        aria-label="Ouvrir les notifications"
+        [attr.aria-expanded]="notificationsOpen"
+        (click)="toggleNotifications($event)">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M12 3a5 5 0 0 0-5 5v2.14c0 .64-.24 1.25-.68 1.72L4.59 13.6A1 1 0 0 0 5.3 15h13.4a1 1 0 0 0 .71-1.7l-1.73-1.74A2.5 2.5 0 0 1 17 10.14V8a5 5 0 0 0-5-5Zm0 18a3 3 0 0 0 2.82-2h-5.64A3 3 0 0 0 12 21Z"></path>
+        </svg>
+        <span *ngIf="hasUnreadNotifications" class="notification-dot notification-dot--alert"></span>
+      </button>
+
+      <section class="notification-panel" *ngIf="notificationsOpen">
+        <header class="notification-panel__header">
+          <div>
+            <p class="notification-panel__eyebrow">Centre de notifications</p>
+            <h2>Vos dernieres alertes</h2>
+          </div>
+          <span class="notification-panel__auto">Auto</span>
+        </header>
+
+        <p class="notification-panel__caption">
+          A l'ouverture, les notifications visibles sont automatiquement marquees comme lues.
+        </p>
+
+        <div class="notification-state" *ngIf="loadingNotifications">
+          Chargement de vos notifications...
+        </div>
+
+        <div class="notification-state notification-state--error" *ngIf="!loadingNotifications && notificationsError">
+          {{ notificationsError }}
+        </div>
+
+        <div class="notification-empty" *ngIf="!loadingNotifications && !notificationsError && notifications.length === 0">
+          <div class="notification-empty__icon">OK</div>
+          <strong>Aucune notification en attente</strong>
+          <p>Tout est a jour. Les prochaines alertes support apparaitront ici.</p>
+        </div>
+
+        <div class="notification-list" *ngIf="!loadingNotifications && notifications.length > 0">
+          <article
+            class="notification-card"
+            *ngFor="let notification of notifications; trackBy: trackNotification"
+            [class.notification-card--unread]="!notification.isRead">
+            <button class="notification-card__body" type="button" (click)="openNotification(notification)">
+              <div class="notification-card__meta">
+                <span class="notification-chip">{{ notificationTypeLabel(notification.type) }}</span>
+                <span class="notification-time">{{ formatNotificationTime(notification.sentAt) }}</span>
+              </div>
+
+              <strong>{{ notificationHeading(notification) }}</strong>
+              <p>{{ notificationBody(notification) }}</p>
+
+              <span class="notification-link" *ngIf="notification.reclamationId">
+                Ouvrir la reclamation concernee
+              </span>
+            </button>
+
+            <button
+              class="notification-delete"
+              type="button"
+              title="Retirer cette notification"
+              aria-label="Retirer cette notification"
+              [disabled]="deletingNotificationId === notification.notificationId"
+              (click)="removeNotification(notification, $event)">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 7h2v7h-2v-7Zm4 0h2v7h-2v-7ZM7 10h2v7H7v-7Zm-1 10a2 2 0 0 1-2-2V8h16v10a2 2 0 0 1-2 2H6Z"></path>
+              </svg>
+            </button>
+          </article>
+        </div>
+      </section>
+    </div>
+  </div>
+</header>

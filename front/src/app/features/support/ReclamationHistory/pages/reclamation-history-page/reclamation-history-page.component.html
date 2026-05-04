@@ -1,0 +1,77 @@
+<div class="support-simple-page">
+  <header class="page-header">
+    <div>
+      <span>Console support</span>
+      <h1>Historique du dossier</h1>
+      <p>Suivez les changements de statut et les interventions effectuees sur une reclamation.</p>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="loadHistory()" [disabled]="loading">Recharger</button>
+  </header>
+
+  <div *ngIf="error" class="alert alert--error">{{ error }}</div>
+
+  <section class="history-stats">
+    <article>
+      <span>Dossier actif</span>
+      <strong>{{ reclamationId || '-' }}</strong>
+    </article>
+    <article>
+      <span>Evenements</span>
+      <strong>{{ rows.length }}</strong>
+    </article>
+    <article>
+      <span>Derniere activite</span>
+      <strong>{{ rows.length ? formatDate(rows[0].changedAt) : '-' }}</strong>
+    </article>
+  </section>
+
+  <div class="history-workspace">
+    <section class="panel command-panel">
+      <div class="panel-title">
+        <div>
+          <h2>Selection du dossier</h2>
+          <p>Renseignez le numero du ticket pour consulter sa timeline.</p>
+        </div>
+      </div>
+
+      <div class="lookup-card">
+        <label>
+          Numero du dossier
+          <input type="number" name="reclamationId" [(ngModel)]="reclamationId" placeholder="Ex: 1024">
+        </label>
+        <button type="button" class="btn btn--primary" (click)="loadHistory()" [disabled]="loading">Charger la timeline</button>
+      </div>
+    </section>
+
+    <section class="panel timeline-panel">
+      <div class="panel-title">
+        <div>
+          <h2>Timeline des actions</h2>
+          <p>{{ rows.length }} evenement(s) enregistre(s)</p>
+        </div>
+      </div>
+      <div *ngIf="loading" class="muted">Chargement...</div>
+
+      <div class="timeline" *ngIf="!loading && rows.length > 0; else noRows">
+        <article class="timeline-item" *ngFor="let row of rows; let first = first; trackBy: trackHistory" [class.timeline-item--latest]="first">
+          <span class="dot"></span>
+          <div class="timeline-content">
+            <div class="timeline-head">
+              <strong>{{ statusLabel(row.oldStatus) }} -> {{ statusLabel(row.newStatus) }}</strong>
+              <span>{{ first ? 'Derniere action' : actorLabel(row) }}</span>
+            </div>
+            <p>{{ row.note || 'Mise a jour enregistree sans note.' }}</p>
+            <small>{{ actorLabel(row) }} - {{ formatDate(row.changedAt) }}</small>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #noRows>
+        <div *ngIf="!loading" class="empty-state">
+          <strong>Aucun historique disponible</strong>
+          <p>Chargez un dossier pour afficher ses changements de statut.</p>
+        </div>
+      </ng-template>
+    </section>
+  </div>
+</div>

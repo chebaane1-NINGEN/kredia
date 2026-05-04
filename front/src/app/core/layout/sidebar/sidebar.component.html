@@ -1,0 +1,124 @@
+<aside class="sidebar">
+
+  <!-- Brand -->
+  <div class="sidebar-brand">
+    <div class="brand-icon">
+      <img src="/assets/kredia-logo.png" alt="Kredia" />
+    </div>
+    <span class="brand-name">KREDIA</span>
+  </div>
+
+  <!-- Section label -->
+  <p class="section-label">ADMINISTRATION</p>
+
+  <!-- Navigation -->
+  <nav class="sidebar-nav">
+    <ul>
+
+      <!-- Dashboard -->
+      <li>
+        <a routerLink="/home" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">⊞</span>
+          <span>Dashboard</span>
+        </a>
+      </li>
+
+      <!-- USER -->
+      <li *ngIf="canViewUserMenu" [class.active-parent]="expandedMenus['user']">
+        <a (click)="toggleMenu('user', $event)" class="nav-item parent-link">
+          <span class="nav-icon">👤</span>
+          <span>Users Management</span>
+          <span class="chevron" [class.rotated]="expandedMenus['user']">▼</span>
+        </a>
+        <ul class="sub" [class.expanded]="expandedMenus['user']">
+          <li><a routerLink="/user" routerLinkActive="active">User List</a></li>
+          <li><a routerLink="/user/kyc-doc" routerLinkActive="active">KYC Documents</a></li>
+        </ul>
+      </li>
+
+      <!-- CREDIT -->
+      <li [class.active-parent]="expandedMenus['credit']">
+        <a (click)="toggleMenu('credit', $event)" class="nav-item parent-link">
+          <span class="nav-icon">📋</span>
+          <span>Credit</span>
+          <span class="chevron" [class.rotated]="expandedMenus['credit']">▼</span>
+        </a>
+        <ul class="sub" [class.expanded]="expandedMenus['credit']">
+          <li><a routerLink="/credit/list" routerLinkActive="active">Crédits</a></li>
+          <li><a routerLink="/credit/echeances" routerLinkActive="active">Échéances</a></li>
+          <li><a routerLink="/credit/kyc" routerLinkActive="active">KYC Loan</a></li>
+          <li *ngIf="!authService.isClient()"><a routerLink="/credit/risk" routerLinkActive="active">Risk Scan</a></li>
+          <li *ngIf="authService.isClient()"><a routerLink="/credit/chatbot" routerLinkActive="active">Chatbot</a></li>
+        </ul>
+      </li>
+
+      <!-- WALLET -->
+      <li *ngIf="canViewWalletMenu" [class.active-parent]="expandedMenus['wallet']">
+        <a (click)="toggleMenu('wallet', $event)" class="nav-item parent-link">
+          <span class="nav-icon">💳</span>
+          <span>Wallet</span>
+          <span class="chevron" [class.rotated]="expandedMenus['wallet']">▼</span>
+        </a>
+        <ul class="sub" [class.expanded]="expandedMenus['wallet']">
+          <li><a routerLink="/wallet" routerLinkActive="active">Wallet</a></li>
+          <li><a routerLink="/wallet/transactions" routerLinkActive="active">Transactions</a></li>
+          <li><a routerLink="/wallet/audit" routerLinkActive="active">Audit Log</a></li>
+          <li><a routerLink="/wallet/loan-transactions" routerLinkActive="active">Transaction Loan</a></li>
+          <li><a routerLink="/wallet/virtual-card" routerLinkActive="active">Virtual Card</a></li>
+        </ul>
+      </li>
+
+      <!-- SUPPORT -->
+      <li [class.active-parent]="expandedMenus['support']">
+        <a (click)="toggleMenu('support', $event)" class="nav-item parent-link">
+          <span class="nav-icon">💬</span>
+          <span>Support</span>
+          <span class="chevron" [class.rotated]="expandedMenus['support']">▼</span>
+        </a>
+        <ul class="sub" [class.expanded]="expandedMenus['support']">
+          <li><a routerLink="/support/reclamations" routerLinkActive="active">Dossiers support</a></li>
+          <li *ngIf="isSupportStaff"><a routerLink="/support/reclamation-attachments" routerLinkActive="active">Documents</a></li>
+          <li *ngIf="isSupportStaff"><a routerLink="/support/reclamation-history" routerLinkActive="active">Historique</a></li>
+          <li *ngIf="isSupportStaff"><a routerLink="/support/reclamation-messages" routerLinkActive="active">Conversations</a></li>
+        </ul>
+      </li>
+
+      <!-- INVESTISSEMENT -->
+      <li *ngIf="canViewInvestmentMenu" [class.active-parent]="expandedMenus['investissement']">
+        <a (click)="toggleMenu('investissement', $event)" class="nav-item parent-link">
+          <span class="nav-icon">📈</span>
+          <span>Investissement</span>
+          <span class="chevron" [class.rotated]="expandedMenus['investissement']">▼</span>
+        </a>
+        <ul class="sub" [class.expanded]="expandedMenus['investissement']">
+          <li><a routerLink="/investissement/assets" routerLinkActive="active">Assets</a></li>
+          <li><a routerLink="/investissement/orders" routerLinkActive="active">Orders</a></li>
+          <li><a routerLink="/investissement/strategies" routerLinkActive="active">Strategies</a></li>
+          <li><a routerLink="/investissement/portfolio" routerLinkActive="active">Portfolio</a></li>
+        </ul>
+      </li>
+
+    </ul>
+  </nav>
+
+  <!-- Footer: user + actions -->
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar">{{ currentUser.initials }}</div>
+      <div class="user-details">
+        <span class="user-name">{{ currentUser.name }}</span>
+        <span class="user-role">{{ currentUser.role }}</span>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="icon-btn" (click)="toggleDarkMode()" title="Toggle dark mode">
+        <span *ngIf="!darkModeService.isDarkMode()">🌙</span>
+        <span *ngIf="darkModeService.isDarkMode()">☀️</span>
+      </button>
+      <a class="sign-out" (click)="logout()">
+        <span>🚪</span> Sign Out
+      </a>
+    </div>
+  </div>
+
+</aside>

@@ -1,0 +1,106 @@
+<div class="support-simple-page">
+  <header class="page-header">
+    <div>
+      <span>Support</span>
+      <h1>Notifications</h1>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="loadNotifications()" [disabled]="loading">Actualiser</button>
+  </header>
+
+  <div *ngIf="error" class="alert alert--error">{{ error }}</div>
+  <div *ngIf="success" class="alert alert--success">{{ success }}</div>
+
+  <section class="panel">
+    <div class="filters">
+      <label>
+        User ID
+        <input type="number" name="userId" [(ngModel)]="userId" [readonly]="auth.isClient()">
+      </label>
+      <label>
+        Lecture
+        <select name="readFilter" [(ngModel)]="readFilter" (ngModelChange)="loadNotifications(true)">
+          <option [ngValue]="'ALL'">Toutes</option>
+          <option [ngValue]="'UNREAD'">Non lues</option>
+          <option [ngValue]="'READ'">Lues</option>
+        </select>
+      </label>
+      <label>
+        Taille
+        <select name="size" [(ngModel)]="size" (ngModelChange)="loadNotifications(true)">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="section-title">
+      <h2>Liste</h2>
+      <span>{{ totalElements }} resultat(s)</span>
+    </div>
+
+    <div *ngIf="loading" class="muted">Chargement...</div>
+
+    <div class="notification-list" *ngIf="!loading && notifications.length > 0; else noNotifications">
+      <article class="notification" *ngFor="let notification of notifications; trackBy: trackNotification" [class.notification--read]="notification.isRead">
+        <div class="notification-head">
+          <div>
+            <strong>{{ notification.title }}</strong>
+            <small>User {{ notification.userId }} - {{ formatDate(notification.sentAt) }}</small>
+          </div>
+          <span [class]="typeClass(notification.type)">{{ notification.type }}</span>
+        </div>
+        <p>{{ notification.message }}</p>
+        <div class="notification-actions">
+          <span class="chip" *ngIf="notification.reclamationId">Reclamation #{{ notification.reclamationId }}</span>
+          <span class="chip" [class.chip--read]="notification.isRead">{{ notification.isRead ? 'Lue' : 'Non lue' }}</span>
+          <button type="button" class="btn btn--ghost" (click)="markAsRead(notification)" [disabled]="notification.isRead">Marquer lue</button>
+          <button type="button" class="btn btn--danger" (click)="deleteNotification(notification)">Supprimer</button>
+        </div>
+      </article>
+    </div>
+
+    <ng-template #noNotifications>
+      <div *ngIf="!loading" class="empty-state">Aucune notification.</div>
+    </ng-template>
+
+    <div class="pagination">
+      <button type="button" class="btn btn--ghost" (click)="changePage(-1)" [disabled]="page === 0">Precedent</button>
+      <span>Page {{ page + 1 }} / {{ totalPages || 1 }}</span>
+      <button type="button" class="btn btn--ghost" (click)="changePage(1)" [disabled]="totalPages === 0 || page + 1 >= totalPages">Suivant</button>
+    </div>
+  </section>
+
+  <section class="panel" *ngIf="canManageNotifications()">
+    <h2>Nouvelle notification</h2>
+    <form class="form-grid" (ngSubmit)="createNotification()">
+      <label>
+        User ID
+        <input type="number" name="draftUserId" [(ngModel)]="draft.userId" required>
+      </label>
+      <label>
+        Reclamation ID
+        <input type="number" name="draftReclamationId" [(ngModel)]="draft.reclamationId">
+      </label>
+      <label>
+        Type
+        <select name="draftType" [(ngModel)]="draft.type">
+          <option *ngFor="let type of types" [ngValue]="type">{{ type }}</option>
+        </select>
+      </label>
+      <label>
+        Titre
+        <input type="text" name="draftTitle" maxlength="150" [(ngModel)]="draft.title" required>
+      </label>
+      <label class="span-2">
+        Message
+        <textarea name="draftMessage" rows="4" [(ngModel)]="draft.message" required></textarea>
+      </label>
+      <div class="span-2">
+        <button type="submit" class="btn btn--primary" [disabled]="actionLoading">Creer</button>
+      </div>
+    </form>
+  </section>
+</div>

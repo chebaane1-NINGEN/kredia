@@ -1,0 +1,107 @@
+.echeance-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 3vw, 40px);
+}
+
+.echeance-page header {
+  margin-bottom: 20px;
+}
+
+.echeance-page h1 {
+  font-family: var(--font-title);
+  margin: 0 0 8px;
+  color: var(--navy-900);
+}
+
+.echeance-page p {
+  margin: 0;
+  color: rgba(34, 51, 68, 0.7);
+}
+
+.alert {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.alert.error {
+  background: rgba(224, 27, 36, 0.08);
+  color: #b42318;
+}
+
+.table-wrapper {
+  background: white;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid rgba(34, 51, 68, 0.08);
+  font-size: 0.95rem;
+}
+
+th {
+  font-weight: 600;
+  color: rgba(34, 51, 68, 0.7);
+}
+
+.status {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status.pending {
+  background: rgba(255, 193, 7, 0.15);
+  color: #b27700;
+}
+
+.status.paid {
+  background: rgba(0, 192, 112, 0.15);
+  color: #0a7a4e;
+}
+
+.status.overdue {
+  background: rgba(224, 27, 36, 0.12);
+  color: #b42318;
+}
+
+.status.partially_paid {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.pay-cell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pay-cell input {
+  width: 120px;
+  border: 1px solid rgba(34, 51, 68, 0.2);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.empty {
+  text-align: center;
+  padding: 24px;
+  color: rgba(34, 51, 68, 0.6);
+}

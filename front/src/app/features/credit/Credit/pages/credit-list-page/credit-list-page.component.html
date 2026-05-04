@@ -1,0 +1,47 @@
+<div class="page-container">
+  <div class="header">
+    <h1>Liste des crédits</h1>
+    <button (click)="loadCredits()" class="btn btn--secondary" [disabled]="loading">
+      {{ loading ? 'Chargement...' : 'Actualiser' }}
+    </button>
+  </div>
+
+  <div *ngIf="error" class="alert alert--error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="loading" class="loader">
+    Chargement des données...
+  </div>
+
+  <table *ngIf="!loading && credits.length > 0" class="credit-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Montant</th>
+        <th>Taux</th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let credit of credits">
+        <td>{{ credit.creditId }}</td>
+        <td>{{ credit.amount | currency:'EUR' }}</td>
+        <td>{{ credit.interestRate }}%</td>
+        <td>
+          <span [class]="getStatusClass(credit.status)">{{ credit.status }}</span>
+        </td>
+        <td class="actions">
+          <button (click)="downloadExcel(credit.creditId!)" title="Export Excel">📊</button>
+          <button (click)="downloadPdf(credit.creditId!)" title="Export PDF">PDF</button>
+          <a [routerLink]="['/credit', credit.creditId]" class="btn btn--small">Détails</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="!loading && credits.length === 0" class="empty-state">
+    Aucun crédit trouvé.
+  </div>
+</div>
