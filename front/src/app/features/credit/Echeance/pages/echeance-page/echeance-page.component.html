@@ -221,14 +221,14 @@
           <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center;" *ngIf="uniqueCreditIds.length > 0 || uniqueUserIds.length > 0">
             <div class="kyc-filter-group" *ngIf="uniqueCreditIds.length > 0">
               <span class="kyc-filter-label">Credit ID:</span>
-              <div class="filter-btn-group">
+              <div class="filter-btn-group filter-btn-group--scroll">
                 <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
                 <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn" [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
               </div>
             </div>
             <div class="kyc-filter-group" *ngIf="uniqueUserIds.length > 0">
               <span class="kyc-filter-label">User ID:</span>
-              <div class="filter-btn-group">
+              <div class="filter-btn-group filter-btn-group--scroll">
                 <button class="kyc-filter-btn" [class.active]="userFilter === 'ALL'" (click)="setUserFilter('ALL')">All</button>
                 <button *ngFor="let id of uniqueUserIds" class="kyc-filter-btn" [class.active]="userFilter === id.toString()" (click)="setUserFilter(id.toString())">#{{ id }}</button>
               </div>

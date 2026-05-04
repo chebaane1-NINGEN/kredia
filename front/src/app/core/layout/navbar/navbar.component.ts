@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { DarkModeService } from '../../services/dark-mode.service';
 import { AuthService } from '../../services/auth.service';
 import { CreditApi } from '../../../features/credit/Credit/data-access/credit.api';
@@ -8,7 +8,7 @@ import { KycLoanApi } from '../../../features/credit/KycLoan/data-access/kyc-loa
 import { EcheanceApi } from '../../../features/credit/Echeance/data-access/echeance.api';
 import { ReclamationApi } from '../../../features/support/Reclamation/data-access/reclamation.api';
 import { forkJoin, Subscription, interval, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, filter } from 'rxjs/operators';
 
 export type NotifType = 'CREDIT' | 'KYC' | 'PAYMENT' | 'ECHEANCE' | 'RECLAMATION';
 
@@ -43,6 +43,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   hasUnread = false;
   unreadCount = 0;
   showDropdown = false;
+  isSimulateurPage = false;
   private seenIds = new Set<string>();
   private sub: Subscription | null = null;
 
@@ -71,9 +72,26 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.updateSimulateurFlag(this.router.url);
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd)
+    ).subscribe((e: any) => {
+      this.updateSimulateurFlag(e.urlAfterRedirects || e.url);
+      this.cdr.markForCheck();
+    });
+
     this.loadSeenIds();
     this.fetchUpdates();
     this.sub = interval(30000).subscribe(() => this.fetchUpdates());
+  }
+
+  private updateSimulateurFlag(url: string): void {
+    // Show public navbar only when on /simulateur AND not logged in
+    this.isSimulateurPage = url.split('?')[0] === '/simulateur' && !this.auth.isLoggedIn();
+  }
+
+  goToLanding(): void {
+    this.router.navigate(['/']);
   }
 
   ngOnDestroy() {

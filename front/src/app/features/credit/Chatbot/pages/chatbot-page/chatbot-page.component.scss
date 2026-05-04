@@ -329,6 +329,14 @@ textarea {
   border-radius: 50%;
   background: #ef4444;
   animation: pulse-dot 1s infinite;
+
+  &--blue {
+    background: #1b6ca8;
+  }
+}
+
+.recording-status.transcribing {
+  color: #1b6ca8;
 }
 
 .error-text {

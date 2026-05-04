@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Location } from '@angular/common';
 import { EcheanceVm } from '../../vm/echeance.vm';
 import { EcheancePaymentResponse } from '../../models/echeance.model';
 import { AuthService } from '../../../../../core/services/auth.service';
@@ -17,6 +18,7 @@ export class EcheancePageComponent implements OnInit {
   private readonly creditVm  = inject(CreditVm);
   public readonly cdr        = inject(ChangeDetectorRef);
   private readonly route     = inject(ActivatedRoute);
+  private readonly location  = inject(Location);
   readonly auth              = inject(AuthService);
 
   // ── UI State ────────────────────────────────────────────
@@ -254,7 +256,11 @@ export class EcheancePageComponent implements OnInit {
   }
 
   back(): void {
-    this.filterCreditId = null;
+    // If we arrived here with a creditId param (from credit list), go back in history
+    if (this.filterCreditId) {
+      this.location.back();
+      return;
+    }
     this.filterEcheanceId = null;
     this.items = [];
     if (this.auth.isClient()) {

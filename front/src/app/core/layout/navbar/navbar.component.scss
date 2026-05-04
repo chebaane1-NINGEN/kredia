@@ -13,6 +13,43 @@
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
+/* Back to landing button (simulator page) */
+.back-to-landing {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: 1.5px solid var(--emerald-600);
+  border-radius: 10px;
+  background: rgba(0, 192, 112, 0.08);
+  color: var(--emerald-600);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  svg {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    background: var(--emerald-600);
+    border-color: var(--emerald-600);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(0, 192, 112, 0.35);
+
+    svg {
+      transform: translateX(-3px);
+    }
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
 /* Search */
 .search-bar {
   display: flex;
