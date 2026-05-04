@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    h1 { color: #333; text-align: center; }
+    h2 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 5px; margin-top: 30px;}
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background-color: #f2f2f2; color: #333; }
+    .method-GET { color: #fff; background-color: #28a745; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+    .method-POST { color: #fff; background-color: #007bff; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+    .method-PUT { color: #fff; background-color: #fd7e14; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+    .method-DELETE { color: #fff; background-color: #dc3545; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+    .method-PATCH { color: #fff; background-color: #6f42c1; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+</style>
+</head>
+<body>
+    <h1>API Endpoints Reference</h1>
+
+    <h2>1. HederaController</h2>
+    <p><strong>Base Path:</strong> /api/hedera</p>
+    <table>
+        <tr><th>Method</th><th>Endpoint</th><th>Operation</th></tr>
+        <tr><td><span class="method-GET">GET</span></td><td>/create-topic</td><td>createTopic</td></tr>
+    </table>
+
+    <h2>2. FraudController</h2>
+    <p><strong>Base Path:</strong> /api/fraud</p>
+    <table>
+        <tr><th>Method</th><th>Endpoint</th><th>Operation</th></tr>
+        <tr><td><span class="method-GET">GET</span></td><td>/suspected</td><td>getSuspectedTransactions</td></tr>
+        <tr><td><span class="method-POST">POST</span></td><td>/analyze-transaction/{transactionId}</td><td>analyzeTransactionWithAI</td></tr>
+    </table>
+
+    <h2>3. TransactionAuditLogController</h2>
+    <p><strong>Base Path:</strong> /api/audit-logs</p>
+    <table>
+        <tr><th>Method</th><th>Endpoint</th><th>Operation</th></tr>
+        <tr><td><span class="method-POST">POST</span></td><td>/</td><td>createAuditLog</td></tr>
+        <tr><td><span class="method-GET">GET</span></td><td>/{id}</td><td>getAuditLogById</td></tr>
+        <tr><td><span class="method-GET">GET</span></td><td>/</td><td>getAllAuditLogs</td></tr>
+        <tr><td><span class="method-GET">GET</span></td><td>/transaction/{transactionId}</td><td>getAuditLogsByTransactionId</td></tr>
+        <tr><td><span class="method-PUT">PUT</span></td><td>/{id}</td><td>updateAuditLog</td></tr>
+        <tr><td><span class="method-DELETE">DELETE</span></td><td>/{id}</td><td>deleteAuditLog</td></tr>
+    </table>
+
+    <h2>4. TransactionController</h2>
+    <p><strong>Base Path:</strong> /api/transactions</p>
+    <table>
+        <tr><th>Method</th><th>Endpoint</th><th>Operation</th></tr>
+        <tr><td><span class="method-POST">POST</span></td><td>/</td><td>createTransaction</td></tr>
+        <tr><td><span class="method-GET">GET</span></td><td>/{id}</td><td>getTransactionById</td></tr>
+        <tr><td><span class="method-GET">GET</span></td><td>/</td><td>getAllTransactions</td></tr>
+        <tr><td><span class="method-PUT">PUT</span></td><td>/{id}</td><td>updateTransaction</td></tr>
+        <tr><td><span class="method-PATCH">PATCH</span></td><td>/{id}/status</td><td>updateTransactionStatus</td></tr>
+        <tr><td><span class="method-DELETE">DELETE</span></td><td>/{id}</td><td>deleteTransaction</td></tr>
+    </table>
+
+    <h2>5. WalletController</h2>
+    <p><strong>Base Path:</strong> /api/wallets</p>
+    <table>
+        <tr><th>Method</th><th>Endpoint</th><th>Operation</th></tr>
+        <tr><td><span class="method-POST">POST</span></td><td>/</td><td>createWallet</td></tr>
+        <tr><td><span class="method-PUT">PUT</span></td><td>/{id}</td><td>updateWallet</td></tr>
+        <tr><td><span class="method-DELETE">DELETE</span></td><td>/{id}</td><td>deleteWallet</td></tr>
+        <tr><td><span class="method-POST">POST</span></td><td>/{id}/freeze</td><td>freezeWallet</td></tr>
+    </table>
+</body>
+</html>
