@@ -14,4 +14,8 @@ export class PortfolioPositionVm {
   findByUser(userId: number): Observable<PortfolioPosition[]> {
     return this.api.findByUser(userId);
   }
+
+  create(position: PortfolioPosition): Observable<PortfolioPosition> {
+    return this.api.create(position);
+  }
 }

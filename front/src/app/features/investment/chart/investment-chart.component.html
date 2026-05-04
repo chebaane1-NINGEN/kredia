@@ -72,14 +72,7 @@
     </article>
     }
 
-    <button 
-      class="market-strip__order-btn"
-      type="button"
-      (click)="openOrderModal()"
-      [disabled]="!selectedAssetSymbol"
-      title="Créer un nouvel ordre">
-      + Order
-    </button>
+    <!-- The order button is now moved to chart-shell__header -->
   </header>
 
   <section class="chart-shell">
@@ -113,23 +106,31 @@
             <span class="price-line__label">{{ marketDirection }}</span>
           </div>
         </div>
-        <button
-          class="chart-shell__favorite-btn"
-          [disabled]="isAddingToFavorites"
-          [class.is-loading]="isAddingToFavorites"
-          [class.is-favorited]="assetAlreadyFavorited"
-          (click)="onAddToFavorites()"
-          [attr.title]="assetAlreadyFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'">
-          @if (isAddingToFavorites) {
-            <span class="favorite-btn__spinner"></span>
-          } @else if (assetAlreadyFavorited) {
-            <span class="favorite-btn__icon">★</span>
-            <span class="favorite-btn__text">Retirer</span>
-          } @else {
-            <span class="favorite-btn__icon">☆</span>
-            <span class="favorite-btn__text">Ajouter aux favoris</span>
-          }
-        </button>
+        <div class="chart-shell__actions">
+          <button
+            class="chart-shell__favorite-btn"
+            [disabled]="isAddingToFavorites"
+            [class.is-loading]="isAddingToFavorites"
+            [class.is-favorited]="assetAlreadyFavorited"
+            (click)="onAddToFavorites()"
+            [attr.title]="assetAlreadyFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'">
+            @if (isAddingToFavorites) {
+              <span class="favorite-btn__spinner"></span>
+            } @else if (assetAlreadyFavorited) {
+              <span class="favorite-btn__icon">★</span>
+            } @else {
+              <span class="favorite-btn__icon">☆</span>
+            }
+          </button>
+          <button 
+            class="chart-shell__trade-btn"
+            type="button"
+            (click)="openOrderModal()"
+            [disabled]="!selectedAssetSymbol"
+            title="Ouvrir une position ou créer un ordre">
+            Trade
+          </button>
+        </div>
       </div>
 
       <div class="chart-stage">
@@ -480,6 +481,130 @@
     </article>
   </section>
 </section>
+<!-- Choice Modal -->
+@if (showChoiceModal) {
+  <div class="choice-modal-overlay" (click)="closeChoiceModal()">
+    <div class="choice-modal" (click)="$event.stopPropagation()">
+      <div class="choice-modal__header">
+        <h2>Sélectionnez une action</h2>
+        <button 
+          type="button" 
+          class="choice-modal__close"
+          (click)="closeChoiceModal()"
+          aria-label="Fermer">
+          ×
+        </button>
+      </div>
+
+      <div class="choice-modal__body">
+        <p class="choice-modal__asset-info">
+          <strong>{{ selectedAssetSymbol }}</strong> - Prix actuel: {{ assetPrice | number:'1.2-2' }} EUR
+        </p>
+
+        @if (selectedAssetPositions.length > 0) {
+          <div class="choice-modal__positions-summary">
+            <div class="positions-stat">
+              <span class="positions-stat__label">Positions ouvertes</span>
+              <span class="positions-stat__value">{{ selectedAssetPositions.length }}</span>
+            </div>
+            <div class="positions-stat">
+              <span class="positions-stat__label">Valeur totale</span>
+              <span class="positions-stat__value">{{ selectedAssetPositionValue | number:'1.2-2' }} EUR</span>
+            </div>
+          </div>
+        }
+
+        <div class="choice-modal__actions">
+          <button 
+            type="button" 
+            class="choice-modal__action-btn choice-modal__action-btn--now"
+            (click)="selectAction('now')">
+            <span class="choice-modal__action-icon">⚡</span>
+            <span class="choice-modal__action-title">Ouvrir une position maintenant</span>
+            <span class="choice-modal__action-desc">Au prix marché actuel</span>
+          </button>
+
+          <button 
+            type="button" 
+            class="choice-modal__action-btn choice-modal__action-btn--order"
+            (click)="selectAction('order')">
+            <span class="choice-modal__action-icon">📋</span>
+            <span class="choice-modal__action-title">Créer un ordre</span>
+            <span class="choice-modal__action-desc">Avec un prix personnalisé</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Position Now Modal -->
+@if (showPositionNowModal) {
+  <div class="choice-modal-overlay" (click)="closePositionNowModal()">
+    <div class="choice-modal" (click)="$event.stopPropagation()">
+      <div class="choice-modal__header">
+        <h2>Ouvrir une position</h2>
+        <button 
+          type="button" 
+          class="choice-modal__close"
+          (click)="closePositionNowModal()"
+          aria-label="Fermer">
+          ×
+        </button>
+      </div>
+
+      <div class="choice-modal__body">
+        <p class="choice-modal__asset-info">
+          <strong>{{ selectedAssetSymbol }}</strong> - Prix actuel: {{ assetPrice | number:'1.2-2' }} EUR
+        </p>
+
+        @if (positionNowError) {
+          <div class="choice-modal__error">{{ positionNowError }}</div>
+        }
+
+        <form (ngSubmit)="submitPositionNow()" class="position-now__form">
+          <div class="position-now__field">
+            <label for="position-quantity">Quantité</label>
+            <input
+              id="position-quantity"
+              type="number"
+              min="0.001"
+              step="0.001"
+              [(ngModel)]="positionNowQuantity"
+              name="quantity"
+              class="position-now__input"
+              placeholder="Entrez la quantité"
+              required />
+          </div>
+
+          <div class="position-now__total">
+            <span class="position-now__total-label">Coût approximatif</span>
+            <span class="position-now__total-value">
+              {{ (positionNowQuantity * assetPrice) | number:'1.2-2' }} EUR
+            </span>
+          </div>
+
+          <div class="position-now__actions">
+            <button
+              type="button"
+              class="position-now__btn position-now__btn--cancel"
+              (click)="closePositionNowModal()">
+              Annuler
+            </button>
+            <button
+              type="submit"
+              class="position-now__btn position-now__btn--submit"
+              [class.is-loading]="positionNowLoading"
+              [disabled]="positionNowLoading || positionNowQuantity <= 0">
+              {{ positionNowLoading ? 'Création...' : 'Ouvrir la position' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
 <!-- Order Modal -->
 @if (showOrderModal) {
   <div class="order-modal-overlay" (click)="closeOrderModal()">

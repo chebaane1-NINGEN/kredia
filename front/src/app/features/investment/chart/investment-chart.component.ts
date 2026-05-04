@@ -10,6 +10,7 @@ import { PortfolioPositionVm } from '../PortfolioPosition/vm/portfolio-position.
 import { InvestmentOrderVm } from '../InvestmentOrder/vm/investment-order.vm';
 import { InvestmentOrder } from '../InvestmentOrder/models/investment-order.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 type MarketTrend = 'positive' | 'negative';
 
@@ -54,6 +55,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
   private readonly destroy$ = new Subject<void>();
   private readonly searchQuery$ = new Subject<string>();
 
@@ -89,6 +91,18 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
   geminiLoading = false;
   geminiError = '';
   geminiDetailOpen = false;
+
+  // Choice Modal Properties
+  showChoiceModal = false;
+  selectedAction: 'now' | 'order' | null = null;
+  selectedAssetPositions: any[] = [];
+  selectedAssetPositionValue = 0;
+
+  // Position Now Modal Properties
+  showPositionNowModal = false;
+  positionNowQuantity = 1;
+  positionNowLoading = false;
+  positionNowError = '';
 
   // Order Modal Properties
   showOrderModal = false;
@@ -225,11 +239,38 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     
     this.checkIfAssetIsFavorited();
     
+    // Load positions for this asset
+    this.loadSelectedAssetPositions(symbol);
+    
     // Load chart data for this asset
     this.loadAssetChart(symbol);
 
     // Load Gemini analysis for this asset
     this.loadGeminiAnalysis();
+  }
+
+  private loadSelectedAssetPositions(symbol: string): void {
+    this.positionVm.findAll().pipe(
+      map((positions: any[]) => {
+        // Filtrer les positions pour l'asset sélectionné
+        return positions.filter(p => p.assetSymbol === symbol);
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (positions) => {
+        this.selectedAssetPositions = positions;
+        // Calculer la valeur totale des positions
+        this.selectedAssetPositionValue = positions.reduce((sum, p) => {
+          return sum + (p.currentValue || 0);
+        }, 0);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Erreur chargement positions:', err);
+        this.selectedAssetPositions = [];
+        this.selectedAssetPositionValue = 0;
+      }
+    });
   }
 
   private loadDashboard(): void {
@@ -699,10 +740,11 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (response) => {
             this.assetAlreadyFavorited = false;
-            console.log('Asset removed from favorites:', response);
+            this.toast.info(`${this.selectedAssetSymbol} retiré des favoris`);
           },
           error: (err) => {
             console.error('Error removing asset from favorites:', err);
+            this.toast.error('Erreur lors du retrait des favoris');
           }
         });
     } else {
@@ -724,10 +766,11 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (response) => {
             this.assetAlreadyFavorited = true;
-            console.log('Asset added to favorites:', response);
+            this.toast.success(`${this.selectedAssetSymbol} ajouté aux favoris`);
           },
           error: (err) => {
             console.error('Error adding asset to favorites:', err);
+            this.toast.error('Erreur lors de l\'ajout aux favoris');
           }
         });
     }
@@ -984,13 +1027,90 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     return labels[sentiment] || 'Neutre';
   }
 
-  // ==================== Order Modal Methods ====================
+  // ==================== Choice Modal Methods ====================
 
   openOrderModal(): void {
     if (!this.selectedAssetSymbol) {
       return;
     }
-    // Préremplir le prix avec le prix actuel
+    // Afficher d'abord le modal de choix
+    this.selectedAction = null;
+    this.showChoiceModal = true;
+  }
+
+  closeChoiceModal(): void {
+    this.showChoiceModal = false;
+    this.selectedAction = null;
+  }
+
+  selectAction(action: 'now' | 'order'): void {
+    this.selectedAction = action;
+    this.closeChoiceModal();
+
+    if (action === 'now') {
+      // Afficher le modal pour demander la quantité
+      this.openPositionNowModal();
+    } else {
+      // Afficher le modal de création d'ordre
+      this.openOrderForm();
+    }
+  }
+
+  private openPositionNowModal(): void {
+    // Réinitialiser le formulaire
+    this.positionNowQuantity = 1;
+    this.positionNowError = '';
+    this.positionNowLoading = false;
+    this.showPositionNowModal = true;
+  }
+
+  closePositionNowModal(): void {
+    this.showPositionNowModal = false;
+    this.positionNowError = '';
+  }
+
+  submitPositionNow(): void {
+    if (!this.selectedAssetSymbol || this.positionNowQuantity <= 0) {
+      this.positionNowError = 'Quantité invalide';
+      return;
+    }
+
+    this.positionNowLoading = true;
+    this.positionNowError = '';
+
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      this.positionNowError = 'Utilisateur non authentifié';
+      this.positionNowLoading = false;
+      return;
+    }
+
+    // Payload correct selon le DTO attendu par le backend
+    const newPositionDTO: any = {
+      userId: userId,
+      assetSymbol: this.selectedAssetSymbol,
+      quantity: this.positionNowQuantity
+    };
+
+    this.positionVm.create(newPositionDTO).pipe(
+      finalize(() => this.positionNowLoading = false),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (position) => {
+        this.closePositionNowModal();
+        this.toast.success(`Position ${this.positionNowQuantity} x ${this.selectedAssetSymbol} créée avec succès`);
+        // Recharger les positions
+        this.loadSelectedAssetPositions(this.selectedAssetSymbol);
+      },
+      error: (err: any) => {
+        console.error('Erreur création position:', err);
+        this.positionNowError = err?.error?.message || 'Erreur lors de la création de la position';
+      }
+    });
+  }
+
+  private openOrderForm(): void {
+    // Afficher le formulaire pour créer un ordre avec prix personnalisé
     this.orderFormData.price = this.assetPrice;
     this.orderFormData.quantity = 1;
     this.orderFormData.orderType = 'BUY';
@@ -1039,9 +1159,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (order: InvestmentOrder) => {
         this.closeOrderModal();
-        // Afficher message de succès (toast)
-        console.log('Ordre créé avec succès:', order);
-        alert(`✅ Ordre ${this.orderFormData.orderType} créé pour ${this.selectedAssetSymbol}`);
+        this.toast.success(`Ordre ${this.orderFormData.orderType} créé pour ${this.selectedAssetSymbol}`);
       },
       error: (err: any) => {
         console.error('Erreur création ordre:', err);

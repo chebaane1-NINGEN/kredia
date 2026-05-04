@@ -15,4 +15,8 @@ export class PortfolioPositionApi {
   findByUser(userId: number): Observable<PortfolioPosition[]> {
     return this.http.get<PortfolioPosition[]>(`${API_BASE_URL}/api/investments/positions/user/${userId}`);
   }
+
+  create(position: PortfolioPosition): Observable<PortfolioPosition> {
+    return this.http.post<PortfolioPosition>(`${API_BASE_URL}/api/investments/positions`, position);
+  }
 }

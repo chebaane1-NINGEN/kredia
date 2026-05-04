@@ -34,20 +34,25 @@ export class InvestmentOrderPageComponent implements OnInit {
   get filteredOrders(): InvestmentOrder[] {
     const term = this.searchTerm.trim().toLowerCase();
 
-    return this.orders.filter((order) => {
-      const userId = order.user?.userId ?? order.user?.id ?? '';
+    return this.orders
+      .filter((order) => {
+        const userId = order.user?.userId ?? order.user?.id ?? '';
 
-      const matchesSearch =
-        !term ||
-        String(order.orderId ?? '').includes(term) ||
-        String(userId).includes(term) ||
-        order.assetSymbol.toLowerCase().includes(term);
+        const matchesSearch =
+          !term ||
+          String(order.orderId ?? '').includes(term) ||
+          String(userId).includes(term) ||
+          order.assetSymbol.toLowerCase().includes(term);
 
-      const matchesStatus = this.statusFilter === 'ALL' || order.orderStatus === this.statusFilter;
-      const matchesType = this.typeFilter === 'ALL' || order.orderType === this.typeFilter;
+        const matchesStatus = this.statusFilter === 'ALL' || order.orderStatus === this.statusFilter;
+        const matchesType = this.typeFilter === 'ALL' || order.orderType === this.typeFilter;
 
-      return matchesSearch && matchesStatus && matchesType;
-    });
+        return matchesSearch && matchesStatus && matchesType;
+      })
+      .sort(
+        (leftOrder, rightOrder) =>
+          this.getOrderSortWeight(leftOrder.orderStatus) - this.getOrderSortWeight(rightOrder.orderStatus)
+      );
   }
 
   get pendingCount(): number {
@@ -147,6 +152,21 @@ export class InvestmentOrderPageComponent implements OnInit {
         return 'badge badge--sell';
       default:
         return 'badge';
+    }
+  }
+
+  private getOrderSortWeight(status: OrderStatus): number {
+    switch (status) {
+      case 'PENDING':
+        return 0;
+      case 'PARTIALLY_FILLED':
+        return 1;
+      case 'EXECUTED':
+        return 2;
+      case 'CANCELLED':
+        return 3;
+      default:
+        return 4;
     }
   }
 }
