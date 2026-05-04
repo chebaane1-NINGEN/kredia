@@ -263,6 +263,61 @@ public class GeminiService {
     }
 
     /**
+     * Transcribes audio bytes using Gemini's multimodal API.
+     * Accepts WebM/OGG audio recorded by the browser's MediaRecorder.
+     */
+    public String transcribeAudio(byte[] audioBytes, String mimeType) {
+        log.info("Transcribing audio ({} bytes, {}) with Gemini {}", audioBytes.length, mimeType, modelName);
+
+        try {
+            String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
+
+            JsonObject requestBody = new JsonObject();
+            JsonArray contents = new JsonArray();
+            JsonObject content = new JsonObject();
+            JsonArray parts = new JsonArray();
+
+            // Text instruction
+            JsonObject textPart = new JsonObject();
+            textPart.addProperty("text",
+                "Please transcribe the following audio exactly as spoken. " +
+                "Return ONLY the transcribed text, no explanations, no punctuation corrections, no formatting. " +
+                "If the audio is silent or inaudible, return an empty string.");
+            parts.add(textPart);
+
+            // Audio data
+            JsonObject audioPart = new JsonObject();
+            JsonObject inlineData = new JsonObject();
+            inlineData.addProperty("mime_type", mimeType);
+            inlineData.addProperty("data", base64Audio);
+            audioPart.add("inline_data", inlineData);
+            parts.add(audioPart);
+
+            content.add("parts", parts);
+            contents.add(content);
+            requestBody.add("contents", contents);
+
+            String apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName
+                    + ":generateContent?key=" + apiKey;
+
+            HttpResponse<String> response = sendGeminiRequest(apiUrl, requestBody);
+
+            if (response.statusCode() != 200) {
+                log.error("Gemini transcription error ({}): {}", response.statusCode(), response.body());
+                return "";
+            }
+
+            String transcript = parseGeminiResponse(response.body());
+            log.info("Transcription result: {}", transcript);
+            return transcript.startsWith("ERROR:") ? "" : transcript;
+
+        } catch (Exception e) {
+            log.error("Audio transcription failed: {}", e.getMessage(), e);
+            return "";
+        }
+    }
+
+    /**
      * Analyse la description du client et recommande le meilleur type de
      * remboursement.
      */

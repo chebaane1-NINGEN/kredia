@@ -64,17 +64,13 @@
                 placeholder="e.g. I have a stable income and prefer fixed monthly payments to manage my budget easily..."
                 [class.has-mic]="speechSupported"></textarea>
 
-              <!-- Interim dictation text -->
-              <div class="interim-overlay" *ngIf="interimText">
-                <span class="interim-text">🎤 {{ interimText }}</span>
-              </div>
-
               <!-- Microphone button -->
               <button
                 *ngIf="speechSupported"
                 type="button"
                 class="mic-btn"
                 [class.active]="isRecording"
+                [disabled]="isTranscribing"
                 (click)="toggleVoice()"
                 [title]="isRecording ? 'Stop recording' : 'Speak to the chatbot'"
                 [attr.aria-label]="isRecording ? 'Stop recording' : 'Start voice recording'"
@@ -92,10 +88,14 @@
               </button>
             </div>
 
-            <!-- Recording badge -->
+            <!-- Recording / transcribing status -->
             <div class="recording-status" *ngIf="isRecording">
               <span class="pulse-dot"></span>
-              <span>Recording... Speak now</span>
+              <span>Recording... Click the button to stop</span>
+            </div>
+            <div class="recording-status transcribing" *ngIf="isTranscribing">
+              <span class="pulse-dot pulse-dot--blue"></span>
+              <span>Transcribing audio...</span>
             </div>
 
             <small class="error-text" *ngIf="form.controls.description.touched && form.controls.description.invalid">

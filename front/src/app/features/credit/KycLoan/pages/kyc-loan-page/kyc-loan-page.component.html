@@ -117,17 +117,23 @@
       <div class="kyc-filter-bar" style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 20px;">
         <div class="kyc-filter-group">
           <span class="kyc-filter-label">Credit:</span>
-          <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
-          <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn" [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+          <div class="filter-btn-group--scroll">
+            <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
+            <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn" [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+          </div>
         </div>
         <div class="kyc-filter-group" *ngIf="uniqueDemandeIds.length > 0">
           <span class="kyc-filter-label">Application:</span>
-          <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'" (click)="setDemandeFilter('ALL')">All</button>
-          <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn" [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
+          <div class="filter-btn-group--scroll">
+            <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'" (click)="setDemandeFilter('ALL')">All</button>
+            <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn" [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
+          </div>
         </div>
         <div class="kyc-filter-group">
           <span class="kyc-filter-label">Status:</span>
-          <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value" (click)="setStatusFilter(s.value)">{{ s.label }}</button>
+          <div class="filter-btn-group--scroll">
+            <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value" (click)="setStatusFilter(s.value)">{{ s.label }}</button>
+          </div>
         </div>
       </div>
 
@@ -138,6 +144,8 @@
               <th>ID</th>
               <th>Type</th>
               <th>User</th>
+              <th>Credit ID</th>
+              <th>App ID</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -147,6 +155,8 @@
               <td>#{{ doc.kycLoanId }}</td>
               <td>{{ docLabel(doc.documentType) }}</td>
               <td>User #{{ doc.userId }}</td>
+              <td>{{ doc.creditId ? 'Credit #' + doc.creditId : '—' }}</td>
+              <td>{{ doc.demandeId ? 'App #' + doc.demandeId : '—' }}</td>
               <td><span class="status-badge" [class]="statusClass(doc.verifiedStatus)">{{ statusLabel(doc.verifiedStatus) }}</span></td>
               <td (click)="$event.stopPropagation()">
                 <div style="display: flex; gap: 6px;" *ngIf="doc.verifiedStatus === 'PENDING'">
@@ -192,27 +202,34 @@
       <div class="kyc-filter-bar" style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 16px;">
         <div class="kyc-filter-group" *ngIf="uniqueCreditIds.length > 0">
           <span class="kyc-filter-label">Credit:</span>
-          <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
-          <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn" [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+          <div class="filter-btn-group--scroll">
+            <button class="kyc-filter-btn" [class.active]="creditFilter === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
+            <button *ngFor="let id of uniqueCreditIds" class="kyc-filter-btn" [class.active]="creditFilter === id.toString()" (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+          </div>
         </div>
         <div class="kyc-filter-group" *ngIf="uniqueDemandeIds.length > 0">
           <span class="kyc-filter-label">Application:</span>
-          <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'" (click)="setDemandeFilter('ALL')">All</button>
-          <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn" [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
+          <div class="filter-btn-group--scroll">
+            <button class="kyc-filter-btn" [class.active]="demandeFilter === 'ALL'" (click)="setDemandeFilter('ALL')">All</button>
+            <button *ngFor="let id of uniqueDemandeIds" class="kyc-filter-btn" [class.active]="demandeFilter === id.toString()" (click)="setDemandeFilter(id.toString())">#{{ id }}</button>
+          </div>
         </div>
         <div class="kyc-filter-group">
           <span class="kyc-filter-label">Status:</span>
-          <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value" (click)="setStatusFilter(s.value)">{{ s.label }}</button>
+          <div class="filter-btn-group--scroll">
+            <button *ngFor="let s of statusOptions" class="kyc-filter-btn" [class.active]="statusFilter === s.value" (click)="setStatusFilter(s.value)">{{ s.label }}</button>
+          </div>
         </div>
       </div>
       <div class="docs-table-wrap">
         <table class="docs-table">
-          <thead><tr><th>ID</th><th>Type</th><th>Ref</th><th>Status</th><th>Date</th></tr></thead>
+          <thead><tr><th>ID</th><th>Type</th><th>Credit ID</th><th>App ID</th><th>Status</th><th>Date</th></tr></thead>
           <tbody>
             <tr *ngFor="let doc of filteredDocs" class="doc-row" (click)="selectDoc(doc)">
               <td>#{{ doc.kycLoanId }}</td>
               <td>{{ docLabel(doc.documentType) }}</td>
-              <td>{{ doc.creditId ? 'Credit #' + doc.creditId : 'App #' + doc.demandeId }}</td>
+              <td>{{ doc.creditId ? 'Credit #' + doc.creditId : '—' }}</td>
+              <td>{{ doc.demandeId ? 'App #' + doc.demandeId : '—' }}</td>
               <td><span class="status-badge" [class]="statusClass(doc.verifiedStatus)">{{ statusLabel(doc.verifiedStatus) }}</span></td>
               <td>{{ doc.submittedAt | date:'MM/dd/yyyy' }}</td>
             </tr>

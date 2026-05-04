@@ -81,11 +81,63 @@
       </div>
 
   <!-- ══════════════════════════════════════════════════ -->
+  <!-- FILTER BAR                                        -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div class="kyc-filter-bar" style="margin-bottom: 24px; display: flex; flex-direction: column; gap: 16px;"
+       *ngIf="viewMode !== 'PENDING'">
+
+    <!-- Row 1: Status filter -->
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: center;">
+      <div class="kyc-filter-group">
+        <span class="kyc-filter-label">Status:</span>
+        <div class="filter-btn-group">
+          <button *ngFor="let s of statusOptions"
+                  class="kyc-filter-btn"
+                  [class.active]="filterStatus === s.value"
+                  (click)="setStatusFilter(s.value)">
+            {{ s.label }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Credit ID pills -->
+    <div style="display: flex; align-items: center;"
+         *ngIf="uniqueCreditIds.length > 0">
+      <div class="kyc-filter-group">
+        <span class="kyc-filter-label">{{ auth.isClient() ? 'Application ID:' : 'Credit ID:' }}</span>
+        <div class="filter-btn-group filter-btn-group--scroll">
+          <button class="kyc-filter-btn" [class.active]="filterCreditId === 'ALL'" (click)="setCreditFilter('ALL')">All</button>
+          <button *ngFor="let id of uniqueCreditIds"
+                  class="kyc-filter-btn"
+                  [class.active]="filterCreditId === id.toString()"
+                  (click)="setCreditFilter(id.toString())">#{{ id }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Client ID pills -->
+    <div style="display: flex; align-items: center;"
+         *ngIf="!auth.isClient() && uniqueClientIds.length > 0">
+      <div class="kyc-filter-group">
+        <span class="kyc-filter-label">Client ID:</span>
+        <div class="filter-btn-group filter-btn-group--scroll">
+          <button class="kyc-filter-btn" [class.active]="filterClientId === 'ALL'" (click)="setClientFilter('ALL')">All</button>
+          <button *ngFor="let id of uniqueClientIds"
+                  class="kyc-filter-btn"
+                  [class.active]="filterClientId === id.toString()"
+                  (click)="setClientFilter(id.toString())">#{{ id }}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
   <!-- CLIENT VIEW: list of client applications          -->
   <!-- ══════════════════════════════════════════════════ -->
   <ng-container *ngIf="auth.isClient() && !loading">
     <div class="table-container">
-      <table *ngIf="clientDemandes.length > 0" class="credit-table">
+      <table *ngIf="filteredClientDemandes.length > 0" class="credit-table">
         <thead>
           <tr>
             <th>Application #</th>
@@ -98,7 +150,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let d of clientDemandes">
+          <tr *ngFor="let d of filteredClientDemandes">
             <td>#{{ d.creditId }}</td>
             <td>{{ d.amount | number:'1.2-2' }}</td>
             <td>{{ d.termMonths }} months</td>
@@ -129,7 +181,7 @@
   <!-- ══════════════════════════════════════════════════ -->
   <ng-container *ngIf="!auth.isClient() && viewMode === 'PENDING' && !loading">
     <div class="table-container">
-      <table *ngIf="demandes.length > 0" class="credit-table">
+      <table *ngIf="filteredDemandes.length > 0" class="credit-table">
         <thead>
           <tr>
             <th>Application #</th>
@@ -146,7 +198,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let d of demandes">
+          <tr *ngFor="let d of filteredDemandes">
             <td class="cell-id">#{{ d.creditId }}</td>
             <td class="cell-client">ID: {{ d.userId }}</td>
             <td class="cell-amount">{{ d.amount | number:'1.2-2' }} <small>DT</small></td>
@@ -190,7 +242,7 @@
     <!-- ══════════════════════════════════════════════════ -->
     <ng-container *ngIf="!auth.isClient() && viewMode === 'ALL' && !loading">
     <div class="table-container">
-      <table *ngIf="credits.length > 0" class="credit-table">
+      <table *ngIf="filteredCredits.length > 0" class="credit-table">
         <thead>
           <tr>
             <th>Credit ID</th>
@@ -203,7 +255,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let credit of credits">
+          <tr *ngFor="let credit of filteredCredits">
             <td class="cell-id">#{{ credit.creditId }}</td>
             <td class="cell-client">ID: {{ credit.userId }}</td>
             <td class="cell-amount">{{ credit.amount | number:'1.2-2' }} <small>DT</small></td>

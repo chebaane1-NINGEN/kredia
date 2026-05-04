@@ -33,6 +33,38 @@ export class CreditListPageComponent implements OnInit {
   error: string | null = null;
   viewMode: 'ALL' | 'PENDING' = 'ALL';
 
+  // ── Search / filter state ──────────────────────────────
+  filterCreditId  = 'ALL';
+  filterClientId  = 'ALL';
+  filterStatus    = 'ALL';
+
+  // ── Unique ID lists for pill buttons ──────────────────
+  get uniqueCreditIds(): number[] {
+    const source = this.auth.isClient() ? this.clientDemandes
+                 : this.viewMode === 'PENDING' ? this.demandes
+                 : this.credits;
+    const ids = new Set<number>();
+    source.forEach((item: any) => { if (item.creditId) ids.add(item.creditId); });
+    return Array.from(ids).sort((a, b) => a - b);
+  }
+
+  get uniqueClientIds(): number[] {
+    const source = this.viewMode === 'PENDING' ? this.demandes : this.credits;
+    const ids = new Set<number>();
+    source.forEach((item: any) => { if (item.userId) ids.add(item.userId); });
+    return Array.from(ids).sort((a, b) => a - b);
+  }
+
+  readonly statusOptions = [
+    { value: 'ALL',       label: 'All' },
+    { value: 'PENDING',   label: 'Pending' },
+    { value: 'APPROVED',  label: 'Approved' },
+    { value: 'REJECTED',  label: 'Rejected' },
+    { value: 'ACTIVE',    label: 'Active' },
+    { value: 'COMPLETED', label: 'Completed' },
+    { value: 'DEFAULTED', label: 'Defaulted' },
+  ];
+
   // ── KYC Modal ─────────────────────────────────────────
   kycModalOpen     = false;
   kycModalLoading  = false;
@@ -230,6 +262,50 @@ export class CreditListPageComponent implements OnInit {
       next:  (blob) => downloadBlob(blob, `statistiques_credit_${id}.pdf`),
       error: ()     => { this.error = `PDF export failed for credit #${id}.`; this.cdr.markForCheck(); }
     });
+  }
+
+  // ── Filtered data getters ─────────────────────────────
+  get filteredCredits(): Credit[] {
+    return this.credits.filter(c => {
+      const idMatch     = this.filterCreditId === 'ALL' || String(c.creditId) === this.filterCreditId;
+      const clientMatch = this.filterClientId === 'ALL' || String(c.userId)   === this.filterClientId;
+      const statusMatch = this.filterStatus   === 'ALL' || c.status           === this.filterStatus;
+      return idMatch && clientMatch && statusMatch;
+    });
+  }
+
+  get filteredDemandes(): DemandeCredit[] {
+    return this.demandes.filter(d => {
+      const idMatch     = this.filterCreditId === 'ALL' || String(d.creditId) === this.filterCreditId;
+      const clientMatch = this.filterClientId === 'ALL' || String(d.userId)   === this.filterClientId;
+      const statusMatch = this.filterStatus   === 'ALL' || d.status           === this.filterStatus;
+      return idMatch && clientMatch && statusMatch;
+    });
+  }
+
+  get filteredClientDemandes(): DemandeCredit[] {
+    return this.clientDemandes.filter(d => {
+      const idMatch     = this.filterCreditId === 'ALL' || String(d.creditId) === this.filterCreditId;
+      const statusMatch = this.filterStatus   === 'ALL' || d.status           === this.filterStatus;
+      return idMatch && statusMatch;
+    });
+  }
+
+  setCreditFilter(val: string): void { this.filterCreditId = val; this.cdr.markForCheck(); }
+  setClientFilter(val: string): void { this.filterClientId = val; this.cdr.markForCheck(); }
+  setStatusFilter(val: string): void { this.filterStatus   = val; this.cdr.markForCheck(); }
+
+  markForCheck(): void { this.cdr.markForCheck(); }
+
+  clearFilters(): void {
+    this.filterCreditId = 'ALL';
+    this.filterClientId = 'ALL';
+    this.filterStatus   = 'ALL';
+    this.cdr.markForCheck();
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.filterCreditId !== 'ALL' || this.filterClientId !== 'ALL' || this.filterStatus !== 'ALL';
   }
 
   getStatusClass(status: string | undefined): string {
