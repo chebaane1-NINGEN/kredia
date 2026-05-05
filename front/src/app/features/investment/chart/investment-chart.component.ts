@@ -75,7 +75,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
 
   marketSnapshots: MarketSnapshot[] = [];
 
-  timeframes = ['1D', '1M', '3M', '1Y', '5Y', 'Tout'];
+  timeframes = ['1D', '1M', '3M', '1Y', '5Y', 'All'];
   chartTools = ['</>', '▭', '◫', '⤢'];
 
 
@@ -375,6 +375,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
       map((strategies) => (Array.isArray(strategies) ? strategies : [])),
       catchError(() => {
         this.strategyPreviewError = 'Impossible de charger les stratégies pour le moment.';
+        this.strategyPreviewError = 'Unable to load strategies right now.';
         return of([] as InvestmentStrategy[]);
       }),
       finalize(() => {
@@ -630,21 +631,21 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
 
   formatStrategyBudget(value: number | null | undefined): string {
     return value != null
-      ? `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
-      : 'Non défini';
+      ? `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+      : 'Not defined';
   }
 
   formatStrategyUpdatedAt(strategy: InvestmentStrategy): string {
     if (!strategy.updatedAt) {
-      return 'Jamais mis à jour';
+      return 'Never updated';
     }
 
     const date = new Date(strategy.updatedAt);
     if (Number.isNaN(date.getTime())) {
-      return 'Date indisponible';
+      return 'Date unavailable';
     }
 
-    return date.toLocaleDateString('fr-FR', {
+    return date.toLocaleDateString('en-US', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
@@ -711,7 +712,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         return { range: '1y', interval: '1d' };
       case '5Y':
         return { range: '5y', interval: '1wk' };
-      case 'Tout':
+      case 'All':
         return { range: 'max', interval: '1mo' };
       default:
         return { range: '1d', interval: '1m' };
@@ -751,7 +752,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         return 30 * 24 * 60 * 60_000;
       case '5Y':
         return 7 * 24 * 60 * 60_000;
-      case 'Tout':
+      case 'All':
         return 30 * 24 * 60 * 60_000;
       default:
         return 60_000;
@@ -799,7 +800,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
   }
 
   get marketDirection(): string {
-    return this.priceChange >= 0 ? 'En hausse' : 'En baisse';
+    return this.priceChange >= 0 ? 'Rising' : 'Falling';
   }
 
   get minPrice(): number {
@@ -934,7 +935,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Check if asset exists in database via backend
+    // Check whether the asset exists in the database via the backend
     this.http.get<any>(`/api/investments/assets/check-favorite/${this.selectedAssetSymbol}`)
       .pipe(
         catchError((err) => {
@@ -976,11 +977,11 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (response) => {
             this.assetAlreadyFavorited = false;
-            this.toast.info(`${this.selectedAssetSymbol} retiré des favoris`);
+            this.toast.info(`${this.selectedAssetSymbol} removed from favorites`);
           },
           error: (err) => {
             console.error('Error removing asset from favorites:', err);
-            this.toast.error('Erreur lors du retrait des favoris');
+            this.toast.error('Error removing from favorites');
           }
         });
     } else {
@@ -1002,11 +1003,11 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (response) => {
             this.assetAlreadyFavorited = true;
-            this.toast.success(`${this.selectedAssetSymbol} ajouté aux favoris`);
+            this.toast.success(`${this.selectedAssetSymbol} added to favorites`);
           },
           error: (err) => {
             console.error('Error adding asset to favorites:', err);
-            this.toast.error('Erreur lors de l\'ajout aux favoris');
+            this.toast.error('Error adding to favorites');
           }
         });
     }
@@ -1023,8 +1024,8 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     this.geminiDetailOpen = false;
 
     const payload = {
-      language: 'fr',
-      tone: 'professionnel, factuel et nuancé',
+      language: 'en',
+      tone: 'professional, factual, and balanced',
       additionalContext: `Asset: ${this.selectedAssetSymbol}, Current Price: ${this.assetPrice} EUR, Change: ${this.priceChange.toFixed(2)}%`
     };
 
@@ -1042,7 +1043,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           console.error('Error loading Gemini analysis:', err);
-          this.geminiError = 'Impossible de charger l\'analyse. Veuillez réessayer.';
+          this.geminiError = 'Unable to load the analysis. Please try again.';
         }
       });
   }
@@ -1051,7 +1052,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     try {
       // Check if there's an error status
       if (data.status === 'error') {
-        this.geminiError = data.message || 'Erreur lors de la génération de l\'analyse';
+        this.geminiError = data.message || 'Error while generating the analysis';
         return;
       }
 
@@ -1074,7 +1075,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
       const outlook = parsed.outlook_6_12m || {};
       const riskFlags = parsed.risk_flags || [];
       const confidence = parsed.confidence || {};
-      const summaryText = marketEquities.summary || parsed.summary || 'Analyse de marché disponible';
+      const summaryText = marketEquities.summary || parsed.summary || 'Market analysis available';
 
       // Determine sentiment from indices
       const sentiment = this.detectSentimentFromData(marketEquities, bondMarket, macroFactors);
@@ -1095,14 +1096,14 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         market_trend: this.buildMarketTrend(marketEquities, bondMarket),
         main_risks: this.buildRisksText(riskFlags, macroFactors),
         opportunities: this.buildOpportunitiesText(marketEquities, outlook),
-        outlook: outlook.base_case || 'Analyse en cours...',
+        outlook: outlook.base_case || 'Analysis in progress...',
         as_of: parsed.as_of || new Date().toISOString(),
         source: data.source || 'Gemini',
         model: data.model || 'gemini-2.5-flash'
       };
     } catch (error) {
       console.error('Error parsing Gemini response:', error);
-      this.geminiError = 'Erreur lors du traitement de l\'analyse';
+      this.geminiError = 'Error while processing the analysis';
     }
   }
 
@@ -1130,7 +1131,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     if (marketEquities.summary) {
       return marketEquities.summary.substring(0, 150) + '...';
     }
-    return 'Marché en analyse';
+    return 'Market under review';
   }
 
   private buildRisksText(riskFlags: string[], macroFactors: any): string {
@@ -1141,14 +1142,14 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     if (macroFactors.geopolitics) {
       return (macroFactors.geopolitics as any[]).map((g: any) => g.theme).join(', ');
     }
-    return 'Volatilité normale';
+    return 'Normal volatility';
   }
 
   private buildOpportunitiesText(marketEquities: any, outlook: any): string {
     if (outlook.bull_case) {
       return outlook.bull_case.substring(0, 150);
     }
-    return 'À évaluer selon positions';
+    return 'To be assessed based on positions';
   }
 
   private buildRecommendations(outlook: any, macroFactors: any): string[] {
@@ -1163,16 +1164,16 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     if (macroFactors.policy_events && Array.isArray(macroFactors.policy_events)) {
       const policies = macroFactors.policy_events.slice(0, 2);
       policies.forEach((p: string) => {
-        recs.push(`Monitorer: ${p}`);
+        recs.push(`Monitor: ${p}`);
       });
     }
 
     // Fallback recommendations
     if (recs.length === 0) {
       recs.push(
-        'Diversifier sur les indices technologiques et traditionnels',
-        'Surveiller l\'évolution des rendements obligataires',
-        'Réévaluer les allocations selon le risque géopolitique'
+        'Diversify across technology and traditional indices',
+        'Monitor bond yield trends',
+        'Reassess allocations based on geopolitical risk'
       );
     }
 
@@ -1186,7 +1187,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     if (marketEquities.tech_ai_vs_traditional) {
       const tech = marketEquities.tech_ai_vs_traditional.tech_ai;
       if (tech && tech.momentum) {
-        factors.push(`Tech/IA: ${tech.momentum}`);
+        factors.push(`Tech/AI: ${tech.momentum}`);
       }
     }
 
@@ -1195,11 +1196,11 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
       factors.push(`Inflation: ${macroFactors.inflation.trend}`);
     }
     if (macroFactors.employment) {
-      factors.push(`Emploi: ${macroFactors.employment.trend}`);
+      factors.push(`Employment: ${macroFactors.employment.trend}`);
     }
 
     if (factors.length === 0) {
-      factors.push('Analyse détaillée en cours', 'Données macroéconomiques collectées');
+      factors.push('Detailed analysis in progress', 'Macroeconomic data collected');
     }
 
     return factors;
@@ -1210,12 +1211,12 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     const sectors: string[] = [];
 
     if (marketEquities.tech_ai_vs_traditional) {
-      sectors.push('Technologie & IA');
-      sectors.push('Secteurs Traditionnels');
+      sectors.push('Technology & AI');
+      sectors.push('Traditional sectors');
     }
 
     if (sectors.length === 0) {
-      sectors.push('Actions de croissance', 'Valeurs défensives', 'Secteur énergétique');
+      sectors.push('Growth stocks', 'Defensive stocks', 'Energy sector');
     }
 
     return sectors;
@@ -1284,16 +1285,16 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     this.closeChoiceModal();
 
     if (action === 'now') {
-      // Afficher le modal pour demander la quantité
+      // Show the modal to request the quantity
       this.openPositionNowModal();
     } else {
-      // Afficher le modal de création d'ordre
+      // Show the order creation modal
       this.openOrderForm();
     }
   }
 
   private openPositionNowModal(): void {
-    // Réinitialiser le formulaire
+    // Reset the form
     this.positionNowQuantity = 1;
     this.positionNowError = '';
     this.positionNowLoading = false;
@@ -1307,7 +1308,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
 
   submitPositionNow(): void {
     if (!this.selectedAssetSymbol || this.positionNowQuantity <= 0) {
-      this.positionNowError = 'Quantité invalide';
+      this.positionNowError = 'Invalid quantity';
       return;
     }
 
@@ -1316,7 +1317,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
 
     const userId = this.getCurrentUserId();
     if (!userId) {
-      this.positionNowError = 'Utilisateur non authentifié';
+      this.positionNowError = 'User not authenticated';
       this.positionNowLoading = false;
       return;
     }
@@ -1334,20 +1335,20 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (position) => {
         this.closePositionNowModal();
-        this.toast.success(`Position ${this.positionNowQuantity} x ${this.selectedAssetSymbol} créée avec succès`);
+        this.toast.success(`Position ${this.positionNowQuantity} x ${this.selectedAssetSymbol} created successfully`);
         // Recharger les positions
         this.loadSelectedAssetPositions(this.selectedAssetSymbol);
         this.loadPortfolioTopPositions();
       },
       error: (err: any) => {
-        console.error('Erreur création position:', err);
-        this.positionNowError = err?.error?.message || 'Erreur lors de la création de la position';
+        console.error('Error creating position:', err);
+        this.positionNowError = err?.error?.message || 'Error creating the position';
       }
     });
   }
 
   private openOrderForm(): void {
-    // Afficher le formulaire pour créer un ordre avec prix personnalisé
+    // Show the form to create an order with a custom price
     this.orderFormData.price = this.assetPrice;
     this.orderFormData.quantity = 1;
     this.orderFormData.orderType = 'BUY';
@@ -1366,17 +1367,17 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
 
   submitOrder(): void {
     if (!this.selectedAssetSymbol || this.orderFormData.quantity <= 0) {
-      this.orderModalError = 'Quantité invalide';
+      this.orderModalError = 'Invalid quantity';
       return;
     }
 
     this.orderModalLoading = true;
     this.orderModalError = '';
 
-    // Récupérer l'ID utilisateur (à adapter selon votre auth service)
+    // Retrieve the user ID (adapt as needed for your auth service)
     const userId = this.getCurrentUserId();
     if (!userId) {
-      this.orderModalError = 'Utilisateur non authentifié';
+      this.orderModalError = 'User not authenticated';
       this.orderModalLoading = false;
       return;
     }
@@ -1396,11 +1397,11 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (order: InvestmentOrder) => {
         this.closeOrderModal();
-        this.toast.success(`Ordre ${this.orderFormData.orderType} créé pour ${this.selectedAssetSymbol}`);
+        this.toast.success(`Order ${this.orderFormData.orderType} created for ${this.selectedAssetSymbol}`);
       },
       error: (err: any) => {
-        console.error('Erreur création ordre:', err);
-        this.orderModalError = err?.error?.message || 'Erreur lors de la création de l\'ordre';
+        console.error('Error creating order:', err);
+        this.orderModalError = err?.error?.message || 'Error creating the order';
       }
     });
   }

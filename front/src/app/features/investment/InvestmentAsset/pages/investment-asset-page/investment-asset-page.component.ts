@@ -71,7 +71,7 @@ export class InvestmentAssetPageComponent implements OnInit {
           this.loadAssets();
         },
         error: () => {
-          this.errorMessage = 'Impossible de mettre à jour l\'asset.';
+          this.errorMessage = 'Unable to update the asset.';
           this.loading = false;
           this.cdr.detectChanges();
         }
@@ -83,7 +83,7 @@ export class InvestmentAssetPageComponent implements OnInit {
           this.loadAssets();
         },
         error: () => {
-          this.errorMessage = 'Impossible de créer l\'asset.';
+          this.errorMessage = 'Unable to create the asset.';
           this.loading = false;
           this.cdr.detectChanges();
         }
@@ -92,14 +92,14 @@ export class InvestmentAssetPageComponent implements OnInit {
   }
 
   deleteAsset(asset: InvestmentAsset): void {
-    const confirmed = window.confirm('Supprimer cet asset ?');
+    const confirmed = window.confirm('Delete this asset?');
     if (!confirmed || !asset.assetId) return;
 
     this.loading = true;
     this.vm.delete(asset.assetId).subscribe({
       next: () => this.loadAssets(),
       error: () => {
-        this.errorMessage = 'Impossible de supprimer l\'asset.';
+        this.errorMessage = 'Unable to delete the asset.';
         this.loading = false;
         this.cdr.detectChanges();
       }
@@ -163,7 +163,7 @@ export class InvestmentAssetPageComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.errorMessage = 'Impossible de charger les assets pour le moment.';
+        this.errorMessage = 'Unable to load assets right now.';
         this.loading = false;
         this.cdr.detectChanges();
       }

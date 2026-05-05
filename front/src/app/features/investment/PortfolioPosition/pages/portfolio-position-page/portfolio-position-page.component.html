@@ -2,60 +2,60 @@
   <header class="page-header">
     <div class="title-group">
       <h1>Portfolio Positions</h1>
-      <p>Vue consolidée des positions utilisateurs et performance globale.</p>
+      <p>Consolidated view of user positions and overall performance.</p>
     </div>
 
-    <button class="page-action-btn" type="button" (click)="loadPositions()">Actualiser</button>
+    <button class="page-action-btn" type="button" (click)="loadPositions()">Refresh</button>
   </header>
 
   <section class="kpi-grid">
     <article class="kpi-card">
       <p class="kpi-label">Positions</p>
       <p class="kpi-value">{{ positions.length }}</p>
-      <p class="kpi-meta">Lignes en portefeuille</p>
+      <p class="kpi-meta">Portfolio lines</p>
     </article>
 
     <article class="kpi-card">
-      <p class="kpi-label">Valeur totale</p>
+      <p class="kpi-label">Total value</p>
       <p class="kpi-value">{{ totalPortfolioValue | number:'1.2-2' }}</p>
-      <p class="kpi-meta">Capital engagé</p>
+      <p class="kpi-meta">Committed capital</p>
     </article>
 
     <article class="kpi-card">
-      <p class="kpi-label">P/L net</p>
+      <p class="kpi-label">Net P/L</p>
       <p class="kpi-value" [class]="profitLossClass(totalProfitLoss)">
         {{ totalProfitLoss | number:'1.2-2' }}
       </p>
-      <p class="kpi-meta">Résultat agrégé</p>
+      <p class="kpi-meta">Aggregated result</p>
     </article>
 
     <article class="kpi-card">
-      <p class="kpi-label">Positions gagnantes</p>
+      <p class="kpi-label">Winning positions</p>
       <p class="kpi-value">{{ profitablePositionsCount }}</p>
-      <p class="kpi-meta">Performance positive</p>
+      <p class="kpi-meta">Positive performance</p>
     </article>
   </section>
 
   <section class="panel">
     <div class="panel-body">
       <div class="field">
-        <label for="portfolio-search">Recherche</label>
+        <label for="portfolio-search">Search</label>
         <input
           id="portfolio-search"
           type="text"
           [value]="searchTerm"
           (input)="onSearchInput($event)"
-          placeholder="Asset, ID utilisateur ou ID asset"
+          placeholder="Asset, user ID, or asset ID"
         />
       </div>
     </div>
   </section>
 
   <section class="panel">
-    <div *ngIf="loading" class="state">Chargement des positions...</div>
+    <div *ngIf="loading" class="state">Loading positions...</div>
     <div *ngIf="!loading && errorMessage" class="state state--error">{{ errorMessage }}</div>
     <div *ngIf="!loading && !errorMessage && filteredPositions.length === 0" class="state">
-      Aucune position trouvée.
+      No positions found.
     </div>
 
     <div *ngIf="!loading && !errorMessage && filteredPositions.length > 0" class="table-wrap">
@@ -64,12 +64,12 @@
           <tr>
             <th>User</th>
             <th>Asset</th>
-            <th>Quantité</th>
-            <th>Prix moyen achat</th>
-            <th>Prix actuel</th>
-            <th>Valeur totale</th>
+            <th>Quantity</th>
+            <th>Average buy price</th>
+            <th>Current price</th>
+            <th>Total value</th>
             <th>P/L</th>
-            <th>MAJ</th>
+            <th>Updated</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -97,14 +97,14 @@
                 (click)="closePosition(position.positionId)"
                 [disabled]="deletingPositionId === position.positionId"
               >
-                {{ deletingPositionId === position.positionId ? 'Fermeture...' : 'Close position' }}
+                {{ deletingPositionId === position.positionId ? 'Closing...' : 'Close position' }}
               </button>
             </td>
           </tr>
         </tbody>
       </table>
       <div class="load-more-wrap" *ngIf="filteredPositions.length > displayCount">
-        <button class="page-action-btn" type="button" (click)="loadMore()">Charger +10</button>
+        <button class="page-action-btn" type="button" (click)="loadMore()">Load +10</button>
       </div>
     </div>
   </section>

@@ -75,7 +75,7 @@ export class PortfolioPositionPageComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.errorMessage = 'Impossible de charger les positions du portefeuille.';
+        this.errorMessage = 'Unable to load portfolio positions.';
         this.loading = false;
         this.cdr.detectChanges();
       }
@@ -87,7 +87,7 @@ export class PortfolioPositionPageComponent implements OnInit {
   }
 
   closePosition(positionId: number): void {
-    const confirmed = window.confirm('Voulez-vous vraiment fermer cette position ?');
+    const confirmed = window.confirm('Are you sure you want to close this position?');
     if (!confirmed) {
       return;
     }
@@ -103,7 +103,7 @@ export class PortfolioPositionPageComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.errorMessage = 'Impossible de fermer cette position.';
+        this.errorMessage = 'Unable to close this position.';
         this.deletingPositionId = null;
         this.cdr.detectChanges();
       }

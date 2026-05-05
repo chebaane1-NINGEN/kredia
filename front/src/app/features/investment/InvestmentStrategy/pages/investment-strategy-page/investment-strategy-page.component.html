@@ -2,57 +2,57 @@
   <header class="page-header">
     <div class="title-group">
       <h1>Investment Strategies</h1>
-      <p>Gestion des profils de risque et des rendements attendus.</p>
+      <p>Manage risk profiles and expected returns.</p>
     </div>
 
     <div class="header-actions">
       <button class="page-action-btn" type="button" (click)="openFormModal()" style="background: var(--emerald-600); border-color: var(--emerald-600); color: white;">
-        + Créer stratégie
+        + Create strategy
       </button>
     </div>
   </header>
 
   <section class="kpi-grid">
     <article class="kpi-card">
-      <p class="kpi-label">Stratégies</p>
+      <p class="kpi-label">Strategies</p>
       <p class="kpi-value">{{ strategies.length }}</p>
-      <p class="kpi-meta">Configurations actives</p>
+      <p class="kpi-meta">Active configurations</p>
     </article>
 
     <article class="kpi-card">
-      <p class="kpi-label">Budget moyen</p>
+      <p class="kpi-label">Average budget</p>
       <p class="kpi-value">{{ averageBudget | number:'1.2-2' }}</p>
-      <p class="kpi-meta">Capacité d'allocation</p>
+      <p class="kpi-meta">Allocation capacity</p>
     </article>
 
     <article class="kpi-card">
-      <p class="kpi-label">Risque élevé</p>
+      <p class="kpi-label">High risk</p>
       <p class="kpi-value">{{ highRiskCount }}</p>
-      <p class="kpi-meta">Surveillance renforcée</p>
+      <p class="kpi-meta">Enhanced monitoring</p>
     </article>
 
     <article class="kpi-card">
-      <p class="kpi-label">Actives</p>
+      <p class="kpi-label">Active</p>
       <p class="kpi-value">{{ activeStrategiesCount }}</p>
-      <p class="kpi-meta">Automatisation en cours</p>
+      <p class="kpi-meta">Automation in progress</p>
     </article>
   </section>
 
   <section class="panel">
     <div class="panel-body filters-grid">
       <div class="field">
-        <label for="strategy-search">Recherche</label>
+        <label for="strategy-search">Search</label>
         <input
           id="strategy-search"
           type="text"
           [value]="searchTerm"
           (input)="onSearchInput($event)"
-          placeholder="Nom ou description"
+          placeholder="Name or description"
         />
       </div>
 
       <div class="field">
-        <label for="strategy-risk">Niveau de risque</label>
+        <label for="strategy-risk">Risk level</label>
         <select id="strategy-risk" [value]="riskFilter" (change)="onRiskFilterChange($event)">
           <option *ngFor="let risk of riskOptions" [value]="risk">{{ risk }}</option>
         </select>
@@ -61,11 +61,11 @@
   </section>
 
   <section class="panel">
-    <div *ngIf="loading" class="state">Chargement des stratégies...</div>
+    <div *ngIf="loading" class="state">Loading strategies...</div>
     <div *ngIf="!loading && errorMessage" class="state state--error">{{ errorMessage }}</div>
     <div *ngIf="!loading && !errorMessage && actionMessage" class="state state--success">{{ actionMessage }}</div>
     <div *ngIf="!loading && !errorMessage && filteredStrategies.length === 0" class="state">
-      Aucune stratégie ne correspond à votre recherche.
+      No strategies match your search.
     </div>
 
     <div *ngIf="!loading && !errorMessage && filteredStrategies.length > 0" class="panel-body strategy-grid">
@@ -82,7 +82,7 @@
         </header>
 
         <p>
-          Budget max: {{ strategy.maxBudget ?? 0 | number:'1.2-2' }} ·
+          Max budget: {{ strategy.maxBudget ?? 0 | number:'1.2-2' }} ·
           Max assets: {{ strategy.maxAssets }}
         </p>
 
@@ -115,23 +115,23 @@
       <div class="modal-body">
         <!-- Strategy Details -->
         <section class="modal-section">
-          <h3 class="section-title">Détails de la stratégie</h3>
+          <h3 class="section-title">Strategy details</h3>
           
           <div class="details-grid">
             <div class="detail-item">
-              <span class="detail-label">Profil de risque</span>
+              <span class="detail-label">Risk profile</span>
               <span [class]="getRiskBadgeClass(selectedStrategy?.riskProfile ?? 'MEDIUM')">
                 {{ selectedStrategy?.riskProfile }}
               </span>
             </div>
 
             <div class="detail-item">
-              <span class="detail-label">Budget max</span>
+              <span class="detail-label">Max budget</span>
               <span class="detail-value">{{ selectedStrategy?.maxBudget ?? 0 | number:'1.2-2' }}</span>
             </div>
 
             <div class="detail-item">
-              <span class="detail-label">Max actifs</span>
+              <span class="detail-label">Max assets</span>
               <span class="detail-value">{{ selectedStrategy?.maxAssets }}</span>
             </div>
 
@@ -141,33 +141,33 @@
             </div>
 
             <div class="detail-item">
-              <span class="detail-label">Auto-positions</span>
+              <span class="detail-label">Auto positions</span>
               <span class="badge" [class.badge--active]="selectedStrategy?.autoCreatePositions">
-                {{ selectedStrategy?.autoCreatePositions ? 'Oui' : 'Non' }}
+                {{ selectedStrategy?.autoCreatePositions ? 'Yes' : 'No' }}
               </span>
             </div>
 
             <div class="detail-item">
-              <span class="detail-label">Réinvestir gains</span>
+              <span class="detail-label">Reinvest gains</span>
               <span class="badge" [class.badge--active]="selectedStrategy?.reinvestProfits">
                 {{ selectedStrategy?.reinvestProfits ? 'Oui' : 'Non' }}
               </span>
             </div>
 
             <div class="detail-item">
-              <span class="detail-label">Statut</span>
+              <span class="detail-label">Status</span>
               <span class="badge" [class.badge--active]="selectedStrategy?.isActive">
                 {{ selectedStrategy?.isActive ? 'Active' : 'Inactive' }}
               </span>
             </div>
 
             <div class="detail-item">
-              <span class="detail-label">Créée le</span>
+              <span class="detail-label">Created</span>
               <span class="detail-value">{{ selectedStrategy?.createdAt | date:'short' }}</span>
             </div>
 
             <div class="detail-item">
-              <span class="detail-label">Mise à jour</span>
+              <span class="detail-label">Updated</span>
               <span class="detail-value">{{ selectedStrategy?.updatedAt | date:'short' }}</span>
             </div>
           </div>
@@ -175,12 +175,12 @@
 
         <!-- Strategy Positions & Performance -->
         <section class="modal-section">
-          <h3 class="section-title">Positions créées ({{ modalPositions.length }})</h3>
+          <h3 class="section-title">Created positions ({{ modalPositions.length }})</h3>
 
-          <div *ngIf="modalPositionsLoading" class="state">Chargement des positions...</div>
+          <div *ngIf="modalPositionsLoading" class="state">Loading positions...</div>
           <div *ngIf="!modalPositionsLoading && modalError" class="state state--error">{{ modalError }}</div>
           <div *ngIf="!modalPositionsLoading && !modalError && modalPositions.length === 0" class="state">
-            Aucune position créée par cette stratégie.
+            No positions created by this strategy.
           </div>
 
           <div *ngIf="!modalPositionsLoading && !modalError && modalPositions.length > 0" class="positions-table-wrap">
@@ -188,11 +188,11 @@
               <thead>
                 <tr>
                   <th>Symbole</th>
-                  <th>Quantité</th>
-                  <th>Prix d'achat</th>
-                  <th>Prix actuel</th>
-                  <th>Valeur</th>
-                  <th>Profit/Perte</th>
+                  <th>Quantity</th>
+                  <th>Buy price</th>
+                  <th>Current price</th>
+                  <th>Value</th>
+                  <th>Profit/Loss</th>
                   <th>% P&L</th>
                 </tr>
               </thead>
@@ -227,9 +227,9 @@
           (click)="selectedStrategy && deleteStrategy(selectedStrategy)"
           [disabled]="deleteLoadingId === selectedStrategy?.strategyId"
         >
-          {{ deleteLoadingId === selectedStrategy?.strategyId ? 'Suppression...' : 'Supprimer' }}
+          {{ deleteLoadingId === selectedStrategy?.strategyId ? 'Deleting...' : 'Delete' }}
         </button>
-        <button class="page-action-btn" type="button" (click)="closeStrategyModal()">Fermer</button>
+        <button class="page-action-btn" type="button" (click)="closeStrategyModal()">Close</button>
       </footer>
     </div>
   </div>
@@ -247,7 +247,7 @@
         <div *ngIf="actionMessage" class="state state--success">{{ actionMessage }}</div>
 
         <div class="field field--full">
-          <label for="form-strategy-name">Nom de la stratégie</label>
+          <label for="form-strategy-name">Strategy name</label>
           <input
             id="form-strategy-name"
             type="text"
@@ -286,7 +286,7 @@
         </div>
 
         <div class="field">
-          <label for="form-strategy-risk">Profil de risque</label>
+          <label for="form-strategy-risk">Risk profile</label>
           <select id="form-strategy-risk" [(ngModel)]="formModel.riskProfile" name="riskProfile">
             <option value="LOW">LOW</option>
             <option value="MEDIUM">MEDIUM</option>
@@ -317,10 +317,10 @@
 
       <footer class="modal-footer">
         <button class="page-action-btn page-action-btn--ghost" type="button" (click)="closeFormModal()">
-          Annuler
+          Cancel
         </button>
         <button class="page-action-btn" type="button" (click)="submitStrategyForm()" [disabled]="saveLoading">
-          {{ saveLoading ? 'Sauvegarde...' : (isEditMode ? 'Mettre à jour' : 'Créer') }}
+          {{ saveLoading ? 'Saving...' : (isEditMode ? 'Update' : 'Create') }}
         </button>
       </footer>
     </div>
