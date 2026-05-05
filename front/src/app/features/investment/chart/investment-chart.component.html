@@ -6,19 +6,19 @@
         #assetSearchInput
         type="text"
         class="asset-search__input"
-        placeholder="Rechercher un asset Yahoo Finance (AAPL, MSFT, NVDA...)"
+        placeholder="Search a Yahoo Finance asset (AAPL, MSFT, NVDA...)"
         [value]="searchQuery"
         (input)="onSearchInput(assetSearchInput.value)"
         (focus)="onSearchFocus()"
         autocomplete="off"
         spellcheck="false" />
-      <button *ngIf="searchQuery" type="button" class="asset-search__clear" (click)="clearSearch()" aria-label="Effacer la recherche">×</button>
+      <button *ngIf="searchQuery" type="button" class="asset-search__clear" (click)="clearSearch()" aria-label="Clear search">×</button>
     </div>
 
     @if (searchOpen) {
       <div class="asset-search__dropdown">
         @if (searchLoading) {
-          <div class="asset-search__state">Recherche Yahoo Finance...</div>
+          <div class="asset-search__state">Searching Yahoo Finance...</div>
         } @else if (searchResults.length > 0) {
           <button
             *ngFor="let result of searchResults"
@@ -35,7 +35,7 @@
             </div>
           </button>
         } @else {
-          <div class="asset-search__state">Aucun résultat Yahoo Finance pour cette recherche.</div>
+          <div class="asset-search__state">No Yahoo Finance results for this search.</div>
         }
       </div>
     }
@@ -77,7 +77,7 @@
 
   <section class="chart-shell">
     @if (loading || chartLoading) {
-      <div class="chart-loader" aria-label="Chargement du graphique">
+      <div class="chart-loader" aria-label="Loading chart">
         <div class="chart-loader__header">
           <div class="skeleton skeleton--line skeleton--short"></div>
           <div class="skeleton skeleton--line skeleton--medium"></div>
@@ -95,7 +95,7 @@
     } @else if (prices.length > 0) {
       <div class="chart-shell__header">
         <div class="chart-shell__intro">
-          <p class="eyebrow">Marché en direct</p>
+          <p class="eyebrow">Live market</p>
           <h1>{{ assetPrice | number:'1.2-2' }} EUR</h1>
           <div class="price-line">
             <span class="price-line__direction" [class.is-positive]="priceChange >= 0" [class.is-negative]="priceChange < 0">
@@ -113,7 +113,7 @@
             [class.is-loading]="isAddingToFavorites"
             [class.is-favorited]="assetAlreadyFavorited"
             (click)="onAddToFavorites()"
-            [attr.title]="assetAlreadyFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'">
+            [attr.title]="assetAlreadyFavorited ? 'Remove from favorites' : 'Add to favorites'">
             @if (isAddingToFavorites) {
               <span class="favorite-btn__spinner"></span>
             } @else if (assetAlreadyFavorited) {
@@ -127,7 +127,7 @@
             type="button"
             (click)="openOrderModal()"
             [disabled]="!selectedAssetSymbol"
-            title="Ouvrir une position ou créer un ordre">
+            title="Open a position or create an order">
             Trade
           </button>
         </div>
@@ -182,7 +182,7 @@
       </div>
     } @else {
       <div class="chart-empty">
-        Aucune donnée de marché disponible pour le moment.
+        No market data available yet.
       </div>
     }
 
@@ -202,15 +202,15 @@
   <section class="strategy-preview-panel">
     <div class="strategy-preview-panel__header">
       <div>
-        <p class="eyebrow">Stratégies</p>
-        <h2>Aperçu rapide des stratégies</h2>
+        <p class="eyebrow">Strategies</p>
+        <h2>Quick strategy overview</h2>
         <p class="strategy-preview-panel__subtitle">
-          Une vue synthétique pour repérer les profils actifs avant d’ouvrir un ordre.
+          A concise view to spot active profiles before opening an order.
         </p>
       </div>
 
       <a class="strategy-preview-panel__link" routerLink="/investissement/strategies">
-        Voir toutes les stratégies
+        View all strategies
       </a>
     </div>
 
@@ -229,7 +229,7 @@
           <div class="strategy-preview-card__top">
             <div>
               <h3>{{ strategy.strategyName }}</h3>
-              <p>{{ strategy.maxAssets }} actifs max</p>
+              <p>{{ strategy.maxAssets }} max assets</p>
             </div>
 
             <span [class]="getStrategyRiskBadgeClass(strategy.riskProfile)">
@@ -261,14 +261,14 @@
                 {{ asset }}
               </span>
             } @else {
-              <span class="strategy-tag strategy-tag--empty">Aucun actif {{getStrategyAssets(strategy.strategyId).length}}</span>
+              <span class="strategy-tag strategy-tag--empty">No assets {{getStrategyAssets(strategy.strategyId).length}}</span>
             }
           </div>
         </article>
       </div>
     } @else {
       <div class="strategy-preview-state">
-        Aucune stratégie trouvée. Créez-en une pour visualiser vos profils ici.
+        No strategies found. Create one to view your profiles here.
       </div>
     }
   </section>
@@ -277,7 +277,7 @@
   <section class="gemini-analysis-block" *ngIf="selectedAssetSymbol">
     <div class="gemini-header">
       <div class="gemini-header__title">
-        <h2>Analyse IA </h2>
+        <h2>AI Analysis </h2>
         <span class="gemini-header__icon">✨</span>
       </div>
       <button
@@ -286,7 +286,7 @@
         [disabled]="geminiLoading"
         [class.is-loading]="geminiLoading"
         (click)="loadGeminiAnalysis()"
-        [title]="geminiLoading ? 'Chargement en cours...' : 'Rafraîchir l\'analyse'">
+        [title]="geminiLoading ? 'Loading...' : 'Refresh analysis'">
         @if (geminiLoading) {
           <span class="spinner"></span>
         } @else {
@@ -298,7 +298,7 @@
     @if (geminiError) {
       <div class="gemini-error">
         <p>{{ geminiError }}</p>
-        <button type="button" class="gemini-error__retry" (click)="loadGeminiAnalysis()">Réessayer</button>
+        <button type="button" class="gemini-error__retry" (click)="loadGeminiAnalysis()">Retry</button>
       </div>
     } @else if (geminiLoading) {
       <div class="gemini-skeleton">
@@ -320,7 +320,7 @@
         </div>
 
         <div class="gemini-banner__date">
-          <span class="gemini-banner__label">Mis à jour</span>
+          <span class="gemini-banner__label">Updated</span>
           <span>{{ geminiAnalysis.as_of | date:'dd MMM yyyy' }}</span>
           <span>{{ geminiAnalysis.as_of | date:'HH:mm' }}</span>
         </div>
@@ -332,7 +332,7 @@
           class="gemini-accordion__toggle"
           [class.is-open]="geminiDetailOpen"
           (click)="geminiDetailOpen = !geminiDetailOpen">
-          <span class="gemini-accordion__label">Voir le détail complet</span>
+          <span class="gemini-accordion__label">View full details</span>
           <span class="gemini-accordion__icon">{{ geminiDetailOpen ? '▼' : '►' }}</span>
         </button>
 
@@ -340,8 +340,8 @@
           <div class="gemini-accordion__content">
             <article class="gemini-summary-card">
               <div class="gemini-summary-card__header">
-                <h3>Résumé stratégique</h3>
-                <span>Marchés actions, obligataires et macro</span>
+                <h3>Strategic summary</h3>
+                <span>Equity, bond, and macro markets</span>
               </div>
               <p>{{ geminiAnalysis.overall_summary }}</p>
             </article>
@@ -368,11 +368,11 @@
               </article>
 
               <article class="gemini-kpi-card">
-                <h3 class="gemini-kpi-card__title">Marché obligataire</h3>
+                <h3 class="gemini-kpi-card__title">Bond market</h3>
                 <p class="gemini-kpi-card__content">{{ geminiAnalysis.bond_market?.summary || '-' }}</p>
                 <div class="gemini-bond-table" *ngIf="geminiAnalysis.bond_market?.yield_curves?.length">
                   <div class="gemini-bond-table__head">
-                    <span>Région</span>
+                    <span>Region</span>
                     <span>2Y</span>
                     <span>10Y</span>
                     <span>Courbe</span>
@@ -389,7 +389,7 @@
               </article>
 
               <article class="gemini-kpi-card">
-                <h3 class="gemini-kpi-card__title">Macro & politique</h3>
+                <h3 class="gemini-kpi-card__title">Macro & policy</h3>
                 <div class="gemini-macro-block">
                   <div class="gemini-macro-block__item">
                     <span>Inflation</span>
@@ -411,7 +411,7 @@
 
             <div class="gemini-grid-2">
               <article class="gemini-panel-box">
-                <h3>Scénario 6-12 mois</h3>
+                <h3>6-12 month scenario</h3>
                 <div class="gemini-scenario">
                   <strong>Base case</strong>
                   <p>{{ geminiAnalysis.outlook_6_12m?.base_case || geminiAnalysis.outlook }}</p>
@@ -427,7 +427,7 @@
               </article>
 
               <article class="gemini-panel-box">
-                <h3>Risques & recommandations</h3>
+                <h3>Risks & recommendations</h3>
 
                 <div class="gemini-subsection">
                   <span class="gemini-subsection__label">Risk flags</span>
@@ -439,7 +439,7 @@
                 </div>
 
                 <div class="gemini-subsection" *ngIf="geminiAnalysis.recommendations?.length">
-                  <span class="gemini-subsection__label">Actions suggérées</span>
+                  <span class="gemini-subsection__label">Suggested actions</span>
                   <ul class="gemini-recommendations__list">
                     @for (rec of geminiAnalysis.recommendations.slice(0, 4); track $index) {
                       <li class="gemini-recommendations__item">{{ rec }}</li>
@@ -466,7 +466,7 @@
             </div>
 
             <div class="gemini-detail-section" *ngIf="geminiAnalysis.macro_political_factors?.policy_events?.length">
-              <h4>Événements de politique</h4>
+              <h4>Policy events</h4>
               <ul>
                 @for (event of geminiAnalysis.macro_political_factors.policy_events; track $index) {
                   <li>{{ event }}</li>
@@ -481,7 +481,7 @@
 
             <div class="gemini-detail-meta">
               <span>Source: {{ geminiAnalysis.source || 'Gemini AI' }}</span>
-              <span>Modèle: {{ geminiAnalysis.model || '-' }}</span>
+              <span>Model: {{ geminiAnalysis.model || '-' }}</span>
             </div>
           </div>
         }
@@ -494,8 +494,8 @@
     <div class="gemini-portfolio-top__header">
       <div class="gemini-portfolio-top__title-row">
         <h3>Top positions</h3>
-        <a routerLink="/investissement/positions" class="gemini-portfolio-top__view-all" title="Voir le portfolio complet">
-          <span class="gemini-portfolio-top__view-all-text">Voir tout</span>
+        <a routerLink="/investissement/positions" class="gemini-portfolio-top__view-all" title="View full portfolio">
+          <span class="gemini-portfolio-top__view-all-text">View all</span>
           <span class="gemini-portfolio-top__arrow">→</span>
         </a>
       </div>
@@ -503,7 +503,7 @@
     </div>
 
     @if (portfolioTopLoading) {
-      <div class="gemini-portfolio-top__loading" aria-label="Chargement des top positions">
+      <div class="gemini-portfolio-top__loading" aria-label="Loading top positions">
         <div class="gemini-portfolio-top__loading-head">
           <span class="skeleton skeleton--line skeleton--short"></span>
           <span class="skeleton skeleton--line skeleton--medium"></span>
@@ -523,7 +523,7 @@
       <div class="gemini-portfolio-top__table">
         <div class="gemini-portfolio-top__head">
           <span>Action</span>
-          <span>Valeur</span>
+          <span>Value</span>
           <span>P/L (€)</span>
           <span>P/L (%)</span>
           <span>Part</span>
@@ -549,7 +549,7 @@
         }
       </div>
     } @else {
-      <div class="gemini-portfolio-top__empty">Aucune position portefeuille disponible.</div>
+      <div class="gemini-portfolio-top__empty">No portfolio positions available.</div>
     }
   </section>
 
@@ -559,29 +559,29 @@
   <div class="choice-modal-overlay" (click)="closeChoiceModal()">
     <div class="choice-modal" (click)="$event.stopPropagation()">
       <div class="choice-modal__header">
-        <h2>Sélectionnez une action</h2>
+        <h2>Select an action</h2>
         <button 
           type="button" 
           class="choice-modal__close"
           (click)="closeChoiceModal()"
-          aria-label="Fermer">
+          aria-label="Close">
           ×
         </button>
       </div>
 
       <div class="choice-modal__body">
         <p class="choice-modal__asset-info">
-          <strong>{{ selectedAssetSymbol }}</strong> - Prix actuel: {{ assetPrice | number:'1.2-2' }} EUR
+          <strong>{{ selectedAssetSymbol }}</strong> - Current price: {{ assetPrice | number:'1.2-2' }} EUR
         </p>
 
         @if (selectedAssetPositions.length > 0) {
           <div class="choice-modal__positions-summary">
             <div class="positions-stat">
-              <span class="positions-stat__label">Positions ouvertes</span>
+              <span class="positions-stat__label">Open positions</span>
               <span class="positions-stat__value">{{ selectedAssetPositions.length }}</span>
             </div>
             <div class="positions-stat">
-              <span class="positions-stat__label">Valeur totale</span>
+              <span class="positions-stat__label">Total value</span>
               <span class="positions-stat__value">{{ selectedAssetPositionValue | number:'1.2-2' }} EUR</span>
             </div>
           </div>
@@ -593,8 +593,8 @@
             class="choice-modal__action-btn choice-modal__action-btn--now"
             (click)="selectAction('now')">
             <span class="choice-modal__action-icon">⚡</span>
-            <span class="choice-modal__action-title">Ouvrir une position maintenant</span>
-            <span class="choice-modal__action-desc">Au prix marché actuel</span>
+            <span class="choice-modal__action-title">Open a position now</span>
+            <span class="choice-modal__action-desc">At the current market price</span>
           </button>
 
           <button 
@@ -602,8 +602,8 @@
             class="choice-modal__action-btn choice-modal__action-btn--order"
             (click)="selectAction('order')">
             <span class="choice-modal__action-icon">📋</span>
-            <span class="choice-modal__action-title">Créer un ordre</span>
-            <span class="choice-modal__action-desc">Avec un prix personnalisé</span>
+            <span class="choice-modal__action-title">Create an order</span>
+            <span class="choice-modal__action-desc">With a custom price</span>
           </button>
         </div>
       </div>
@@ -616,19 +616,19 @@
   <div class="choice-modal-overlay" (click)="closePositionNowModal()">
     <div class="choice-modal" (click)="$event.stopPropagation()">
       <div class="choice-modal__header">
-        <h2>Ouvrir une position</h2>
+        <h2>Open a position</h2>
         <button 
           type="button" 
           class="choice-modal__close"
           (click)="closePositionNowModal()"
-          aria-label="Fermer">
+          aria-label="Close">
           ×
         </button>
       </div>
 
       <div class="choice-modal__body">
         <p class="choice-modal__asset-info">
-          <strong>{{ selectedAssetSymbol }}</strong> - Prix actuel: {{ assetPrice | number:'1.2-2' }} EUR
+          <strong>{{ selectedAssetSymbol }}</strong> - Current price: {{ assetPrice | number:'1.2-2' }} EUR
         </p>
 
         @if (positionNowError) {
@@ -637,7 +637,7 @@
 
         <form (ngSubmit)="submitPositionNow()" class="position-now__form">
           <div class="position-now__field">
-            <label for="position-quantity">Quantité</label>
+            <label for="position-quantity">Quantity</label>
             <input
               id="position-quantity"
               type="number"
@@ -646,12 +646,12 @@
               [(ngModel)]="positionNowQuantity"
               name="quantity"
               class="position-now__input"
-              placeholder="Entrez la quantité"
+              placeholder="Enter quantity"
               required />
           </div>
 
           <div class="position-now__total">
-            <span class="position-now__total-label">Coût approximatif</span>
+            <span class="position-now__total-label">Approximate cost</span>
             <span class="position-now__total-value">
               {{ (positionNowQuantity * assetPrice) | number:'1.2-2' }} EUR
             </span>
@@ -662,14 +662,14 @@
               type="button"
               class="position-now__btn position-now__btn--cancel"
               (click)="closePositionNowModal()">
-              Annuler
+              Cancel
             </button>
             <button
               type="submit"
               class="position-now__btn position-now__btn--submit"
               [class.is-loading]="positionNowLoading"
               [disabled]="positionNowLoading || positionNowQuantity <= 0">
-              {{ positionNowLoading ? 'Création...' : 'Ouvrir la position' }}
+              {{ positionNowLoading ? 'Creating...' : 'Open position' }}
             </button>
           </div>
         </form>
@@ -683,12 +683,12 @@
   <div class="order-modal-overlay" (click)="closeOrderModal()">
     <div class="order-modal" (click)="$event.stopPropagation()">
       <div class="order-modal__header">
-        <h2>Créer un ordre</h2>
+        <h2>Create an order</h2>
         <button 
           type="button" 
           class="order-modal__close"
           (click)="closeOrderModal()"
-          aria-label="Fermer">
+          aria-label="Close">
           ×
         </button>
       </div>
@@ -726,7 +726,7 @@
 
           <!-- Quantity Input -->
           <div class="order-modal__field">
-            <label for="quantity">Quantité</label>
+            <label for="quantity">Quantity</label>
             <input
               id="quantity"
               type="number"
@@ -735,7 +735,7 @@
               [(ngModel)]="orderFormData.quantity"
               name="quantity"
               class="order-modal__input"
-              placeholder="Entrez la quantité"
+              placeholder="Enter quantity"
               required />
           </div>
 
@@ -743,7 +743,7 @@
           <div class="order-modal__field">
             <label for="price">
               Prix limite (EUR)
-              <span class="order-modal__hint">Optionnel - Prix marché par défaut</span>
+              <span class="order-modal__hint">Optional - defaults to market price</span>
             </label>
             <input
               id="price"
@@ -753,12 +753,12 @@
               [(ngModel)]="orderFormData.price"
               name="price"
               class="order-modal__input"
-              placeholder="Laisser vide pour prix marché" />
+              placeholder="Leave empty for market price" />
           </div>
 
           <!-- Total Estimation -->
           <div class="order-modal__total">
-            <span class="order-modal__total-label">Total estimé</span>
+            <span class="order-modal__total-label">Estimated total</span>
             <span class="order-modal__total-value">
               {{ ((orderFormData.price || assetPrice) * orderFormData.quantity) | number:'1.2-2' }} EUR
             </span>
@@ -770,14 +770,14 @@
               type="button"
               class="order-modal__btn order-modal__btn--cancel"
               (click)="closeOrderModal()">
-              Annuler
+              Cancel
             </button>
             <button
               type="submit"
               class="order-modal__btn order-modal__btn--submit"
               [class.is-loading]="orderModalLoading"
               [disabled]="orderModalLoading || orderFormData.quantity <= 0">
-              {{ orderModalLoading ? 'Création...' : 'Créer l\'ordre' }}
+              {{ orderModalLoading ? 'Creating...' : 'Create order' }}
             </button>
           </div>
         </form>

@@ -2,53 +2,53 @@
   <header class="page-header">
     <div class="title-group">
       <h1>Investment Orders</h1>
-      <p>Supervision des ordres d'achat et de vente en temps réel.</p>
+      <p>Real-time monitoring of buy and sell orders.</p>
     </div>
 
-    <button class="page-action-btn" type="button" (click)="loadOrders()">Actualiser</button>
+    <button class="page-action-btn" type="button" (click)="loadOrders()">Refresh</button>
   </header>
 
   <section class="kpi-grid">
     <article class="kpi-card">
-      <p class="kpi-label">Ordres totaux</p>
+      <p class="kpi-label">Total orders</p>
       <p class="kpi-value">{{ orders.length }}</p>
-      <p class="kpi-meta">Historique complet</p>
+      <p class="kpi-meta">Full history</p>
     </article>
 
     <article class="kpi-card">
-      <p class="kpi-label">En attente</p>
+      <p class="kpi-label">Pending</p>
       <p class="kpi-value">{{ pendingCount }}</p>
-      <p class="kpi-meta">À traiter</p>
+      <p class="kpi-meta">To process</p>
     </article>
 
     <article class="kpi-card">
-      <p class="kpi-label">Exécutés</p>
+      <p class="kpi-label">Executed</p>
       <p class="kpi-value">{{ executedCount }}</p>
-      <p class="kpi-meta">Succès opérationnel</p>
+      <p class="kpi-meta">Operational success</p>
     </article>
 
     <article class="kpi-card">
-      <p class="kpi-label">Annulés</p>
+      <p class="kpi-label">Cancelled</p>
       <p class="kpi-value">{{ cancelledCount }}</p>
-      <p class="kpi-meta">Ordres stoppés</p>
+      <p class="kpi-meta">Stopped orders</p>
     </article>
   </section>
 
   <section class="panel">
     <div class="panel-body filters-grid">
       <div class="field">
-        <label for="order-search">Recherche</label>
+        <label for="order-search">Search</label>
         <input
           id="order-search"
           type="text"
           [value]="searchTerm"
           (input)="onSearchInput($event)"
-          placeholder="ID ordre, utilisateur ou asset"
+          placeholder="Order ID, user, or asset"
         />
       </div>
 
       <div class="field">
-        <label for="order-status">Statut</label>
+        <label for="order-status">Status</label>
         <select id="order-status" [value]="statusFilter" (change)="onStatusFilterChange($event)">
           <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
         </select>
@@ -64,10 +64,10 @@
   </section>
 
   <section class="panel">
-    <div *ngIf="loading" class="state">Chargement des ordres...</div>
+    <div *ngIf="loading" class="state">Loading orders...</div>
     <div *ngIf="!loading && errorMessage" class="state state--error">{{ errorMessage }}</div>
     <div *ngIf="!loading && !errorMessage && filteredOrders.length === 0" class="state">
-      Aucun ordre disponible pour les filtres sélectionnés.
+      No orders available for the selected filters.
     </div>
 
     <div *ngIf="!loading && !errorMessage && filteredOrders.length > 0" class="table-wrap">
@@ -78,10 +78,10 @@
             <th>User</th>
             <th>Asset</th>
             <th>Type</th>
-            <th>Quantité</th>
-            <th>Prix ordre</th>
-            <th>Statut</th>
-            <th>Créé le</th>
+            <th>Quantity</th>
+            <th>Order price</th>
+            <th>Status</th>
+            <th>Created</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -101,7 +101,7 @@
                 type="button"
                 [disabled]="order.orderStatus !== 'PENDING' || cancelInProgressOrderId === order.orderId"
                 (click)="cancelOrder(order)">
-                {{ cancelInProgressOrderId === order.orderId ? 'Annulation...' : 'Annuler' }}
+                {{ cancelInProgressOrderId === order.orderId ? 'Cancelling...' : 'Cancel' }}
               </button>
             </td>
           </tr>

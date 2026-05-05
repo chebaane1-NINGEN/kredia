@@ -48,7 +48,7 @@ export class InvestmentStrategyPageComponent implements OnInit {
 
   // Form modal state
   formModalOpen = false;
-  formModalTitle = 'Créer une stratégie';
+  formModalTitle = 'Create strategy';
 
   ngOnInit(): void {
     this.loadStrategies();
@@ -108,7 +108,7 @@ export class InvestmentStrategyPageComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.errorMessage = 'Impossible de charger les stratégies pour le moment.';
+        this.errorMessage = 'Unable to load strategies right now.';
         this.loading = false;
         this.cdr.detectChanges();
       }
@@ -118,14 +118,14 @@ export class InvestmentStrategyPageComponent implements OnInit {
   submitStrategyForm(): void {
     const userId = this.auth.getCurrentUserId();
     if (!userId) {
-      this.errorMessage = 'Utilisateur non authentifié. Impossible de sauvegarder la stratégie.';
+      this.errorMessage = 'User not authenticated. Unable to save the strategy.';
       this.cdr.detectChanges();
       return;
     }
 
     const strategyName = this.formModel.strategyName.trim();
     if (!strategyName) {
-      this.errorMessage = 'Le nom de la stratégie est obligatoire.';
+      this.errorMessage = 'The strategy name is required.';
       this.cdr.detectChanges();
       return;
     }
@@ -153,13 +153,13 @@ export class InvestmentStrategyPageComponent implements OnInit {
         next: () => {
           this.saveLoading = false;
           this.closeFormModal();
-          this.actionMessage = 'Stratégie mise à jour avec succès.';
+          this.actionMessage = 'Strategy updated successfully.';
           this.loadStrategies();
           this.cdr.detectChanges();
         },
         error: () => {
           this.saveLoading = false;
-          this.errorMessage = 'Impossible de mettre à jour la stratégie.';
+          this.errorMessage = 'Unable to update the strategy.';
           this.cdr.detectChanges();
         }
       });
@@ -172,14 +172,14 @@ export class InvestmentStrategyPageComponent implements OnInit {
         this.saveLoading = false;
         this.closeFormModal();
         // Afficher le message du backend qui contient les détails (positions créées, etc.)
-        this.actionMessage = response.message || 'Stratégie créée avec succès.';
+        this.actionMessage = response.message || 'Strategy created successfully.';
         console.log('[DEBUG] Strategy creation response:', response);
         this.loadStrategies();
         this.cdr.detectChanges();
       },
       error: () => {
         this.saveLoading = false;
-        this.errorMessage = 'Impossible de créer la stratégie.';
+        this.errorMessage = 'Unable to create the strategy.';
         this.cdr.detectChanges();
       }
     });
@@ -218,7 +218,7 @@ export class InvestmentStrategyPageComponent implements OnInit {
       return;
     }
 
-    const confirmed = window.confirm(`Supprimer la stratégie \"${strategy.strategyName}\" ?`);
+    const confirmed = window.confirm(`Delete strategy \"${strategy.strategyName}\"?`);
     if (!confirmed) {
       return;
     }
@@ -230,7 +230,7 @@ export class InvestmentStrategyPageComponent implements OnInit {
     this.vm.delete(strategy.strategyId).subscribe({
       next: () => {
         this.deleteLoadingId = null;
-        this.actionMessage = 'Stratégie supprimée avec succès.';
+        this.actionMessage = 'Strategy deleted successfully.';
         if (this.selectedStrategy?.strategyId === strategy.strategyId) {
           this.closeStrategyModal();
         }
@@ -238,7 +238,7 @@ export class InvestmentStrategyPageComponent implements OnInit {
       },
       error: () => {
         this.deleteLoadingId = null;
-        this.errorMessage = 'Suppression impossible pour le moment.';
+        this.errorMessage = 'Unable to delete the strategy right now.';
         this.cdr.detectChanges();
       }
     });
@@ -400,7 +400,7 @@ export class InvestmentStrategyPageComponent implements OnInit {
       },
       error: () => {
         this.modalPositionsLoading = false;
-        this.modalError = 'Impossible de charger les positions de cette stratégie.';
+        this.modalError = 'Unable to load the positions for this strategy.';
         this.cdr.detectChanges();
       }
     });
@@ -425,7 +425,7 @@ export class InvestmentStrategyPageComponent implements OnInit {
     this.editStrategyId = null;
     this.formModel = this.getDefaultFormModel();
     this.formModalOpen = true;
-    this.formModalTitle = 'Créer une stratégie';
+    this.formModalTitle = 'Create strategy';
     this.errorMessage = '';
     this.actionMessage = '';
     this.cdr.detectChanges();

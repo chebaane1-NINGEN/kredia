@@ -94,7 +94,7 @@ export class InvestmentOrderPageComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.errorMessage = 'Impossible de charger les ordres pour le moment.';
+        this.errorMessage = 'Unable to load orders right now.';
         this.loading = false;
         this.cdr.detectChanges();
       }
@@ -106,7 +106,7 @@ export class InvestmentOrderPageComponent implements OnInit {
       return;
     }
 
-    const confirmed = window.confirm('Confirmer l\'annulation de cet ordre ?');
+    const confirmed = window.confirm('Confirm cancellation of this order?');
     if (!confirmed) {
       return;
     }
@@ -123,7 +123,7 @@ export class InvestmentOrderPageComponent implements OnInit {
       },
       error: () => {
         this.cancelInProgressOrderId = null;
-        this.errorMessage = 'Annulation impossible pour le moment.';
+        this.errorMessage = 'Unable to cancel this order right now.';
         this.cdr.detectChanges();
       }
     });
