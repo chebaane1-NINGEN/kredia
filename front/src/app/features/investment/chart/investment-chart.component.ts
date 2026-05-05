@@ -4,8 +4,11 @@ import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { combineLatest, forkJoin, of, Subject } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap, takeUntil } from 'rxjs/operators';
+import { RouterModule } from '@angular/router';
 
 import { InvestmentAssetVm } from '../InvestmentAsset/vm/investment-asset.vm';
+import { InvestmentStrategyVm } from '../InvestmentStrategy/vm/investment-strategy.vm';
+import { InvestmentStrategy, StrategyRiskProfile } from '../InvestmentStrategy/models/investment-strategy.model';
 import { PortfolioPositionVm } from '../PortfolioPosition/vm/portfolio-position.vm';
 import { InvestmentOrderVm } from '../InvestmentOrder/vm/investment-order.vm';
 import { InvestmentOrder } from '../InvestmentOrder/models/investment-order.model';
@@ -41,15 +44,24 @@ interface MarketSearchResult {
   displayLabel: string;
 }
 
+interface PortfolioTopPosition {
+  assetSymbol: string;
+  currentValue: number;
+  profitLossDollars: number;
+  profitLossPercentage: number;
+  portfolioSharePct: number;
+}
+
 @Component({
   selector: 'app-investment-chart',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './investment-chart.component.html',
   styleUrls: ['./investment-chart.component.scss']
 })
 export class InvestmentChartComponent implements OnInit, OnDestroy {
   private readonly assetVm = inject(InvestmentAssetVm);
+  private readonly strategyVm = inject(InvestmentStrategyVm);
   private readonly positionVm = inject(PortfolioPositionVm);
   private readonly orderVm = inject(InvestmentOrderVm);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -66,8 +78,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
   timeframes = ['1D', '1M', '3M', '1Y', '5Y', 'Tout'];
   chartTools = ['</>', '▭', '◫', '⤢'];
 
-  volumeLeaders: MarketMover[] = [];
-  volatileLeaders: MarketMover[] = [];
+
   searchResults: MarketSearchResult[] = [];
   loadingPrices: Set<string> = new Set();
 
@@ -91,6 +102,13 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
   geminiLoading = false;
   geminiError = '';
   geminiDetailOpen = false;
+  portfolioTopPositions: PortfolioTopPosition[] = [];
+  portfolioTotalValue = 0;
+  portfolioTopLoading = false;
+  strategyPreview: InvestmentStrategy[] = [];
+  strategyPreviewLoading = false;
+  strategyPreviewError = '';
+  strategyPositionsMap: Map<number, string[]> = new Map();
 
   // Choice Modal Properties
   showChoiceModal = false;
@@ -189,6 +207,8 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.setupSearch();
     this.loadDashboard();
+    this.loadPortfolioTopPositions();
+    this.loadStrategyPreview();
   }
 
   ngOnDestroy(): void {
@@ -273,6 +293,139 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadPortfolioTopPositions(): void {
+    this.portfolioTopLoading = true;
+
+    this.positionVm.findAll().pipe(
+      finalize(() => {
+        this.portfolioTopLoading = false;
+        this.cdr.markForCheck();
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (positions: any[]) => {
+        const safePositions = Array.isArray(positions) ? positions : [];
+
+        // Agrégation par symbole pour éviter les doublons (ex: plusieurs lignes AAPL)
+        const bySymbol = new Map<string, { currentValue: number; profitLossDollars: number; costBasis: number }>();
+
+        for (const p of safePositions) {
+          const symbol = String(p?.assetSymbol ?? '').toUpperCase().trim();
+          if (!symbol) {
+            continue;
+          }
+
+          const currentValue = Number(
+            p?.currentValue ?? ((p?.currentQuantity ?? 0) * (p?.currentMarketPrice ?? p?.avgPurchasePrice ?? 0))
+          ) || 0;
+          const profitLossDollars = Number(p?.profitLossDollars ?? 0) || 0;
+          const costBasis = currentValue - profitLossDollars;
+
+          const prev = bySymbol.get(symbol) ?? { currentValue: 0, profitLossDollars: 0, costBasis: 0 };
+          bySymbol.set(symbol, {
+            currentValue: prev.currentValue + currentValue,
+            profitLossDollars: prev.profitLossDollars + profitLossDollars,
+            costBasis: prev.costBasis + costBasis
+          });
+        }
+
+        const aggregated: PortfolioTopPosition[] = Array.from(bySymbol.entries()).map(([assetSymbol, value]) => {
+          const denominator = value.costBasis;
+          const profitLossPercentage = denominator > 0
+            ? (value.profitLossDollars / denominator) * 100
+            : 0;
+
+          return {
+            assetSymbol,
+            currentValue: value.currentValue,
+            profitLossDollars: value.profitLossDollars,
+            profitLossPercentage,
+            portfolioSharePct: 0
+          };
+        });
+
+        this.portfolioTotalValue = aggregated.reduce((sum, p) => sum + p.currentValue, 0);
+
+        const withShare: PortfolioTopPosition[] = aggregated.map((p) => ({
+          ...p,
+          portfolioSharePct: this.portfolioTotalValue > 0
+            ? Math.min((p.currentValue / this.portfolioTotalValue) * 100, 100)
+            : 0
+        }));
+
+        this.portfolioTopPositions = withShare
+          .sort((a, b) => b.portfolioSharePct - a.portfolioSharePct)
+          .slice(0, 5);
+
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Erreur chargement top positions portefeuille:', err);
+        this.portfolioTopPositions = [];
+        this.portfolioTotalValue = 0;
+      }
+    });
+  }
+
+  private loadStrategyPreview(): void {
+    this.strategyPreviewLoading = true;
+    this.strategyPreviewError = '';
+
+    this.strategyVm.findAll().pipe(
+      map((strategies) => (Array.isArray(strategies) ? strategies : [])),
+      catchError(() => {
+        this.strategyPreviewError = 'Impossible de charger les stratégies pour le moment.';
+        return of([] as InvestmentStrategy[]);
+      }),
+      finalize(() => {
+        this.strategyPreviewLoading = false;
+        this.cdr.markForCheck();
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (strategies) => {
+        this.strategyPreview = this.sortStrategyPreview(strategies).slice(0, 4);
+        // Load positions for each strategy
+        this.loadStrategyPositions();
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private loadStrategyPositions(): void {
+    // Reset map
+    this.strategyPositionsMap.clear();
+
+    // Load positions for each strategy using findByStrategy
+    for (const strategy of this.strategyPreview) {
+      if (!strategy.strategyId) {
+        continue;
+      }
+
+      this.positionVm.findByStrategy(strategy.strategyId).pipe(
+        catchError(() => of([] as any[])),
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (positions: any[]) => {
+          const positionList = Array.isArray(positions) ? positions : [];
+
+          // Extract unique asset symbols
+          const assets = Array.from(
+            new Set(
+              positionList
+                .map((p) => p.assetSymbol)
+                .filter((s) => s && String(s).trim().length > 0)
+                .map((s) => String(s).toUpperCase().trim())
+            )
+          ).slice(0, 5); // Show max 5 assets
+
+          this.strategyPositionsMap.set(strategy.strategyId!, assets);
+          this.cdr.markForCheck();
+        }
+      });
+    }
+  }
+
   private loadDashboard(): void {
     this.loading = true;
 
@@ -291,14 +444,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
             code: String(a.symbol ?? a.id ?? i)
           }));
 
-          // Volume leaders from assets (quick fill)
-          this.volumeLeaders = (Array.isArray(assets) ? assets : []).slice(0, 6).map((a: any) => ({
-            name: a.assetName ?? a.name ?? a.symbol,
-            symbol: a.symbol ?? 'NA',
-            value: a.currentPrice != null ? `${a.currentPrice} EUR` : '-',
-            change: a.change ?? '+0.00%',
-            trend: (a.change && String(a.change).includes('-')) ? 'negative' : 'positive'
-          }));
+
 
           // Initialize with first asset's data and display chart quickly
           if (this.marketSnapshots.length > 0) {
@@ -333,18 +479,6 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
 
         combineLatest([positions$, orders$]).pipe(takeUntil(this.destroy$)).subscribe({
           next: ([positions, orders]) => {
-            // Volatile leaders from positions
-            if (Array.isArray(positions) && positions.length > 0) {
-              const byVol = positions.slice().sort((p1: any, p2: any) => Math.abs(p2.profitLossPercentage ?? 0) - Math.abs(p1.profitLossPercentage ?? 0));
-              this.volatileLeaders = byVol.slice(0, 6).map((p: any) => ({
-                name: p.assetSymbol ?? 'NA',
-                symbol: p.assetSymbol ?? 'NA',
-                value: p.currentMarketPrice != null ? `${p.currentMarketPrice} EUR` : '-',
-                change: p.profitLossPercentage != null ? `${Number(p.profitLossPercentage).toFixed(2)}%` : '-',
-                trend: (p.profitLossPercentage ?? 0) >= 0 ? 'positive' : 'negative'
-              }));
-            }
-
             this.cdr.detectChanges();
           },
           error: (err) => {
@@ -381,6 +515,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
           map((prices) => ({
             symbol,
             prices,
+            firstPrice: prices && prices.length > 0 ? prices[0] : null,
             lastPrice: prices && prices.length > 0 ? prices[prices.length - 1] : null
           }))
         );
@@ -391,10 +526,20 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (results: any) => {
         results.forEach((result: any) => {
-          // Update market snapshot with new price
+          // Update market snapshot with new price and percentage change
           const snapshot = this.marketSnapshots.find(m => m.code === result.symbol);
           if (snapshot && result.lastPrice != null) {
             snapshot.value = `${result.lastPrice.toFixed(2)} EUR`;
+            
+            // Calculate percentage change
+            let priceChange = 0;
+            if (result.firstPrice && result.firstPrice !== 0) {
+              priceChange = ((result.lastPrice - result.firstPrice) / result.firstPrice) * 100;
+            }
+            
+            const formattedChange = `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%`;
+            snapshot.change = formattedChange;
+            snapshot.trend = priceChange >= 0 ? 'positive' : 'negative';
           }
           this.loadingPrices.delete(result.symbol);
         });
@@ -407,6 +552,67 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         });
       }
     });
+  }
+
+  private sortStrategyPreview(strategies: InvestmentStrategy[]): InvestmentStrategy[] {
+    return [...strategies].sort((left, right) => {
+      const activeDiff = Number(right.isActive) - Number(left.isActive);
+      if (activeDiff !== 0) {
+        return activeDiff;
+      }
+
+      const leftUpdated = left.updatedAt ? new Date(left.updatedAt).getTime() : 0;
+      const rightUpdated = right.updatedAt ? new Date(right.updatedAt).getTime() : 0;
+      return rightUpdated - leftUpdated;
+    });
+  }
+
+  getStrategyRiskBadgeClass(riskProfile: StrategyRiskProfile | string | null | undefined): string {
+    switch ((riskProfile ?? '').toString().toUpperCase()) {
+      case 'LOW':
+        return 'strategy-pill strategy-pill--low';
+      case 'HIGH':
+        return 'strategy-pill strategy-pill--high';
+      case 'MEDIUM':
+      default:
+        return 'strategy-pill strategy-pill--medium';
+    }
+  }
+
+  getStrategyStopLossWidth(stopLossPct: number | null | undefined): number {
+    const value = Number(stopLossPct ?? 0);
+    return Math.max(0, Math.min(value, 100));
+  }
+
+  formatStrategyBudget(value: number | null | undefined): string {
+    return value != null
+      ? `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+      : 'Non défini';
+  }
+
+  formatStrategyUpdatedAt(strategy: InvestmentStrategy): string {
+    if (!strategy.updatedAt) {
+      return 'Jamais mis à jour';
+    }
+
+    const date = new Date(strategy.updatedAt);
+    if (Number.isNaN(date.getTime())) {
+      return 'Date indisponible';
+    }
+
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  getStrategyAssets(strategyId: number | undefined): string[] {
+    if (!strategyId) {
+      return [];
+    }
+
+    return this.strategyPositionsMap.get(strategyId) ?? [];
   }
 
   private loadAssetChart(symbol: string): void {
@@ -439,20 +645,6 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
             selectedSnapshot.value = `${lastPrice.toFixed(2)} EUR`;
             selectedSnapshot.change = formattedChange;
             selectedSnapshot.trend = this.priceChange >= 0 ? 'positive' : 'negative';
-          }
-
-          const selectedVolumeLeader = this.volumeLeaders.find(mover => mover.symbol === symbol);
-          if (selectedVolumeLeader) {
-            selectedVolumeLeader.value = `${lastPrice.toFixed(2)} EUR`;
-            selectedVolumeLeader.change = formattedChange;
-            selectedVolumeLeader.trend = this.priceChange >= 0 ? 'positive' : 'negative';
-          }
-
-          const selectedVolatileLeader = this.volatileLeaders.find(mover => mover.symbol === symbol);
-          if (selectedVolatileLeader) {
-            selectedVolatileLeader.value = `${lastPrice.toFixed(2)} EUR`;
-            selectedVolatileLeader.change = formattedChange;
-            selectedVolatileLeader.trend = this.priceChange >= 0 ? 'positive' : 'negative';
           }
           
           // Update labels for x-axis
@@ -1101,6 +1293,7 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
         this.toast.success(`Position ${this.positionNowQuantity} x ${this.selectedAssetSymbol} créée avec succès`);
         // Recharger les positions
         this.loadSelectedAssetPositions(this.selectedAssetSymbol);
+        this.loadPortfolioTopPositions();
       },
       error: (err: any) => {
         console.error('Erreur création position:', err);

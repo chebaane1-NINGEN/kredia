@@ -70,10 +70,11 @@
             <th>Valeur totale</th>
             <th>P/L</th>
             <th>MAJ</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let position of filteredPositions">
+          <tr *ngFor="let position of visiblePositions">
             <td>{{ position.userId }}</td>
             <td>
               <strong>{{ position.assetSymbol }}</strong>
@@ -83,13 +84,28 @@
             <td>{{ position.avgPurchasePrice | number:'1.2-2' }}</td>
             <td>{{ position.currentMarketPrice != null ? (position.currentMarketPrice | number:'1.2-2') : '-' }}</td>
             <td>{{ position.currentValue != null ? (position.currentValue | number:'1.2-2') : '-' }}</td>
-            <td [class]="profitLossClass(position.profitLossDollars ?? 0)">
-              {{ position.profitLossDollars != null ? (position.profitLossDollars | number:'1.2-2') : '-' }}
+            <td>
+              <span [class]="profitLossClass(position.profitLossDollars ?? 0)">
+                {{ position.profitLossDollars != null ? (position.profitLossDollars | number:'1.2-2') : '-' }}
+              </span>
             </td>
             <td>{{ position.createdAt ? (position.createdAt | date:'short') : '-' }}</td>
+            <td>
+              <button
+                class="page-action-btn page-action-btn--danger"
+                type="button"
+                (click)="closePosition(position.positionId)"
+                [disabled]="deletingPositionId === position.positionId"
+              >
+                {{ deletingPositionId === position.positionId ? 'Fermeture...' : 'Close position' }}
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
+      <div class="load-more-wrap" *ngIf="filteredPositions.length > displayCount">
+        <button class="page-action-btn" type="button" (click)="loadMore()">Charger +10</button>
+      </div>
     </div>
   </section>
 </section>

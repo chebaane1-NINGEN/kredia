@@ -12,4 +12,7 @@ public interface PortfolioPositionRepository extends JpaRepository<PortfolioPosi
     List<PortfolioPosition> findByUser_Id(Long userId);
     List<PortfolioPosition> findByAssetSymbol(String assetSymbol);
     Optional<PortfolioPosition> findByUser_IdAndAssetSymbol(Long userId, String assetSymbol);
+    
+    // Traceability: find positions by strategy
+    List<PortfolioPosition> findByStrategy_StrategyId(Long strategyId);
 }

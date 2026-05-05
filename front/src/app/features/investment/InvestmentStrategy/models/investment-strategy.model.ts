@@ -1,9 +1,17 @@
+export type StrategyRiskProfile = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export interface InvestmentStrategyUser {
+  userId?: number;
+  id?: number;
+}
+
 export interface InvestmentStrategy {
-  strategyId: number;
+  strategyId?: number;
+  user?: InvestmentStrategyUser;
   strategyName: string;
   maxBudget?: number | null;
   stopLossPct?: number | null;
-  riskProfile: 'LOW' | 'MEDIUM' | 'HIGH';
+  riskProfile: StrategyRiskProfile;
   autoCreateOrders: boolean;
   autoCreatePositions: boolean;
   maxAssets: number;

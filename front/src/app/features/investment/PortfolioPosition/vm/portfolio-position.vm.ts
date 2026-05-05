@@ -18,4 +18,12 @@ export class PortfolioPositionVm {
   create(position: PortfolioPosition): Observable<PortfolioPosition> {
     return this.api.create(position);
   }
+
+  delete(id: number): Observable<void> {
+    return this.api.delete(id);
+  }
+
+  findByStrategy(strategyId: number): Observable<PortfolioPosition[]> {
+    return this.api.findByStrategy(strategyId);
+  }
 }

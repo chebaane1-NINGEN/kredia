@@ -199,11 +199,82 @@
     </div>
   </section>
 
+  <section class="strategy-preview-panel">
+    <div class="strategy-preview-panel__header">
+      <div>
+        <p class="eyebrow">Stratégies</p>
+        <h2>Aperçu rapide des stratégies</h2>
+        <p class="strategy-preview-panel__subtitle">
+          Une vue synthétique pour repérer les profils actifs avant d’ouvrir un ordre.
+        </p>
+      </div>
+
+      <a class="strategy-preview-panel__link" routerLink="/investissement/strategies">
+        Voir toutes les stratégies
+      </a>
+    </div>
+
+    @if (strategyPreviewLoading) {
+      <div class="strategy-preview-grid strategy-preview-grid--loading" aria-hidden="true">
+        <article class="strategy-preview-card strategy-preview-card--skeleton" *ngFor="let _ of [1, 2, 3]"></article>
+      </div>
+    } @else if (strategyPreviewError) {
+      <div class="strategy-preview-state strategy-preview-state--error">{{ strategyPreviewError }}</div>
+    } @else if (strategyPreview.length > 0) {
+      <div class="strategy-preview-grid">
+        <article
+          *ngFor="let strategy of strategyPreview"
+          class="strategy-preview-card"
+          [class.is-active]="strategy.isActive">
+          <div class="strategy-preview-card__top">
+            <div>
+              <h3>{{ strategy.strategyName }}</h3>
+              <p>{{ strategy.maxAssets }} actifs max</p>
+            </div>
+
+            <span [class]="getStrategyRiskBadgeClass(strategy.riskProfile)">
+              {{ strategy.riskProfile }}
+            </span>
+          </div>
+
+          <div class="strategy-preview-card__metrics">
+            <div>
+              <span>Budget max</span>
+              <strong>{{ formatStrategyBudget(strategy.maxBudget) }}</strong>
+            </div>
+            <div>
+              <span>Stop loss</span>
+              <strong>{{ strategy.stopLossPct ?? 0 | number:'1.2-2' }}%</strong>
+            </div>
+          </div>
+
+          <div class="strategy-preview-card__bar" aria-hidden="true">
+            <span [style.width.%]="getStrategyStopLossWidth(strategy.stopLossPct)"></span>
+          </div>
+
+          <div class="strategy-preview-card__tags">
+            @if ((getStrategyAssets(strategy.strategyId) || []).length > 0) {
+              <span *ngFor="let asset of getStrategyAssets(strategy.strategyId)" class="strategy-tag strategy-tag--asset">
+                {{ asset }}
+              </span>
+            } @else {
+              <span class="strategy-tag strategy-tag--empty">Aucun actif {{getStrategyAssets(strategy.strategyId).length}}</span>
+            }
+          </div>
+        </article>
+      </div>
+    } @else {
+      <div class="strategy-preview-state">
+        Aucune stratégie trouvée. Créez-en une pour visualiser vos profils ici.
+      </div>
+    }
+  </section>
+
   <!-- ==================== AI Gemini Market Analysis Block ==================== -->
   <section class="gemini-analysis-block" *ngIf="selectedAssetSymbol">
     <div class="gemini-header">
       <div class="gemini-header__title">
-        <h2>Analyse IA Gemini</h2>
+        <h2>Analyse IA </h2>
         <span class="gemini-header__icon">✨</span>
       </div>
       <button
@@ -412,74 +483,73 @@
           </div>
         }
       </div>
+
     }
   </section>
 
-  <section class="movers-grid">
-    <article class="movers-panel">
-      <header class="panel-heading">
-        <h2>Actions à plus fort volume</h2>
-        <span>›</span>
-      </header>
+  <section class="gemini-portfolio-top" *ngIf="selectedAssetSymbol">
+    <div class="gemini-portfolio-top__header">
+      <div class="gemini-portfolio-top__title-row">
+        <h3>Top positions</h3>
+        <a routerLink="/investissement/positions" class="gemini-portfolio-top__view-all" title="Voir le portfolio complet">
+          <span class="gemini-portfolio-top__view-all-text">Voir tout</span>
+          <span class="gemini-portfolio-top__arrow">→</span>
+        </a>
+      </div>
+      <span class="gemini-portfolio-top__total">Total: {{ portfolioTotalValue | number:'1.2-2' }} EUR</span>
+    </div>
 
-      <div class="mover-list">
-        <div 
-          *ngFor="let mover of volumeLeaders; trackBy: trackBySymbol" 
-          class="mover-row"
-          [class.selected]="selectedAssetSymbol === mover.symbol"
-          (click)="selectAsset(mover.symbol)">
-          <div class="mover-row__identity">
-            <div class="mover-row__avatar">{{ mover.symbol.slice(0, 2) }}</div>
-            <div>
-              <h3>{{ mover.name }}</h3>
-              <span class="mover-row__symbol">{{ mover.symbol }}</span>
-            </div>
-          </div>
+    @if (portfolioTopLoading) {
+      <div class="gemini-portfolio-top__loading" aria-label="Chargement des top positions">
+        <div class="gemini-portfolio-top__loading-head">
+          <span class="skeleton skeleton--line skeleton--short"></span>
+          <span class="skeleton skeleton--line skeleton--medium"></span>
+        </div>
 
-          <div class="mover-row__metrics">
-            <span class="mover-row__value">{{ mover.value }}</span>
-            <span class="mover-row__change" [class.is-positive]="mover.trend === 'positive'" [class.is-negative]="mover.trend === 'negative'">
-              {{ mover.change }}
-            </span>
+        <div class="gemini-portfolio-top__loading-table">
+          <div class="gemini-portfolio-top__loading-row" *ngFor="let _ of [1,2,3,4,5]">
+            <span class="skeleton skeleton--line skeleton--short"></span>
+            <span class="skeleton skeleton--line skeleton--medium"></span>
+            <span class="skeleton skeleton--line skeleton--short"></span>
+            <span class="skeleton skeleton--line skeleton--short"></span>
+            <span class="skeleton skeleton--line skeleton--medium"></span>
           </div>
         </div>
       </div>
+    } @else if (portfolioTopPositions.length > 0) {
+      <div class="gemini-portfolio-top__table">
+        <div class="gemini-portfolio-top__head">
+          <span>Action</span>
+          <span>Valeur</span>
+          <span>P/L (€)</span>
+          <span>P/L (%)</span>
+          <span>Part</span>
+        </div>
 
-      <a href="#" class="panel-link">Voir toutes les actions les plus activement tradées ›</a>
-    </article>
-
-    <article class="movers-panel">
-      <header class="panel-heading">
-        <h2>Actions les plus volatiles</h2>
-        <span>›</span>
-      </header>
-
-      <div class="mover-list">
-        <div 
-          *ngFor="let mover of volatileLeaders; trackBy: trackBySymbol" 
-          class="mover-row"
-          [class.selected]="selectedAssetSymbol === mover.symbol"
-          (click)="selectAsset(mover.symbol)">
-          <div class="mover-row__identity">
-            <div class="mover-row__avatar mover-row__avatar--alt">{{ mover.symbol.slice(0, 2) }}</div>
-            <div>
-              <h3>{{ mover.name }}</h3>
-              <span class="mover-row__symbol">{{ mover.symbol }}</span>
+        @for (position of portfolioTopPositions; track position.assetSymbol) {
+          <div class="gemini-portfolio-top__row">
+            <span class="gemini-portfolio-top__symbol">{{ position.assetSymbol }}</span>
+            <span>{{ position.currentValue | number:'1.2-2' }} EUR</span>
+            <span [class.is-positive]="position.profitLossDollars >= 0" [class.is-negative]="position.profitLossDollars < 0">
+              {{ position.profitLossDollars | number:'1.2-2' }}
+            </span>
+            <span [class.is-positive]="position.profitLossPercentage >= 0" [class.is-negative]="position.profitLossPercentage < 0">
+              {{ formatPercentage(position.profitLossPercentage) }}
+            </span>
+            <div class="gemini-portfolio-top__share">
+              <span>{{ position.portfolioSharePct | number:'1.2-2' }}%</span>
+              <div class="gemini-portfolio-top__bar">
+                <div class="gemini-portfolio-top__bar-fill" [style.width.%]="position.portfolioSharePct"></div>
+              </div>
             </div>
           </div>
-
-          <div class="mover-row__metrics">
-            <span class="mover-row__value">{{ mover.value }}</span>
-            <span class="mover-row__change" [class.is-positive]="mover.trend === 'positive'" [class.is-negative]="mover.trend === 'negative'">
-              {{ mover.change }}
-            </span>
-          </div>
-        </div>
+        }
       </div>
-
-      <a href="#" class="panel-link">Voir toutes les actions dont le prix a le plus changé ›</a>
-    </article>
+    } @else {
+      <div class="gemini-portfolio-top__empty">Aucune position portefeuille disponible.</div>
+    }
   </section>
+
 </section>
 <!-- Choice Modal -->
 @if (showChoiceModal) {

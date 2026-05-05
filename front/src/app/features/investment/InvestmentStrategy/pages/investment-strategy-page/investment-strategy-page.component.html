@@ -5,7 +5,11 @@
       <p>Gestion des profils de risque et des rendements attendus.</p>
     </div>
 
-    <button class="page-action-btn" type="button" (click)="loadStrategies()">Actualiser</button>
+    <div class="header-actions">
+      <button class="page-action-btn" type="button" (click)="openFormModal()" style="background: var(--emerald-600); border-color: var(--emerald-600); color: white;">
+        + Créer stratégie
+      </button>
+    </div>
   </header>
 
   <section class="kpi-grid">
@@ -59,12 +63,19 @@
   <section class="panel">
     <div *ngIf="loading" class="state">Chargement des stratégies...</div>
     <div *ngIf="!loading && errorMessage" class="state state--error">{{ errorMessage }}</div>
+    <div *ngIf="!loading && !errorMessage && actionMessage" class="state state--success">{{ actionMessage }}</div>
     <div *ngIf="!loading && !errorMessage && filteredStrategies.length === 0" class="state">
       Aucune stratégie ne correspond à votre recherche.
     </div>
 
     <div *ngIf="!loading && !errorMessage && filteredStrategies.length > 0" class="panel-body strategy-grid">
-      <article class="strategy-card" *ngFor="let strategy of filteredStrategies">
+      <article
+        class="strategy-card strategy-card--clickable"
+        *ngFor="let strategy of filteredStrategies"
+        (click)="openStrategyModal(strategy)"
+        role="button"
+        tabindex="0"
+      >
         <header>
           <h3>{{ strategy.strategyName }}</h3>
           <span [class]="getRiskBadgeClass(strategy.riskProfile)">{{ strategy.riskProfile }}</span>
@@ -72,17 +83,246 @@
 
         <p>
           Budget max: {{ strategy.maxBudget ?? 0 | number:'1.2-2' }} ·
-          Max assets: {{ strategy.maxAssets }} ·
-          Auto-orders: {{ strategy.autoCreateOrders ? 'Oui' : 'Non' }}
+          Max assets: {{ strategy.maxAssets }}
         </p>
 
         <div class="progress">
           <span>Stop loss: {{ strategy.stopLossPct ?? 0 | number:'1.2-2' }}%</span>
-          <div class="progress-track">
-            <div class="progress-fill" [style.width.%]="stopLossPercent(strategy.stopLossPct)"></div>
+            <div class="progress-track">
+            <div
+              class="progress-fill"
+              [style.width.%]="stopLossPercent(strategy.stopLossPct)"
+              [style.background]="getStopLossColor(strategy.stopLossPct)">
+            </div>
           </div>
+        </div>
+
+        <div class="card-actions">
+          
         </div>
       </article>
     </div>
   </section>
+
+  <!-- Strategy Details Modal -->
+  <div *ngIf="modalOpen" class="modal-overlay" (click)="closeStrategyModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2>{{ selectedStrategy?.strategyName }}</h2>
+        <button class="modal-close-btn" type="button" (click)="closeStrategyModal()">✕</button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Strategy Details -->
+        <section class="modal-section">
+          <h3 class="section-title">Détails de la stratégie</h3>
+          
+          <div class="details-grid">
+            <div class="detail-item">
+              <span class="detail-label">Profil de risque</span>
+              <span [class]="getRiskBadgeClass(selectedStrategy?.riskProfile ?? 'MEDIUM')">
+                {{ selectedStrategy?.riskProfile }}
+              </span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Budget max</span>
+              <span class="detail-value">{{ selectedStrategy?.maxBudget ?? 0 | number:'1.2-2' }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Max actifs</span>
+              <span class="detail-value">{{ selectedStrategy?.maxAssets }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Stop loss</span>
+              <span class="detail-value">{{ selectedStrategy?.stopLossPct ?? 0 | number:'1.2-2' }}%</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Auto-positions</span>
+              <span class="badge" [class.badge--active]="selectedStrategy?.autoCreatePositions">
+                {{ selectedStrategy?.autoCreatePositions ? 'Oui' : 'Non' }}
+              </span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Réinvestir gains</span>
+              <span class="badge" [class.badge--active]="selectedStrategy?.reinvestProfits">
+                {{ selectedStrategy?.reinvestProfits ? 'Oui' : 'Non' }}
+              </span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Statut</span>
+              <span class="badge" [class.badge--active]="selectedStrategy?.isActive">
+                {{ selectedStrategy?.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Créée le</span>
+              <span class="detail-value">{{ selectedStrategy?.createdAt | date:'short' }}</span>
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Mise à jour</span>
+              <span class="detail-value">{{ selectedStrategy?.updatedAt | date:'short' }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Strategy Positions & Performance -->
+        <section class="modal-section">
+          <h3 class="section-title">Positions créées ({{ modalPositions.length }})</h3>
+
+          <div *ngIf="modalPositionsLoading" class="state">Chargement des positions...</div>
+          <div *ngIf="!modalPositionsLoading && modalError" class="state state--error">{{ modalError }}</div>
+          <div *ngIf="!modalPositionsLoading && !modalError && modalPositions.length === 0" class="state">
+            Aucune position créée par cette stratégie.
+          </div>
+
+          <div *ngIf="!modalPositionsLoading && !modalError && modalPositions.length > 0" class="positions-table-wrap">
+            <table class="positions-table">
+              <thead>
+                <tr>
+                  <th>Symbole</th>
+                  <th>Quantité</th>
+                  <th>Prix d'achat</th>
+                  <th>Prix actuel</th>
+                  <th>Valeur</th>
+                  <th>Profit/Perte</th>
+                  <th>% P&L</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let position of modalPositions" class="position-row">
+                  <td class="symbol">{{ position.assetSymbol }}</td>
+                  <td>{{ position.currentQuantity | number:'1.2-4' }}</td>
+                  <td>{{ position.avgPurchasePrice | number:'1.2-2' }}</td>
+                  <td>{{ position.currentMarketPrice ?? position.avgPurchasePrice | number:'1.2-2' }}</td>
+                  <td>{{ getPositionCurrentValue(position) | number:'1.2-2' }}</td>
+                  <td>
+                    <span [class]="getPositionProfitClass(position)">
+                      {{ position.profitLossDollars ?? 0 | number:'1.2-2' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span [class]="getPositionProfitClass(position)">
+                      {{ position.profitLossPercentage ?? 0 | number:'1.2-2' }}%
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <footer class="modal-footer">
+        <button
+          class="page-action-btn page-action-btn--danger"
+          type="button"
+          (click)="selectedStrategy && deleteStrategy(selectedStrategy)"
+          [disabled]="deleteLoadingId === selectedStrategy?.strategyId"
+        >
+          {{ deleteLoadingId === selectedStrategy?.strategyId ? 'Suppression...' : 'Supprimer' }}
+        </button>
+        <button class="page-action-btn" type="button" (click)="closeStrategyModal()">Fermer</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Form Modal: Create/Edit Strategy -->
+  <div *ngIf="formModalOpen" class="modal-overlay" (click)="closeFormModal()">
+    <div class="modal-content modal-content--form" (click)="$event.stopPropagation()">
+      <header class="modal-header">
+        <h2>{{ formModalTitle }}</h2>
+        <button class="modal-close-btn" type="button" (click)="closeFormModal()">✕</button>
+      </header>
+
+      <form class="modal-body strategy-form" (ngSubmit)="submitStrategyForm()">
+        <div *ngIf="errorMessage" class="state state--error">{{ errorMessage }}</div>
+        <div *ngIf="actionMessage" class="state state--success">{{ actionMessage }}</div>
+
+        <div class="field field--full">
+          <label for="form-strategy-name">Nom de la stratégie</label>
+          <input
+            id="form-strategy-name"
+            type="text"
+            [(ngModel)]="formModel.strategyName"
+            name="strategyName"
+            required
+            placeholder="Ex: Balanced Growth"
+          />
+        </div>
+
+        <div class="field">
+          <label for="form-strategy-budget">Budget max</label>
+          <input
+            id="form-strategy-budget"
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="formModel.maxBudget"
+            name="maxBudget"
+            placeholder="1000"
+          />
+        </div>
+
+        <div class="field">
+          <label for="form-strategy-stop-loss">Stop loss (%)</label>
+          <input
+            id="form-strategy-stop-loss"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            [(ngModel)]="formModel.stopLossPct"
+            name="stopLossPct"
+            placeholder="10"
+          />
+        </div>
+
+        <div class="field">
+          <label for="form-strategy-risk">Profil de risque</label>
+          <select id="form-strategy-risk" [(ngModel)]="formModel.riskProfile" name="riskProfile">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="form-strategy-max-assets">Max assets</label>
+          <input
+            id="form-strategy-max-assets"
+            type="number"
+            min="1"
+            step="1"
+            [(ngModel)]="formModel.maxAssets"
+            name="maxAssets"
+            placeholder="5"
+          />
+        </div>
+
+        <div class="toggles-row field--full">
+          <label class="toggle">
+            <input type="checkbox" [(ngModel)]="formModel.reinvestProfits" name="reinvestProfits" />
+            <span>Reinvest profits</span>
+          </label>
+        </div>
+      </form>
+
+      <footer class="modal-footer">
+        <button class="page-action-btn page-action-btn--ghost" type="button" (click)="closeFormModal()">
+          Annuler
+        </button>
+        <button class="page-action-btn" type="button" (click)="submitStrategyForm()" [disabled]="saveLoading">
+          {{ saveLoading ? 'Sauvegarde...' : (isEditMode ? 'Mettre à jour' : 'Créer') }}
+        </button>
+      </footer>
+    </div>
+  </div>
 </section>
