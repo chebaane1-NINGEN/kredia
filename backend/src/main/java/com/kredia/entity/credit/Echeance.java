@@ -29,10 +29,15 @@ public class Echeance {
     @JsonIgnore
     private Credit credit;
 
-    /** Exposé en JSON pour le frontend (groupement par crédit) */
     @JsonProperty("creditId")
     public Long getCreditId() {
         return credit != null ? credit.getCreditId() : null;
+    }
+
+    /** Exposé en JSON pour le filtrage par utilisateur en admin */
+    @JsonProperty("userId")
+    public Long getUserId() {
+        return credit != null ? credit.getUserId() : null;
     }
 
     @Column(name = "echeance_number", nullable = false)

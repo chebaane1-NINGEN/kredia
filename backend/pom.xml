@@ -140,11 +140,10 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
-        <!-- Brevo (SendinBlue) API Client -->
+        <!-- Spring Mail (used by Mailtrap SMTP provider) -->
         <dependency>
-            <groupId>com.sendinblue</groupId>
-            <artifactId>sib-api-v3-sdk</artifactId>
-            <version>6.0.0</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
         <!-- Flyway Migration -->

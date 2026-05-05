@@ -116,6 +116,8 @@ export class CreditRiskPageComponent implements OnInit {
     const t = rec.trim().toLowerCase();
     if (t.includes('approuvable') && t.includes('sain'))
       return 'Approvable credit. Healthy financial profile.';
+    if (t.includes('surveillance') && (t.includes('revenus') || t.includes('charges')))
+      return 'Monitoring recommended. Verify income and expenses.';
     if (t.includes('approuvable') && t.includes('surveillance'))
       return 'Approvable credit with monitoring.';
     if (t.includes('risqué') && t.includes('approfondie'))

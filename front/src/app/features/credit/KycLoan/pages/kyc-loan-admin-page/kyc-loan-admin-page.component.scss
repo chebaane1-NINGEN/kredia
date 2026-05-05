@@ -301,15 +301,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
-
-  .kyc-filter-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #64748b;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
+  .kyc-filter-label { font-size: 0.85rem; font-weight: 700; color: #64748b; }
 }
 
 .kyc-filter-btn {
@@ -320,24 +312,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: all 0.2s;
   &.active { background: #0d3b6e; color: #fff; border-color: #0d3b6e; }
-}
-
-.filter-btn-group--scroll {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  flex-wrap: nowrap;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
-  padding-bottom: 4px;
-
-  &::-webkit-scrollbar { height: 4px; }
-  &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 }
 
 .btn-verify-sm {

@@ -33,13 +33,13 @@ public class CreditService {
 
     private final CreditRepository creditRepository;
     private final UserRepository userRepository;
-    private final EmailService emailService;
+    private final IEmailService emailService;
     private final DemandeCreditRepository demandeCreditRepository;
     private final KycLoanRepository kycLoanRepository;
 
     @Autowired
     public CreditService(CreditRepository creditRepository, UserRepository userRepository,
-                         EmailService emailService, DemandeCreditRepository demandeCreditRepository,
+                         IEmailService emailService, DemandeCreditRepository demandeCreditRepository,
                          KycLoanRepository kycLoanRepository) {
         this.creditRepository = creditRepository;
         this.userRepository = userRepository;

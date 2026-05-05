@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService, LoginResponse } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -60,10 +60,10 @@ export class LoginComponent {
           err?.error?.message ??
           err?.error?.error ??
           (err?.status === 0
-            ? 'Impossible de joindre le serveur.'
+            ? 'Unable to reach the server.'
             : err?.status === 401
-            ? 'Email ou mot de passe incorrect.'
-            : `Erreur ${err?.status ?? ''} — réessayez.`);
+            ? 'Incorrect email or password.'
+            : `Error ${err?.status ?? ''} — please try again.`);
         this.cdr.markForCheck();
       }
     });

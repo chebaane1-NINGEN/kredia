@@ -3,17 +3,10 @@ import {
   Component, inject, NgZone, OnDestroy
 } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { finalize } from 'rxjs';
 import { ChatbotVm } from '../../vm/chatbot.vm';
 import { ChatbotRecommendation } from '../../models/chatbot.model';
-
-// ── Déclaration Web Speech API ──────────────────────────
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
-}
 
 @Component({
   standalone: false,
@@ -26,24 +19,28 @@ export class ChatbotPageComponent implements OnDestroy {
   private readonly cdr  = inject(ChangeDetectorRef);
   private readonly fb   = inject(FormBuilder);
   private readonly zone = inject(NgZone);
+  private readonly http = inject(HttpClient);
 
-  // ── État UI ────────────────────────────────────────────
+  // ── UI state ───────────────────────────────────────────
   loading    = false;
   error: string | null = null;
   response: ChatbotRecommendation | null = null;
 
-  // ── État vocal ─────────────────────────────────────────
-  isRecording        = false;
-  speechSupported    = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  // ── Voice state ────────────────────────────────────────
+  isRecording      = false;
+  isTranscribing   = false;
+  speechSupported  = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   voiceError: string | null = null;
-  interimText        = '';
-  private recognition: any = null;
+
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  private stream: MediaStream | null = null;
 
   readonly form = this.fb.nonNullable.group({
     description: ['', [Validators.required, Validators.minLength(10)]]
   });
 
-  // ── Reconnaissance vocale ──────────────────────────────
+  // ── Voice recording ────────────────────────────────────
   toggleVoice(): void {
     if (this.isRecording) {
       this.stopRecording();
@@ -52,98 +49,132 @@ export class ChatbotPageComponent implements OnDestroy {
     }
   }
 
-  private startRecording(): void {
+  private async startRecording(): Promise<void> {
     this.voiceError = null;
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      this.voiceError = 'La reconnaissance vocale n\'est pas supportée par votre navigateur (utilisez Chrome/Edge).';
-      this.cdr.markForCheck();
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err: any) {
+      this.zone.run(() => {
+        if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+          this.voiceError = 'Microphone access denied. Please allow microphone access in your browser settings.';
+        } else if (err?.name === 'NotFoundError') {
+          this.voiceError = 'No microphone found. Please connect a microphone and try again.';
+        } else {
+          this.voiceError = `Microphone error: ${err?.message ?? err}`;
+        }
+        this.cdr.markForCheck();
+      });
       return;
     }
 
-    this.recognition = new SpeechRecognition();
-    this.recognition.lang          = 'fr-FR';
-    this.recognition.interimResults = true;
-    this.recognition.continuous     = true;
-    this.recognition.maxAlternatives = 1;
+    // Pick the best supported format
+    const mimeType = this.getSupportedMimeType();
+    this.audioChunks = [];
 
-    this.recognition.onstart = () => {
-      this.zone.run(() => {
-        this.isRecording = true;
-        this.interimText = '';
-        this.cdr.markForCheck();
-      });
+    this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : {});
+
+    this.mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) this.audioChunks.push(e.data);
     };
 
-    this.recognition.onresult = (event: any) => {
-      this.zone.run(() => {
-        let finalText = this.form.controls.description.value;
-        let interim   = '';
+    this.mediaRecorder.onstop = () => this.handleRecordingStop();
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalText += (finalText ? ' ' : '') + transcript.trim();
-          } else {
-            interim += transcript;
-          }
-        }
+    this.mediaRecorder.start(250); // collect chunks every 250ms
 
-        this.form.controls.description.setValue(finalText);
-        this.interimText = interim;
-        this.cdr.markForCheck();
-      });
-    };
-
-    this.recognition.onerror = (event: any) => {
-      this.zone.run(() => {
-        this.isRecording = false;
-        this.interimText = '';
-        if (event.error === 'not-allowed') {
-          this.voiceError = 'Accès au microphone refusé. Veuillez autoriser l\'accès dans les paramètres du navigateur.';
-        } else if (event.error === 'no-speech') {
-          this.voiceError = 'Aucune parole détectée. Réessayez.';
-        } else {
-          this.voiceError = `Erreur microphone : ${event.error}`;
-        }
-        this.cdr.markForCheck();
-      });
-    };
-
-    this.recognition.onend = () => {
-      this.zone.run(() => {
-        this.isRecording = false;
-        this.interimText = '';
-        this.cdr.markForCheck();
-      });
-    };
-
-    try {
-      this.recognition.start();
-    } catch {
-      this.voiceError = 'Impossible de démarrer la reconnaissance vocale.';
+    this.zone.run(() => {
+      this.isRecording = true;
       this.cdr.markForCheck();
-    }
+    });
   }
 
   private stopRecording(): void {
-    if (this.recognition) {
-      this.recognition.stop();
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
     }
+    if (this.stream) {
+      this.stream.getTracks().forEach(t => t.stop());
+      this.stream = null;
+    }
+    this.zone.run(() => {
+      this.isRecording = false;
+      this.cdr.markForCheck();
+    });
+  }
+
+  private handleRecordingStop(): void {
+    if (this.audioChunks.length === 0) return;
+
+    const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
+    const audioBlob = new Blob(this.audioChunks, { type: mimeType });
+    this.audioChunks = [];
+
+    this.zone.run(() => {
+      this.isTranscribing = true;
+      this.voiceError = null;
+      this.cdr.markForCheck();
+    });
+
+    const formData = new FormData();
+    formData.append('audio', audioBlob, `recording.${this.getExtension(mimeType)}`);
+
+    this.http.post<{ transcript?: string; warning?: string; error?: string }>(
+      'http://localhost:8081/api/speech/transcribe',
+      formData
+    ).subscribe({
+      next: (res) => {
+        this.zone.run(() => {
+          this.isTranscribing = false;
+          if (res.error) {
+            this.voiceError = `Transcription failed: ${res.error}`;
+          } else if (res.transcript) {
+            const current = this.form.controls.description.value;
+            const appended = current ? `${current} ${res.transcript}` : res.transcript;
+            this.form.controls.description.setValue(appended);
+          } else {
+            this.voiceError = 'No speech detected. Please try again.';
+          }
+          this.cdr.markForCheck();
+        });
+      },
+      error: () => {
+        this.zone.run(() => {
+          this.isTranscribing = false;
+          this.voiceError = 'Could not reach the transcription service. Please check your connection.';
+          this.cdr.markForCheck();
+        });
+      }
+    });
+  }
+
+  private getSupportedMimeType(): string {
+    const types = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/ogg',
+      'audio/mp4',
+    ];
+    return types.find(t => MediaRecorder.isTypeSupported(t)) ?? '';
+  }
+
+  private getExtension(mimeType: string): string {
+    if (mimeType.includes('ogg')) return 'ogg';
+    if (mimeType.includes('mp4')) return 'mp4';
+    return 'webm';
   }
 
   ngOnDestroy(): void {
-    this.recognition?.stop();
+    this.stopRecording();
   }
 
-  // ── Envoi du formulaire ────────────────────────────────
+  // ── Form submit ────────────────────────────────────────
   submit(): void {
     if (this.isRecording) { this.stopRecording(); }
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error = 'Ajoutez une description plus détaillée.';
+      this.error = 'Please add a more detailed description.';
       this.cdr.markForCheck();
       return;
     }
@@ -160,11 +191,11 @@ export class ChatbotPageComponent implements OnDestroy {
       .subscribe({
         next: (res) => {
           if (res?.error) { this.error = res.error; }
-          else            { this.response = res;    }
+          else { this.response = res; }
           this.cdr.markForCheck();
         },
         error: () => {
-          this.error = 'Erreur lors de la demande. Vérifiez le backend et le CORS.';
+          this.error = 'Request failed. Please check the backend connection.';
           this.cdr.markForCheck();
         }
       });

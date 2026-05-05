@@ -1,16 +1,19 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { DarkModeService } from '../../services/dark-mode.service';
 import { AuthService } from '../../services/auth.service';
 import { CreditApi } from '../../../features/credit/Credit/data-access/credit.api';
 import { KycLoanApi } from '../../../features/credit/KycLoan/data-access/kyc-loan.api';
 import { EcheanceApi } from '../../../features/credit/Echeance/data-access/echeance.api';
+import { ReclamationApi } from '../../../features/support/Reclamation/data-access/reclamation.api';
 import { forkJoin, Subscription, interval, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, filter } from 'rxjs/operators';
+
+export type NotifType = 'CREDIT' | 'KYC' | 'PAYMENT' | 'ECHEANCE' | 'RECLAMATION';
 
 export interface NotifItem {
-  type: 'CREDIT' | 'KYC' | 'PAYMENT';
+  type: NotifType;
   id: number;
   relatedId?: number;
   status: string;
@@ -32,17 +35,63 @@ export class NavbarComponent implements OnInit, OnDestroy {
   creditApi = inject(CreditApi);
   kycApi = inject(KycLoanApi);
   echeanceApi = inject(EcheanceApi);
+  reclamationApi = inject(ReclamationApi);
   router = inject(Router);
   cdr = inject(ChangeDetectorRef);
 
   recentUpdates: NotifItem[] = [];
   hasUnread = false;
+  unreadCount = 0;
   showDropdown = false;
+  isSimulateurPage = false;
+  private seenIds = new Set<string>();
   private sub: Subscription | null = null;
 
+  private getStorageKey(): string {
+    const userId = this.auth.getCurrentUserId();
+    return `notifSeen_${userId}`;
+  }
+
+  private itemKey(item: NotifItem): string {
+    return `${item.type}_${item.id}_${item.status}`;
+  }
+
+  private loadSeenIds(): void {
+    try {
+      const raw = localStorage.getItem(this.getStorageKey());
+      this.seenIds = raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch {
+      this.seenIds = new Set();
+    }
+  }
+
+  private saveSeenIds(): void {
+    try {
+      localStorage.setItem(this.getStorageKey(), JSON.stringify([...this.seenIds]));
+    } catch { /* ignore */ }
+  }
+
   ngOnInit() {
+    this.updateSimulateurFlag(this.router.url);
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd)
+    ).subscribe((e: any) => {
+      this.updateSimulateurFlag(e.urlAfterRedirects || e.url);
+      this.cdr.markForCheck();
+    });
+
+    this.loadSeenIds();
     this.fetchUpdates();
     this.sub = interval(30000).subscribe(() => this.fetchUpdates());
+  }
+
+  private updateSimulateurFlag(url: string): void {
+    // Show public navbar only when on /simulateur AND not logged in
+    this.isSimulateurPage = url.split('?')[0] === '/simulateur' && !this.auth.isLoggedIn();
+  }
+
+  goToLanding(): void {
+    this.router.navigate(['/']);
   }
 
   ngOnDestroy() {
@@ -90,7 +139,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
         });
 
         updates.sort((a, b) => b.date.getTime() - a.date.getTime());
-        this.recentUpdates = updates.slice(0, 5);
+        this.recentUpdates = updates.slice(0, 10);
         this.checkUnread();
         this.cdr.markForCheck();
       });
@@ -141,7 +190,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
         });
 
         updates.sort((a, b) => b.date.getTime() - a.date.getTime());
-        this.recentUpdates = updates.slice(0, 5);
+        this.recentUpdates = updates.slice(0, 10);
         this.checkUnread();
         this.cdr.markForCheck();
       });
@@ -149,29 +198,39 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   checkUnread() {
-    const lastSeen = Number(localStorage.getItem('lastNotifSeen')) || 0;
-    this.hasUnread = this.recentUpdates.some(u => u.date.getTime() > lastSeen);
+    this.loadSeenIds();
+    const unread = this.recentUpdates.filter(u => !this.seenIds.has(this.itemKey(u)));
+    this.unreadCount = unread.length;
+    this.hasUnread = this.unreadCount > 0;
+  }
+
+  isUnread(item: NotifItem): boolean {
+    return !this.seenIds.has(this.itemKey(item));
   }
 
   toggleNotifications() {
     this.showDropdown = !this.showDropdown;
-    if (this.showDropdown && this.recentUpdates.length > 0) {
-      localStorage.setItem('lastNotifSeen', Date.now().toString());
-      this.hasUnread = false;
-      this.cdr.markForCheck();
-    }
+    this.cdr.markForCheck();
+  }
+
+  markOneAsRead(item: NotifItem): void {
+    this.seenIds.add(this.itemKey(item));
+    this.saveSeenIds();
+    const unread = this.recentUpdates.filter(u => !this.seenIds.has(this.itemKey(u)));
+    this.unreadCount = unread.length;
+    this.hasUnread = this.unreadCount > 0;
   }
 
   goToTarget(item: NotifItem) {
+    this.markOneAsRead(item);
     this.showDropdown = false;
+    this.cdr.markForCheck();
     if (item.type === 'CREDIT') {
       this.router.navigate(['/credit/list'], { queryParams: { demandeId: item.id } });
     } else if (item.type === 'KYC') {
       if (!this.auth.isClient() && item.status === 'PENDING') {
-        // Admin: go to list page and open modal
         this.router.navigate(['/credit/list'], { queryParams: { openKycDemandeId: item.relatedId, filterKycLoanId: item.id } });
       } else {
-        // Client or Admin viewing specific doc: go to KYC page
         this.router.navigate(['/credit/kyc'], { queryParams: { kycLoanId: item.id } });
       }
     } else {

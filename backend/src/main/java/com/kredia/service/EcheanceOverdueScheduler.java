@@ -6,7 +6,7 @@ import com.kredia.entity.user.User;
 import com.kredia.enums.EcheanceStatus;
 import com.kredia.repository.CreditRepository;
 import com.kredia.repository.EcheanceRepository;
-import lombok.RequiredArgsConstructor;
+import com.kredia.service.IEmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,16 +17,27 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class EcheanceOverdueScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(EcheanceOverdueScheduler.class);
 
     private final EcheanceRepository echeanceRepository;
     private final CreditRepository creditRepository;
-    private final EmailService emailService;
+    private final IEmailService emailService;
 
-    @Scheduled(fixedDelay = 30000) // every 30 seconds
+    // Track echeances for which overdue email was already sent (in-memory, reset on restart)
+    private final java.util.Set<Long> overdueEmailSent = java.util.Collections
+            .newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+
+    public EcheanceOverdueScheduler(EcheanceRepository echeanceRepository,
+                                     CreditRepository creditRepository,
+                                     IEmailService emailService) {
+        this.echeanceRepository = echeanceRepository;
+        this.creditRepository = creditRepository;
+        this.emailService = emailService;
+    }
+
+    @Scheduled(initialDelay = 3600000, fixedDelay = 3600000) // first run after 1 hour
     @Transactional
     public void markOverdueEcheances() {
         LocalDate today = LocalDate.now();
@@ -52,20 +63,26 @@ public class EcheanceOverdueScheduler {
             e.setStatus(EcheanceStatus.OVERDUE);
             java.math.BigDecimal penalty = e.getAmountDue().multiply(penaltyRate);
             e.setAmountDue(e.getAmountDue().add(penalty).setScale(2, java.math.RoundingMode.HALF_EVEN));
-            
-            try {
-                if (e.getCredit() != null && e.getCredit().getCreditId() != null) {
-                    Credit credit = creditRepository.findById(e.getCredit().getCreditId()).orElse(null);
-                    if (credit != null && credit.getUser() != null) {
-                        User user = credit.getUser();
-                        user.getEmail();
-                        user.getFirstName();
-                        user.getLastName();
-                        emailService.sendEcheanceOverdueEmail(user, e);
+
+            // Send email only once per echeance, with delay to respect Mailtrap rate limit
+            if (overdueEmailSent.add(e.getEcheanceId())) {
+                try {
+                    if (e.getCredit() != null && e.getCredit().getCreditId() != null) {
+                        Credit credit = creditRepository.findById(e.getCredit().getCreditId()).orElse(null);
+                        if (credit != null && credit.getUser() != null) {
+                            User user = credit.getUser();
+                            emailService.sendEcheanceOverdueEmail(user, e);
+                            log.info("Overdue email sent for echeance {}", e.getEcheanceId());
+                            // Respect Mailtrap free plan: 1 email/second
+                            Thread.sleep(2000);
+                        }
                     }
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                } catch (Exception ex) {
+                    overdueEmailSent.remove(e.getEcheanceId()); // retry next time
+                    log.error("Failed to send OVERDUE email for Echeance {}: {}", e.getEcheanceId(), ex.getMessage());
                 }
-            } catch (Exception ex) {
-                log.error("Failed to prepare and send OVERDUE email for Echeance {}: {}", e.getEcheanceId(), ex.getMessage());
             }
         });
         echeanceRepository.saveAll(echeancesToProcess);

@@ -7,7 +7,7 @@ import com.kredia.enums.OrderStatus;
 import com.kredia.enums.OrderType;
 import com.kredia.repository.InvestmentOrderRepository;
 import com.kredia.repository.user.UserRepository;
-import com.kredia.service.EmailService;
+import com.kredia.service.IEmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 @Slf4j
 public class OrderExecutionController {
 
-    private final EmailService emailService;
+    private final IEmailService emailService;
     private final InvestmentOrderRepository orderRepository;
     private final UserRepository userRepository;
 

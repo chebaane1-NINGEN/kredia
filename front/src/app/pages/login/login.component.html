@@ -1,4 +1,14 @@
 <div class="login-wrapper">
+
+  <!-- Back to landing — top left -->
+  <a routerLink="/" class="btn-back-landing">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Return to Landing Page
+  </a>
+
   <div class="login-card">
 
     <!-- Brand -->
@@ -9,7 +19,7 @@
       <h1 class="brand-name">KREDIA</h1>
     </div>
 
-    <p class="login-subtitle">Connectez-vous à votre espace administration</p>
+    <p class="login-subtitle">Sign in to your account</p>
 
     <!-- Form -->
     <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
@@ -17,7 +27,7 @@
       <div class="alert error" *ngIf="error">⚠️ {{ error }}</div>
 
       <div class="field">
-        <label for="email">Adresse email</label>
+        <label for="email">Email address</label>
         <input
           id="email"
           type="email"
@@ -26,12 +36,12 @@
           autocomplete="email"
         />
         <small *ngIf="form.controls.email.touched && form.controls.email.invalid">
-          Email valide requis.
+          Valid email required.
         </small>
       </div>
 
       <div class="field">
-        <label for="password">Mot de passe</label>
+        <label for="password">Password</label>
         <input
           id="password"
           type="password"
@@ -40,17 +50,18 @@
           autocomplete="current-password"
         />
         <small *ngIf="form.controls.password.touched && form.controls.password.invalid">
-          Mot de passe requis (min. 4 caractères).
+          Password required (min. 4 characters).
         </small>
       </div>
 
       <button type="submit" class="btn-login" [disabled]="loading">
-        <span *ngIf="!loading">Se connecter</span>
+        <span *ngIf="!loading">Sign in</span>
         <span *ngIf="loading" class="spinner-wrap">
-          <span class="spinner"></span> Connexion...
+          <span class="spinner"></span> Signing in...
         </span>
       </button>
 
     </form>
+
   </div>
 </div>
