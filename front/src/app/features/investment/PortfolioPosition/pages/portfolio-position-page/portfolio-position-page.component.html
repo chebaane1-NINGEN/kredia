@@ -37,7 +37,7 @@
   </section>
 
   <section class="panel">
-    <div class="panel-body">
+    <div class="panel-body filters-grid">
       <div class="field">
         <label for="portfolio-search">Search</label>
         <input
@@ -48,6 +48,24 @@
           placeholder="Asset, user ID, or asset ID"
         />
       </div>
+
+      <div class="field">
+        <label for="portfolio-performance-filter">Filter</label>
+        <select
+          id="portfolio-performance-filter"
+          [value]="performanceFilter"
+          (change)="onPerformanceFilterChange($event)"
+        >
+          <option *ngFor="let option of performanceFilterOptions" [value]="option">{{ option }}</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="portfolio-sort">Order by</label>
+        <select id="portfolio-sort" [value]="sortBy" (change)="onSortChange($event)">
+          <option *ngFor="let option of sortOptions" [value]="option.value">{{ option.label }}</option>
+        </select>
+      </div>
     </div>
   </section>
 
@@ -55,7 +73,7 @@
     <div *ngIf="loading" class="state">Loading positions...</div>
     <div *ngIf="!loading && errorMessage" class="state state--error">{{ errorMessage }}</div>
     <div *ngIf="!loading && !errorMessage && filteredPositions.length === 0" class="state">
-      No positions found.
+      No positions match the selected filters.
     </div>
 
     <div *ngIf="!loading && !errorMessage && filteredPositions.length > 0" class="table-wrap">
