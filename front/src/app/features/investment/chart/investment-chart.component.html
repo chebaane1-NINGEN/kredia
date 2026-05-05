@@ -249,7 +249,10 @@
           </div>
 
           <div class="strategy-preview-card__bar" aria-hidden="true">
-            <span [style.width.%]="getStrategyStopLossWidth(strategy.stopLossPct)"></span>
+            <span
+              [style.width.%]="getStrategyStopLossWidth(strategy.stopLossPct)"
+              [style.background]="getStopLossColor(strategy.stopLossPct)">
+            </span>
           </div>
 
           <div class="strategy-preview-card__tags">

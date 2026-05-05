@@ -584,6 +584,50 @@ export class InvestmentChartComponent implements OnInit, OnDestroy {
     return Math.max(0, Math.min(value, 100));
   }
 
+  getStopLossColor(stopLossPct: number | null | undefined): string {
+    const pct = typeof stopLossPct === 'number' && Number.isFinite(stopLossPct) ? stopLossPct : 0;
+
+    const clamp = (v: number, a = 0, b = 100) => Math.max(a, Math.min(b, v));
+    const toHex = (r: number, g: number, b: number) =>
+      '#' + [r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('');
+
+    const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
+
+    // Colors
+    const green = { r: 16, g: 185, b: 129 }; // #10b981 (emerald-500)
+    const yellow = { r: 234, g: 179, b: 8 }; // #eab308
+    const red = { r: 229, g: 62, b: 62 }; // #e53e3e
+
+    const p = clamp(pct, 0, 100);
+    if (p <= 20) {
+      return `linear-gradient(120deg, ${toHex(green.r, green.g, green.b)}, ${toHex(green.r, green.g, green.b)})`;
+    }
+    if (p >= 60) {
+      return `linear-gradient(120deg, ${toHex(red.r, red.g, red.b)}, ${toHex(red.r, red.g, red.b)})`;
+    }
+
+    // interpolate between green->yellow for 20-40, yellow->red for 40-60
+    const tNorm = (p - 20) / 40; // 0..1 across 20..60
+    let colorStart = green;
+    let colorEnd = yellow;
+    let localT = tNorm;
+    if (tNorm > 0.5) {
+      // second half: yellow -> red
+      localT = (tNorm - 0.5) * 2; // 0..1
+      colorStart = yellow;
+      colorEnd = red;
+    } else {
+      localT = tNorm * 2; // 0..1 for green->yellow
+    }
+
+    const r = lerp(colorStart.r, colorEnd.r, localT);
+    const g = lerp(colorStart.g, colorEnd.g, localT);
+    const b = lerp(colorStart.b, colorEnd.b, localT);
+
+    const hex = toHex(r, g, b);
+    return `linear-gradient(120deg, ${hex}, ${hex})`;
+  }
+
   formatStrategyBudget(value: number | null | undefined): string {
     return value != null
       ? `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
