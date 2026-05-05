@@ -15,13 +15,19 @@ export class PortfolioPositionPageComponent implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   loading = false;
+  deletingPositionId: number | null = null;
   errorMessage = '';
 
   positions: PortfolioPosition[] = [];
   searchTerm = '';
+  displayCount = 10;
 
   ngOnInit(): void {
     this.loadPositions();
+  }
+
+  get visiblePositions(): PortfolioPosition[] {
+    return this.filteredPositions.slice(0, this.displayCount);
   }
 
   get filteredPositions(): PortfolioPosition[] {
@@ -71,6 +77,34 @@ export class PortfolioPositionPageComponent implements OnInit {
       error: () => {
         this.errorMessage = 'Impossible de charger les positions du portefeuille.';
         this.loading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  loadMore(): void {
+    this.displayCount += 10;
+  }
+
+  closePosition(positionId: number): void {
+    const confirmed = window.confirm('Voulez-vous vraiment fermer cette position ?');
+    if (!confirmed) {
+      return;
+    }
+
+    this.deletingPositionId = positionId;
+    this.errorMessage = '';
+    this.cdr.markForCheck();
+
+    this.vm.delete(positionId).subscribe({
+      next: () => {
+        this.positions = this.positions.filter((position) => position.positionId !== positionId);
+        this.deletingPositionId = null;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.errorMessage = 'Impossible de fermer cette position.';
+        this.deletingPositionId = null;
         this.cdr.detectChanges();
       }
     });

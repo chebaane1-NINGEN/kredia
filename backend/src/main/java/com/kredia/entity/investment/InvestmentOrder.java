@@ -27,6 +27,10 @@ public class InvestmentOrder {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "strategy_id", nullable = true)
+    private InvestmentStrategy strategy;
+    
     @Column(name = "asset_symbol", nullable = false, length = 20)
     private String assetSymbol;
     

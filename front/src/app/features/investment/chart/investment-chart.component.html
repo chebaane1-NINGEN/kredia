@@ -72,14 +72,7 @@
     </article>
     }
 
-    <button 
-      class="market-strip__order-btn"
-      type="button"
-      (click)="openOrderModal()"
-      [disabled]="!selectedAssetSymbol"
-      title="Créer un nouvel ordre">
-      + Order
-    </button>
+    <!-- The order button is now moved to chart-shell__header -->
   </header>
 
   <section class="chart-shell">
@@ -113,23 +106,31 @@
             <span class="price-line__label">{{ marketDirection }}</span>
           </div>
         </div>
-        <button
-          class="chart-shell__favorite-btn"
-          [disabled]="isAddingToFavorites"
-          [class.is-loading]="isAddingToFavorites"
-          [class.is-favorited]="assetAlreadyFavorited"
-          (click)="onAddToFavorites()"
-          [attr.title]="assetAlreadyFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'">
-          @if (isAddingToFavorites) {
-            <span class="favorite-btn__spinner"></span>
-          } @else if (assetAlreadyFavorited) {
-            <span class="favorite-btn__icon">★</span>
-            <span class="favorite-btn__text">Retirer</span>
-          } @else {
-            <span class="favorite-btn__icon">☆</span>
-            <span class="favorite-btn__text">Ajouter aux favoris</span>
-          }
-        </button>
+        <div class="chart-shell__actions">
+          <button
+            class="chart-shell__favorite-btn"
+            [disabled]="isAddingToFavorites"
+            [class.is-loading]="isAddingToFavorites"
+            [class.is-favorited]="assetAlreadyFavorited"
+            (click)="onAddToFavorites()"
+            [attr.title]="assetAlreadyFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'">
+            @if (isAddingToFavorites) {
+              <span class="favorite-btn__spinner"></span>
+            } @else if (assetAlreadyFavorited) {
+              <span class="favorite-btn__icon">★</span>
+            } @else {
+              <span class="favorite-btn__icon">☆</span>
+            }
+          </button>
+          <button 
+            class="chart-shell__trade-btn"
+            type="button"
+            (click)="openOrderModal()"
+            [disabled]="!selectedAssetSymbol"
+            title="Ouvrir une position ou créer un ordre">
+            Trade
+          </button>
+        </div>
       </div>
 
       <div class="chart-stage">
@@ -198,11 +199,82 @@
     </div>
   </section>
 
+  <section class="strategy-preview-panel">
+    <div class="strategy-preview-panel__header">
+      <div>
+        <p class="eyebrow">Stratégies</p>
+        <h2>Aperçu rapide des stratégies</h2>
+        <p class="strategy-preview-panel__subtitle">
+          Une vue synthétique pour repérer les profils actifs avant d’ouvrir un ordre.
+        </p>
+      </div>
+
+      <a class="strategy-preview-panel__link" routerLink="/investissement/strategies">
+        Voir toutes les stratégies
+      </a>
+    </div>
+
+    @if (strategyPreviewLoading) {
+      <div class="strategy-preview-grid strategy-preview-grid--loading" aria-hidden="true">
+        <article class="strategy-preview-card strategy-preview-card--skeleton" *ngFor="let _ of [1, 2, 3]"></article>
+      </div>
+    } @else if (strategyPreviewError) {
+      <div class="strategy-preview-state strategy-preview-state--error">{{ strategyPreviewError }}</div>
+    } @else if (strategyPreview.length > 0) {
+      <div class="strategy-preview-grid">
+        <article
+          *ngFor="let strategy of strategyPreview"
+          class="strategy-preview-card"
+          [class.is-active]="strategy.isActive">
+          <div class="strategy-preview-card__top">
+            <div>
+              <h3>{{ strategy.strategyName }}</h3>
+              <p>{{ strategy.maxAssets }} actifs max</p>
+            </div>
+
+            <span [class]="getStrategyRiskBadgeClass(strategy.riskProfile)">
+              {{ strategy.riskProfile }}
+            </span>
+          </div>
+
+          <div class="strategy-preview-card__metrics">
+            <div>
+              <span>Budget max</span>
+              <strong>{{ formatStrategyBudget(strategy.maxBudget) }}</strong>
+            </div>
+            <div>
+              <span>Stop loss</span>
+              <strong>{{ strategy.stopLossPct ?? 0 | number:'1.2-2' }}%</strong>
+            </div>
+          </div>
+
+          <div class="strategy-preview-card__bar" aria-hidden="true">
+            <span [style.width.%]="getStrategyStopLossWidth(strategy.stopLossPct)"></span>
+          </div>
+
+          <div class="strategy-preview-card__tags">
+            @if ((getStrategyAssets(strategy.strategyId) || []).length > 0) {
+              <span *ngFor="let asset of getStrategyAssets(strategy.strategyId)" class="strategy-tag strategy-tag--asset">
+                {{ asset }}
+              </span>
+            } @else {
+              <span class="strategy-tag strategy-tag--empty">Aucun actif {{getStrategyAssets(strategy.strategyId).length}}</span>
+            }
+          </div>
+        </article>
+      </div>
+    } @else {
+      <div class="strategy-preview-state">
+        Aucune stratégie trouvée. Créez-en une pour visualiser vos profils ici.
+      </div>
+    }
+  </section>
+
   <!-- ==================== AI Gemini Market Analysis Block ==================== -->
   <section class="gemini-analysis-block" *ngIf="selectedAssetSymbol">
     <div class="gemini-header">
       <div class="gemini-header__title">
-        <h2>Analyse IA Gemini</h2>
+        <h2>Analyse IA </h2>
         <span class="gemini-header__icon">✨</span>
       </div>
       <button
@@ -411,75 +483,198 @@
           </div>
         }
       </div>
+
     }
   </section>
 
-  <section class="movers-grid">
-    <article class="movers-panel">
-      <header class="panel-heading">
-        <h2>Actions à plus fort volume</h2>
-        <span>›</span>
-      </header>
+  <section class="gemini-portfolio-top" *ngIf="selectedAssetSymbol">
+    <div class="gemini-portfolio-top__header">
+      <div class="gemini-portfolio-top__title-row">
+        <h3>Top positions</h3>
+        <a routerLink="/investissement/positions" class="gemini-portfolio-top__view-all" title="Voir le portfolio complet">
+          <span class="gemini-portfolio-top__view-all-text">Voir tout</span>
+          <span class="gemini-portfolio-top__arrow">→</span>
+        </a>
+      </div>
+      <span class="gemini-portfolio-top__total">Total: {{ portfolioTotalValue | number:'1.2-2' }} EUR</span>
+    </div>
 
-      <div class="mover-list">
-        <div 
-          *ngFor="let mover of volumeLeaders; trackBy: trackBySymbol" 
-          class="mover-row"
-          [class.selected]="selectedAssetSymbol === mover.symbol"
-          (click)="selectAsset(mover.symbol)">
-          <div class="mover-row__identity">
-            <div class="mover-row__avatar">{{ mover.symbol.slice(0, 2) }}</div>
-            <div>
-              <h3>{{ mover.name }}</h3>
-              <span class="mover-row__symbol">{{ mover.symbol }}</span>
-            </div>
-          </div>
+    @if (portfolioTopLoading) {
+      <div class="gemini-portfolio-top__loading" aria-label="Chargement des top positions">
+        <div class="gemini-portfolio-top__loading-head">
+          <span class="skeleton skeleton--line skeleton--short"></span>
+          <span class="skeleton skeleton--line skeleton--medium"></span>
+        </div>
 
-          <div class="mover-row__metrics">
-            <span class="mover-row__value">{{ mover.value }}</span>
-            <span class="mover-row__change" [class.is-positive]="mover.trend === 'positive'" [class.is-negative]="mover.trend === 'negative'">
-              {{ mover.change }}
-            </span>
+        <div class="gemini-portfolio-top__loading-table">
+          <div class="gemini-portfolio-top__loading-row" *ngFor="let _ of [1,2,3,4,5]">
+            <span class="skeleton skeleton--line skeleton--short"></span>
+            <span class="skeleton skeleton--line skeleton--medium"></span>
+            <span class="skeleton skeleton--line skeleton--short"></span>
+            <span class="skeleton skeleton--line skeleton--short"></span>
+            <span class="skeleton skeleton--line skeleton--medium"></span>
           </div>
         </div>
       </div>
+    } @else if (portfolioTopPositions.length > 0) {
+      <div class="gemini-portfolio-top__table">
+        <div class="gemini-portfolio-top__head">
+          <span>Action</span>
+          <span>Valeur</span>
+          <span>P/L (€)</span>
+          <span>P/L (%)</span>
+          <span>Part</span>
+        </div>
 
-      <a href="#" class="panel-link">Voir toutes les actions les plus activement tradées ›</a>
-    </article>
-
-    <article class="movers-panel">
-      <header class="panel-heading">
-        <h2>Actions les plus volatiles</h2>
-        <span>›</span>
-      </header>
-
-      <div class="mover-list">
-        <div 
-          *ngFor="let mover of volatileLeaders; trackBy: trackBySymbol" 
-          class="mover-row"
-          [class.selected]="selectedAssetSymbol === mover.symbol"
-          (click)="selectAsset(mover.symbol)">
-          <div class="mover-row__identity">
-            <div class="mover-row__avatar mover-row__avatar--alt">{{ mover.symbol.slice(0, 2) }}</div>
-            <div>
-              <h3>{{ mover.name }}</h3>
-              <span class="mover-row__symbol">{{ mover.symbol }}</span>
+        @for (position of portfolioTopPositions; track position.assetSymbol) {
+          <div class="gemini-portfolio-top__row">
+            <span class="gemini-portfolio-top__symbol">{{ position.assetSymbol }}</span>
+            <span>{{ position.currentValue | number:'1.2-2' }} EUR</span>
+            <span [class.is-positive]="position.profitLossDollars >= 0" [class.is-negative]="position.profitLossDollars < 0">
+              {{ position.profitLossDollars | number:'1.2-2' }}
+            </span>
+            <span [class.is-positive]="position.profitLossPercentage >= 0" [class.is-negative]="position.profitLossPercentage < 0">
+              {{ formatPercentage(position.profitLossPercentage) }}
+            </span>
+            <div class="gemini-portfolio-top__share">
+              <span>{{ position.portfolioSharePct | number:'1.2-2' }}%</span>
+              <div class="gemini-portfolio-top__bar">
+                <div class="gemini-portfolio-top__bar-fill" [style.width.%]="position.portfolioSharePct"></div>
+              </div>
             </div>
           </div>
-
-          <div class="mover-row__metrics">
-            <span class="mover-row__value">{{ mover.value }}</span>
-            <span class="mover-row__change" [class.is-positive]="mover.trend === 'positive'" [class.is-negative]="mover.trend === 'negative'">
-              {{ mover.change }}
-            </span>
-          </div>
-        </div>
+        }
       </div>
-
-      <a href="#" class="panel-link">Voir toutes les actions dont le prix a le plus changé ›</a>
-    </article>
+    } @else {
+      <div class="gemini-portfolio-top__empty">Aucune position portefeuille disponible.</div>
+    }
   </section>
+
 </section>
+<!-- Choice Modal -->
+@if (showChoiceModal) {
+  <div class="choice-modal-overlay" (click)="closeChoiceModal()">
+    <div class="choice-modal" (click)="$event.stopPropagation()">
+      <div class="choice-modal__header">
+        <h2>Sélectionnez une action</h2>
+        <button 
+          type="button" 
+          class="choice-modal__close"
+          (click)="closeChoiceModal()"
+          aria-label="Fermer">
+          ×
+        </button>
+      </div>
+
+      <div class="choice-modal__body">
+        <p class="choice-modal__asset-info">
+          <strong>{{ selectedAssetSymbol }}</strong> - Prix actuel: {{ assetPrice | number:'1.2-2' }} EUR
+        </p>
+
+        @if (selectedAssetPositions.length > 0) {
+          <div class="choice-modal__positions-summary">
+            <div class="positions-stat">
+              <span class="positions-stat__label">Positions ouvertes</span>
+              <span class="positions-stat__value">{{ selectedAssetPositions.length }}</span>
+            </div>
+            <div class="positions-stat">
+              <span class="positions-stat__label">Valeur totale</span>
+              <span class="positions-stat__value">{{ selectedAssetPositionValue | number:'1.2-2' }} EUR</span>
+            </div>
+          </div>
+        }
+
+        <div class="choice-modal__actions">
+          <button 
+            type="button" 
+            class="choice-modal__action-btn choice-modal__action-btn--now"
+            (click)="selectAction('now')">
+            <span class="choice-modal__action-icon">⚡</span>
+            <span class="choice-modal__action-title">Ouvrir une position maintenant</span>
+            <span class="choice-modal__action-desc">Au prix marché actuel</span>
+          </button>
+
+          <button 
+            type="button" 
+            class="choice-modal__action-btn choice-modal__action-btn--order"
+            (click)="selectAction('order')">
+            <span class="choice-modal__action-icon">📋</span>
+            <span class="choice-modal__action-title">Créer un ordre</span>
+            <span class="choice-modal__action-desc">Avec un prix personnalisé</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Position Now Modal -->
+@if (showPositionNowModal) {
+  <div class="choice-modal-overlay" (click)="closePositionNowModal()">
+    <div class="choice-modal" (click)="$event.stopPropagation()">
+      <div class="choice-modal__header">
+        <h2>Ouvrir une position</h2>
+        <button 
+          type="button" 
+          class="choice-modal__close"
+          (click)="closePositionNowModal()"
+          aria-label="Fermer">
+          ×
+        </button>
+      </div>
+
+      <div class="choice-modal__body">
+        <p class="choice-modal__asset-info">
+          <strong>{{ selectedAssetSymbol }}</strong> - Prix actuel: {{ assetPrice | number:'1.2-2' }} EUR
+        </p>
+
+        @if (positionNowError) {
+          <div class="choice-modal__error">{{ positionNowError }}</div>
+        }
+
+        <form (ngSubmit)="submitPositionNow()" class="position-now__form">
+          <div class="position-now__field">
+            <label for="position-quantity">Quantité</label>
+            <input
+              id="position-quantity"
+              type="number"
+              min="0.001"
+              step="0.001"
+              [(ngModel)]="positionNowQuantity"
+              name="quantity"
+              class="position-now__input"
+              placeholder="Entrez la quantité"
+              required />
+          </div>
+
+          <div class="position-now__total">
+            <span class="position-now__total-label">Coût approximatif</span>
+            <span class="position-now__total-value">
+              {{ (positionNowQuantity * assetPrice) | number:'1.2-2' }} EUR
+            </span>
+          </div>
+
+          <div class="position-now__actions">
+            <button
+              type="button"
+              class="position-now__btn position-now__btn--cancel"
+              (click)="closePositionNowModal()">
+              Annuler
+            </button>
+            <button
+              type="submit"
+              class="position-now__btn position-now__btn--submit"
+              [class.is-loading]="positionNowLoading"
+              [disabled]="positionNowLoading || positionNowQuantity <= 0">
+              {{ positionNowLoading ? 'Création...' : 'Ouvrir la position' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
 <!-- Order Modal -->
 @if (showOrderModal) {
   <div class="order-modal-overlay" (click)="closeOrderModal()">

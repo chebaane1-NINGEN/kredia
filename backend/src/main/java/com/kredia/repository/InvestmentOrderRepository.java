@@ -13,4 +13,8 @@ public interface InvestmentOrderRepository extends JpaRepository<InvestmentOrder
     List<InvestmentOrder> findByAssetSymbol(String assetSymbol);
     List<InvestmentOrder> findByOrderStatus(OrderStatus orderStatus);
     List<InvestmentOrder> findByUser_IdAndOrderStatus(Long userId, OrderStatus orderStatus);
+    
+    // Traceability: find orders by strategy
+    List<InvestmentOrder> findByStrategy_StrategyId(Long strategyId);
+    List<InvestmentOrder> findByStrategy_StrategyIdAndOrderStatus(Long strategyId, OrderStatus orderStatus);
 }

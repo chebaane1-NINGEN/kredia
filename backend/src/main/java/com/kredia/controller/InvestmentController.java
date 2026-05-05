@@ -313,6 +313,26 @@ public class InvestmentController {
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
+    // ==================== Traceability Endpoints ====================
+    
+    @GetMapping("/orders/strategy/{strategyId}")
+    public ResponseEntity<List<InvestmentOrder>> getOrdersByStrategy(@PathVariable Long strategyId) {
+        List<InvestmentOrder> orders = investmentService.getOrdersByStrategy(strategyId);
+        return new ResponseEntity<>(orders, HttpStatus.OK);
+    }
+
+    @GetMapping("/orders/strategy/{strategyId}/pending")
+    public ResponseEntity<List<InvestmentOrder>> getPendingOrdersByStrategy(@PathVariable Long strategyId) {
+        List<InvestmentOrder> orders = investmentService.getPendingOrdersByStrategy(strategyId);
+        return new ResponseEntity<>(orders, HttpStatus.OK);
+    }
+
+    @GetMapping("/positions/strategy/{strategyId}")
+    public ResponseEntity<List<PortfolioPosition>> getPositionsByStrategy(@PathVariable Long strategyId) {
+        List<PortfolioPosition> positions = investmentService.getPositionsByStrategy(strategyId);
+        return new ResponseEntity<>(positions, HttpStatus.OK);
+    }
+
     // ==================== AI Market Insight Endpoint ====================
 
     @PostMapping("/market-strategy-summary")

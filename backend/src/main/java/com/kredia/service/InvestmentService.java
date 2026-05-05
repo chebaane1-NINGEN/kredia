@@ -271,6 +271,11 @@ public class InvestmentService {
             return new BootstrapExecutionResult(createdPositions, updatedPositionsCount, createdOrdersCount, debugHints);
         }
 
+        System.out.println("[DEBUG] bootstrapStrategy - Strategy ID: " + strategy.getStrategyId() + 
+            ", isActive: " + strategy.getIsActive() + 
+            ", autoCreatePositions: " + strategy.getAutoCreatePositions() + 
+            ", maxBudget: " + maxBudget);
+
         int maxAssets = strategy.getMaxAssets() != null && strategy.getMaxAssets() > 0
                 ? strategy.getMaxAssets()
                 : 5;
@@ -278,6 +283,7 @@ public class InvestmentService {
         AssetSelectionResult selectionResult = selectAssetsByRiskAndKpi(strategy, maxAssets);
         List<YahooMarketDataService.EvaluatedAsset> selectedAssets = selectionResult.selectedAssets();
         debugHints.addAll(selectionResult.debugHints());
+        System.out.println("[DEBUG] Selected assets count: " + selectedAssets.size() + " for risk profile: " + strategy.getRiskProfile());
         if (selectedAssets.isEmpty()) {
             debugHints.add("Aucun actif Yahoo sélectionné pour le profil de risque " + strategy.getRiskProfile() + ".");
             return new BootstrapExecutionResult(createdPositions, updatedPositionsCount, createdOrdersCount, debugHints);
@@ -332,6 +338,10 @@ public class InvestmentService {
                 debugHints.add("Actifs ignorés: stopLossPrice <= 0 pour " + skippedInvalidStopLoss + " symbole(s). ");
             }
         }
+
+        System.out.println("[DEBUG] bootstrapStrategy result - createdPositions: " + createdPositions.size() + 
+            ", updatedPositions: " + updatedPositionsCount + 
+            ", createdOrders: " + createdOrdersCount);
 
         return new BootstrapExecutionResult(createdPositions, updatedPositionsCount, createdOrdersCount, debugHints);
     }
@@ -490,6 +500,7 @@ public class InvestmentService {
     private void createAutoBuyOrder(InvestmentStrategy strategy, String symbol, BigDecimal quantity, BigDecimal currentPrice) {
         InvestmentOrder order = new InvestmentOrder();
         order.setUser(strategy.getUser());
+        order.setStrategy(strategy);
         order.setAssetSymbol(symbol);
         order.setOrderType(OrderType.BUY);
         order.setQuantity(quantity);
@@ -499,31 +510,21 @@ public class InvestmentService {
     }
 
     private PositionMutationResult createOrUpdatePosition(InvestmentStrategy strategy, String symbol, BigDecimal quantity, BigDecimal currentPrice) {
-        Optional<PortfolioPosition> existingPosition = positionRepository
-                .findByUser_IdAndAssetSymbol(strategy.getUser().getId(), symbol);
-
-        if (existingPosition.isPresent()) {
-            PortfolioPosition position = existingPosition.get();
-            BigDecimal oldQuantity = position.getCurrentQuantity();
-            BigDecimal newQuantity = oldQuantity.add(quantity);
-
-            BigDecimal weightedOldValue = oldQuantity.multiply(position.getAvgPurchasePrice());
-            BigDecimal weightedNewValue = quantity.multiply(currentPrice);
-            BigDecimal newAveragePrice = weightedOldValue.add(weightedNewValue)
-                    .divide(newQuantity, 8, RoundingMode.HALF_UP);
-
-            position.setCurrentQuantity(newQuantity);
-            position.setAvgPurchasePrice(newAveragePrice);
-            PortfolioPosition updatedPosition = positionRepository.save(position);
-            return new PositionMutationResult(updatedPosition, false);
-        }
-
+        // Always create a new position for this strategy, don't reuse positions from other strategies
+        // This ensures each strategy has its own set of positions
         PortfolioPosition newPosition = new PortfolioPosition();
         newPosition.setUser(strategy.getUser());
+        newPosition.setStrategy(strategy);
         newPosition.setAssetSymbol(symbol);
         newPosition.setCurrentQuantity(quantity);
         newPosition.setAvgPurchasePrice(currentPrice);
         PortfolioPosition savedPosition = positionRepository.save(newPosition);
+        
+        System.out.println("[DEBUG] New position created - Strategy ID: " + strategy.getStrategyId() + 
+            ", Symbol: " + symbol + 
+            ", Quantity: " + quantity + 
+            ", Avg Price: " + currentPrice);
+        
         return new PositionMutationResult(savedPosition, true);
     }
 
@@ -574,14 +575,11 @@ public class InvestmentService {
         BigDecimal currentMarketPrice = marketPriceService.getCurrentPrice(positionDTO.getAssetSymbol());
 
         // Create new PortfolioPosition using the fetched market price as avg purchase price
-        PortfolioPosition position = new PortfolioPosition(
-            null, // positionId will be generated
-            user,
-            positionDTO.getAssetSymbol(),
-            positionDTO.getQuantity(),
-            currentMarketPrice,
-            LocalDateTime.now()
-        );
+        PortfolioPosition position = new PortfolioPosition();
+        position.setUser(user);
+        position.setAssetSymbol(positionDTO.getAssetSymbol());
+        position.setCurrentQuantity(positionDTO.getQuantity());
+        position.setAvgPurchasePrice(currentMarketPrice);
 
         return positionRepository.save(position);
     }
@@ -755,4 +753,28 @@ public class InvestmentService {
         return positionRepository.findByUser_IdAndAssetSymbol(userId, assetSymbol)
                 .map(this::convertToResponseDTO);
     }
+
+    // ==================== Traceability Methods ====================
+    
+    /**
+     * Récupère tous les ordres créés par une stratégie donnée.
+     */
+    public List<InvestmentOrder> getOrdersByStrategy(Long strategyId) {
+        return orderRepository.findByStrategy_StrategyId(strategyId);
+    }
+
+    /**
+     * Récupère tous les ordres PENDING créés par une stratégie donnée.
+     */
+    public List<InvestmentOrder> getPendingOrdersByStrategy(Long strategyId) {
+        return orderRepository.findByStrategy_StrategyIdAndOrderStatus(strategyId, OrderStatus.PENDING);
+    }
+
+    /**
+     * Récupère toutes les positions créées par une stratégie donnée.
+     */
+    public List<PortfolioPosition> getPositionsByStrategy(Long strategyId) {
+        return positionRepository.findByStrategy_StrategyId(strategyId);
+    }
 }
+
