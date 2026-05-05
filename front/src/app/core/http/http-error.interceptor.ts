@@ -18,11 +18,15 @@ export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {
   const notificationService = inject(NotificationService);
 
   return next(req).pipe(
-    // Retry pour les erreurs temporaires (5xx)
+    // Retry pour les erreurs temporaires (5xx), sauf les tentatives de connexion
     retry({
       count: 2,
       delay: (error, retryCount) => {
-        if (error instanceof HttpErrorResponse && error.status >= 500) {
+        if (
+          error instanceof HttpErrorResponse &&
+          error.status >= 500 &&
+          !req.url.includes('/api/auth/login')
+        ) {
           console.warn(`HTTP ${error.status} - Tentative ${retryCount}/2 dans 1s`);
           return timer(1000);
         }

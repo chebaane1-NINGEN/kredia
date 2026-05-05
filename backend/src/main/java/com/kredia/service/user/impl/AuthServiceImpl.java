@@ -64,10 +64,20 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponseDTO login(LoginRequestDTO request) {
-        User user = userRepository.findByEmailAndDeletedFalse(request.getEmail())
+        if (request == null || request.getEmail() == null || request.getPassword() == null) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+
+        String email = request.getEmail().trim();
+        if (email.isEmpty()) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+
+        User user = userRepository.findByEmailAndDeletedFalse(email)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        String passwordHash = user.getPasswordHash();
+        if (passwordHash == null || passwordHash.isBlank() || !passwordEncoder.matches(request.getPassword(), passwordHash)) {
             user.setFailedLoginAttempts(user.getFailedLoginAttempts() + 1);
             userRepository.save(user);
             throw new IllegalArgumentException("Invalid email or password");

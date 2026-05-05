@@ -3,6 +3,7 @@ package com.kredia.exception;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
@@ -61,6 +62,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<?> handleBadRequest(HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest().body(error("Malformed JSON request or invalid request payload", 400));
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<?> handleConstraint(ConstraintViolationException ex) {
         return ResponseEntity.badRequest().body(error(ex.getMessage(), 400));
@@ -78,7 +84,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleOther(Exception ex) {
-        return ResponseEntity.status(500).body(error("Internal Server Error: " + ex.getMessage(), 500));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(error("Internal Server Error. Please contact support.", 500));
     }
 
     private Map<String, Object> error(String message, int status) {

@@ -337,14 +337,6 @@ public class UserController {
                 .body(data);
     }
 
-    @GetMapping("/admin/agents")
-    public ResponseEntity<ApiResponse<Page<UserResponseDTO>>> adminAgent(
-            @RequestHeader("X-Actor-Id") Long actorId,
-            @PageableDefault Pageable pageable
-    ) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.adminAgent(actorId, pageable)));
-    }
-
     @GetMapping("/admin/clients")
     public ResponseEntity<ApiResponse<Page<UserResponseDTO>>> adminClient(
             @RequestHeader("X-Actor-Id") Long actorId,
@@ -361,49 +353,6 @@ public class UserController {
             @PageableDefault Pageable pageable
     ) {
         return ResponseEntity.ok(ApiResponse.ok(userService.agentClients(actorId, Optional.ofNullable(email), Optional.ofNullable(status), pageable)));
-    }
-
-    @GetMapping("/agent/clients/enhanced")
-    public ResponseEntity<ApiResponse<Page<com.kredia.dto.user.EnhancedClientDTO>>> agentClientsEnhanced(
-            @RequestHeader("X-Actor-Id") Long actorId,
-            @RequestParam(name = "email", required = false) String email,
-            @RequestParam(name = "statuses", required = false) String statusesStr,
-            @RequestParam(name = "priorities", required = false) String prioritiesStr,
-            @RequestParam(name = "startDate", required = false) String startDate,
-            @RequestParam(name = "endDate", required = false) String endDate,
-            @PageableDefault Pageable pageable
-    ) {
-        try {
-            // Parse comma-separated strings into lists
-            List<UserStatus> statuses = null;
-            if (statusesStr != null && !statusesStr.trim().isEmpty()) {
-                statuses = Arrays.stream(statusesStr.split(","))
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .map(s -> {
-                            try {
-                                return UserStatus.valueOf(s.toUpperCase());
-                            } catch (IllegalArgumentException e) {
-                                throw new IllegalArgumentException("Invalid status: " + s);
-                            }
-                        })
-                        .collect(Collectors.toList());
-            }
-
-            List<String> priorities = null;
-            if (prioritiesStr != null && !prioritiesStr.trim().isEmpty()) {
-                priorities = Arrays.stream(prioritiesStr.split(","))
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .collect(Collectors.toList());
-            }
-
-            return ResponseEntity.ok(ApiResponse.ok(userService.agentClientsEnhanced(actorId, Optional.ofNullable(email), Optional.ofNullable(statuses), Optional.ofNullable(priorities), parseStartOfDay(startDate), parseEndOfDay(endDate), pageable)));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("Failed to fetch enhanced clients: " + e.getMessage()));
-        }
     }
 
     @GetMapping("/admin/activities")
@@ -436,34 +385,9 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.ok(userService.adminAudit(actorId, userId, pageable)));
     }
 
-    @GetMapping("/agent/{agentId}/dashboard")
-    public ResponseEntity<ApiResponse<AgentDashboard>> agentDashboard(@PathVariable("agentId") Long agentId) {
-        return ResponseEntity.ok(ApiResponse.ok(userService.agentDashboard(agentId)));
-    }
-
     @GetMapping("/agent/{agentId}/performance")
     public ResponseEntity<ApiResponse<AgentPerformanceDTO>> agentPerformance(@PathVariable("agentId") Long agentId) {
         return ResponseEntity.ok(ApiResponse.ok(userService.agentPerformance(agentId)));
-    }
-
-    @GetMapping("/agent/{agentId}/activity")
-    public ResponseEntity<ApiResponse<Page<UserActivityResponseDTO>>> agentActivity(
-            @RequestHeader("X-Actor-Id") Long actorId,
-            @PathVariable("agentId") Long agentId,
-            @RequestParam(name = "actionType", required = false) List<UserActivityActionType> actionTypes,
-            @RequestParam(name = "clientId", required = false) Long clientId,
-            @RequestParam(name = "fromDate", required = false) String fromDate,
-            @RequestParam(name = "toDate", required = false) String toDate,
-            @RequestParam(name = "search", required = false) String searchTerm,
-            @PageableDefault Pageable pageable
-    ) {
-        try {
-            Instant fromInstant = parseStartOfDay(fromDate).orElse(null);
-            Instant toInstant = parseEndOfDay(toDate).orElse(null);
-            return ResponseEntity.ok(ApiResponse.ok(userService.agentActivityEnhanced(agentId, actionTypes, clientId, fromInstant, toInstant, searchTerm, pageable)));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error("Failed to fetch activity: " + e.getMessage()));
-        }
     }
 
     @GetMapping("/agent/{agentId}/activity/realtime")

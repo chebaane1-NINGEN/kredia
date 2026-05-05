@@ -99,6 +99,7 @@ export class LoginComponent implements OnInit {
         const message =
           err?.error?.message ??
           err?.error?.error ??
+          err?.message ??
           (err?.status === 0
             ? 'Unable to reach the server. Please check your connection.'
             : err?.status === 401
@@ -114,7 +115,7 @@ export class LoginComponent implements OnInit {
 
   loginWithProvider(provider: 'google' | 'github'): void {
     this.loading = true;
-    window.location.href = `${API_BASE_URL}/oauth2/authorization/${provider}`;
+    window.location.href = `${API_BASE_URL}/api/oauth2/authorization/${provider}`;
   }
 
   ngOnInit(): void {
